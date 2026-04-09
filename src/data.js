@@ -25,8 +25,8 @@ import spk3 from '../public/audios/speaker3.jpg';
 import spk4 from '../public/audios/speaker4.jpg';
 import hdp1 from '../public/audios/headphone1.jpg';
 import hdp2 from '../public/audios/headphone2.jpg';
-import hdp3 from '../public/audios/headphone3.jpg';
-import hdp4 from '../public/audios/headphone4.jpg';
+import hdp3 from '../public/audios/headphone3.avif';
+import hdp4 from '../public/audios/headphone4.png';
 import bd1 from '../public/audios/buds1.jpg';
 import bd2 from '../public/audios/buds2.jpg';
 import bd3 from '../public/audios/buds3.jpg';
@@ -47,14 +47,14 @@ import cp_lp1 from '../public/computing/laptop1.jpg';
 import cp_lp2 from '../public/computing/laptop2.jpg';
 import cp_lp3 from '../public/computing/laptop3.jpg';
 import cp_lp4 from '../public/computing/laptop4.jpg';
-import cp_mb1 from '../public/computing/mobile1.jpg';
-import cp_mb2 from '../public/computing/mobile2.jpg';
-import cp_mb3 from '../public/computing/mobile3.jpg';
-import cp_mb4 from '../public/computing/mobile4.jpg';
+import cp_mb1 from '../public/computing/mobile1.webp';
+import cp_mb2 from '../public/computing/mobile2.webp';
+import cp_mb3 from '../public/computing/mobile3.webp';
+import cp_mb4 from '../public/computing/mobile4.webp';
 import cp_mb5 from '../public/computing/mobile5.avif';
 import cp_mb6 from '../public/computing/mobile6.avif';
-import cp_mn1 from '../public/computing/monitor1.jpg';
-import cp_mn2 from '../public/computing/monitor2.jpg';
+import cp_mn1 from '../public/computing/monitor1.avif';
+import cp_mn2 from '../public/computing/monitor2.avif';
 
 // Accessories
 import acc_cs1 from '../public/accessories/case1.jpg';
@@ -62,7 +62,7 @@ import acc_cs2 from '../public/accessories/case2.jpg';
 import acc_cs3 from '../public/accessories/case3.avif';
 import acc_cs4 from '../public/accessories/case4.webp';
 import acc_ch1 from '../public/accessories/charger1.jpg';
-import acc_ch2 from '../public/accessories/charger2.jpg';
+import acc_ch2 from '../public/accessories/charger2.avif';
 import acc_pb1 from '../public/accessories/powerbank1.jpg';
 import acc_pb2 from '../public/accessories/powerbank2.jpg';
 
@@ -107,7 +107,7 @@ export const productsData = {
         category: "Audio",
         desc: "Studio-quality sound with spatial audio capabilities.",
         variants: [
-            { id: "v4_1", colorBg: "bg-black", ringColor: "ring-blue-400", img: hdp3, price: "₹34,999", colorName: "Ocean Blue" },
+            { id: "v4_1", colorBg: "bg-gray-100", ringColor: "ring-blue-400", img: hdp3, price: "₹34,999", colorName: "Ocean Blue" },
             { id: "v4_2", colorBg: "bg-blue-600", ringColor: "ring-red-400", img: hdp4, price: "₹35,999", colorName: "Ember Red" }
         ]
     },
@@ -190,24 +190,24 @@ export const productsData = {
     },
     "12": {
         id: "12",
-        name: "Stealth 14",
+        name: "Macbook Air",
         title: "Power Laptop",
         category: "Computing",
         desc: "Ultra-portable performance for the modern nomad.",
         variants: [
-            { id: "v12_1", colorBg: "bg-stone-900", ringColor: "ring-stone-700", img: cp_lp3, price: "₹1,89,999", colorName: "Stealth" },
-            { id: "v12_2", colorBg: "bg-yellow-100", ringColor: "ring-yellow-400", img: cp_lp4, price: "₹1,92,999", colorName: "Harvest Gold" }
+            { id: "v12_1", colorBg: "bg-stone-300", ringColor: "ring-stone-700", img: cp_lp3, price: "₹1,89,999", colorName: "Stealth" },
+            { id: "v12_2", colorBg: "bg-pink-100", ringColor: "ring-yellow-400", img: cp_lp4, price: "₹1,92,999", colorName: "Harvest Gold" }
         ]
     },
     "13": {
         id: "13",
-        name: "Galaxy Flagship",
+        name: "Samsung S26Ultra",
         title: "Smartphone",
         category: "Computing",
         desc: "The pinnacle of mobile photography and speed.",
         variants: [
-            { id: "v13_1", colorBg: "bg-pink-200", ringColor: "ring-pink-400", img: cp_mb1, price: "₹1,34,999", colorName: "Rose Pink" },
-            { id: "v13_2", colorBg: "bg-stone-600", ringColor: "ring-stone-600", img: cp_mb2, price: "₹1,36,999", colorName: "Dark Gray" }
+            { id: "v13_1", colorBg: "bg-violet-900", ringColor: "ring-pink-400", img: cp_mb1, price: "₹1,34,999", colorName: "Rose Pink" },
+            { id: "v13_2", colorBg: "bg-blue-100", ringColor: "ring-stone-600", img: cp_mb2, price: "₹1,36,999", colorName: "Dark Gray" }
         ]
     },
     "14": {

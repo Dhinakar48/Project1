@@ -28,7 +28,7 @@ export function Categories() {
 
                             <div className="absolute bottom-8 left-8">
                                 <h4 className="text-[10px] font-black uppercase tracking-[0.3em] text-stone-400 mb-2">Collection</h4>
-                                <h2 className="text-4xl font-black text-gray-100 uppercase italic">Nothing</h2>
+                                <h2 className="text-4xl font-black text-gray-100 uppercase italic">Audios</h2>
                                 <p className="text-gray-300 text-xs mt-2 font-medium">Premium sound systems</p>
                             </div>
                         </motion.div>
@@ -52,7 +52,7 @@ export function Categories() {
 
                             <div className="absolute bottom-8 left-8">
                                 <h4 className="text-[10px] font-black uppercase tracking-[0.3em] text-stone-400 mb-2">Collection</h4>
-                                <h2 className="text-4xl font-black text-gray-100 uppercase italic">Watch</h2>
+                                <h2 className="text-4xl font-black text-gray-100 uppercase italic">Wearables</h2>
                                 <p className="text-gray-300 text-xs mt-2 font-medium">Connected devices</p>
                             </div>
                         </motion.div>
