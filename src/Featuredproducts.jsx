@@ -12,18 +12,18 @@ export default function Featured() {
             
             <div className="mb-16">
                 <div className="space-y-4">
-                    <motion.h1
-                        className="text-5xl md:text-7xl font-black tracking-tighter leading-none"
+                    <motion.h1 
+                        className="text-3xl md:text-5xl font-black tracking-tighter leading-none text-stone-900 italic uppercase"
                         initial={{ opacity: 0, y: 20 }}
                         whileInView={{ opacity: 1, y: 0 }}
                         transition={{ duration: 0.8 }}
                     >
-                        Featured
+                        Featured <span className="text-amber-600">Products</span>
                     </motion.h1>
                 </div>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-12 md:gap-16">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-12 md:gap-16 ">
                 {products.slice(0, 3).map((item, i) => {
                     return (
                         <motion.div
@@ -35,7 +35,7 @@ export default function Featured() {
                             viewport={{ once: true }}
                         >
                             {/* Product Card Image Wrapper */}
-                            <div className="relative aspect-[4/5] bg-stone-100 overflow-hidden mb-6 group shadow-sm hover:shadow-2xl transition-all duration-700">
+                            <div className="relative aspect-[4/5] bg-amber-100/20 overflow-hidden mb-6 transition-all duration-700">
                                 <img
                                     src={item.variants[0].img}
                                     alt={item.name}
@@ -45,8 +45,8 @@ export default function Featured() {
                                 
 
 
-                                <div className="absolute bottom-0 left-0 right-0 p-6 bg-gradient-to-t from-stone-900/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none">
-                                    <button className="w-full bg-white/90 backdrop-blur-sm text-stone-900 py-3 text-[10px] font-black uppercase tracking-[0.2em] shadow-lg">
+                                <div className="absolute bottom-0 left-0 right-0 p-6 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none">
+                                    <button className="w-full bg-amber-600 text-white py-3 text-[10px] font-black uppercase tracking-[0.2em]">
                                         Quick Purchase
                                     </button>
                                 </div>
@@ -54,11 +54,10 @@ export default function Featured() {
 
                             <div className="space-y-3 px-2">
                                 <div className="cursor-pointer" onClick={() => navigate(`/product/${item.id}`, { state: { from: 'home' } })}>
-                                    <p className="text-stone-400 text-[10px] font-black uppercase tracking-[0.3em] mb-1">{item.title}</p>
-                                    <h2 className="text-xl font-bold tracking-tight text-stone-900 group-hover:text-stone-600 transition-colors">
+                                    <h2 className="text-xl font-bold tracking-tight text-stone-900 group-hover:text-amber-600 transition-colors">
                                         {item.name}
                                     </h2>
-                                    <p className="text-sm font-black text-stone-500 mt-1">
+                                    <p className="text-sm font-black text-amber-600 mt-1">
                                         {item.variants[0].price}
                                     </p>
                                 </div>

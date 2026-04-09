@@ -17,7 +17,7 @@ export default function Cart() {
   const navigate = useNavigate();
 
   return (
-    <div className="min-h-screen bg-stone-50 text-stone-900 py-12 px-6 md:px-16 lg:px-24">
+    <div className="min-h-screen bg-white text-stone-900 py-12 px-6 md:px-16 lg:px-24">
       <div className="max-w-6xl mx-auto">
         <button
           onClick={() => navigate("/")}
@@ -27,7 +27,7 @@ export default function Cart() {
           <span className="font-medium tracking-wide">Back to Store</span>
         </button>
 
-        <h1 className="text-4xl md:text-6xl font-black mb-12 tracking-tighter">Shopping Bag</h1>
+        <h1 className="text-3xl md:text-5xl font-black mb-12 tracking-tighter">Shopping Bag</h1>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-16">
           <div className="lg:col-span-2 space-y-8">
@@ -40,7 +40,7 @@ export default function Cart() {
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
                     exit={{ opacity: 0, scale: 0.95 }}
-                    className="flex flex-col sm:flex-row gap-6 p-6 bg-white border border-stone-200 shadow-sm hover:shadow-md transition group relative overflow-hidden"
+                    className="flex flex-col sm:flex-row gap-6 p-6 bg-white border border-stone-200 transition group relative overflow-hidden"
                   >
                     <div className="w-full sm:w-40 h-40 bg-stone-100 flex-shrink-0 overflow-hidden">
                       <img
@@ -57,7 +57,7 @@ export default function Cart() {
                             <p className="text-stone-400 text-xs font-bold uppercase tracking-widest mb-1">{item.title}</p>
                             <h2 className="text-xl font-bold tracking-tight">{item.name}</h2>
                           </div>
-                          <p className="text-lg font-black text-stone-900">{item.variant.price}</p>
+                          <p className="text-lg font-black text-amber-600">{item.variant.price}</p>
                         </div>
                         <p className="text-sm text-stone-500 font-medium">Color: {item.variant.colorName}</p>
                       </div>
@@ -95,7 +95,7 @@ export default function Cart() {
                   <p className="text-stone-400 font-medium italic">Your bag is currently empty.</p>
                   <button
                     onClick={() => navigate("/")}
-                    className="bg-stone-900 text-stone-50 px-8 py-3 font-bold hover:bg-stone-800 transition shadow-lg"
+                    className="bg-amber-600 text-white px-8 py-3 font-black text-[10px] uppercase tracking-widest hover:bg-amber-500 transition shadow-xl"
                   >
                     Continue Shopping
                   </button>
@@ -104,15 +104,14 @@ export default function Cart() {
             </AnimatePresence>
           </div>
 
-          {/* Summary Box */}
           <div className="lg:col-span-1">
-            <div className="bg-stone-900 text-stone-50 p-8 shadow-2xl sticky top-32 space-y-8">
-              <h3 className="text-xl font-bold border-b border-stone-800 pb-4 tracking-tight">Order Summary</h3>
+            <div className="bg-amber-500 text-black p-8 sticky top-32 space-y-8 rounded-2xl shadow-2xl shadow-amber-900/20">
+              <h3 className="text-xl font-bold border-b border-amber-500/30 pb-4 tracking-tight uppercase italic">Order Summary</h3>
               
               <div className="space-y-4">
                 <div className="flex justify-between text-stone-400 text-sm">
-                  <span>Subtotal</span>
-                  <span className="text-stone-50">₹{subtotal.toLocaleString()}</span>
+                  <span className="text-black">Subtotal</span>
+                  <span className="text-black">₹{subtotal.toLocaleString()}</span>
                 </div>
                 {appliedDiscount && (
                   <div className="flex justify-between text-green-400 text-sm">
@@ -124,27 +123,27 @@ export default function Cart() {
                   </div>
                 )}
                 <div className="flex justify-between text-stone-400 text-sm">
-                  <span>Shipping</span>
-                  <span className={appliedDiscount?.type === 'shipping' ? 'text-green-400 font-bold' : 'text-stone-50'}>
+                  <span className="text-black">Shipping</span>
+                  <span className={appliedDiscount?.type === 'shipping' ? 'text-green-500 font-bold' : 'text-black'}>
                     {appliedDiscount?.type === 'shipping' ? 'FREE' : '₹500'}
                   </span>
                 </div>
                 <div className="flex justify-between text-stone-400 text-sm">
-                  <span>Tax</span>
-                  <span className="text-stone-50">₹0.00</span>
+                  <span className="text-black">Tax</span>
+                  <span className="text-black">₹0.00</span>
                 </div>
               </div>
 
-              <div className="border-t border-stone-800 pt-6 flex justify-between items-end">
-                <p className="text-stone-400 font-bold uppercase tracking-widest text-[10px]">Total Amount</p>
+              <div className="border-t border-amber-500/30 pt-6 flex justify-between items-end">
+                <p className="text-black font-black uppercase tracking-widest text-[10px]">Total Amount</p>
                 <p className="text-3xl font-black">₹{(finalTotal + (appliedDiscount?.type === 'shipping' ? 0 : 500)).toLocaleString()}</p>
               </div>
 
-              <button className="w-full bg-stone-50 text-stone-900 py-4 font-black uppercase tracking-widest hover:bg-white transition-all shadow-xl hover:shadow-2xl hover:-translate-y-1 active:translate-y-0 active:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none" disabled={cart.length === 0}>
+              <button className="w-full bg-white text-amber-600 py-4 font-black uppercase tracking-widest hover:bg-amber-50 transition-all hover:-translate-y-1 active:translate-y-0 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none shadow-xl" disabled={cart.length === 0}>
                 Checkout Now
               </button>
               
-              <p className="text-[10px] text-stone-500 uppercase tracking-widest text-center">Secure checkout powered by ElectroShop</p>
+              <p className="text-[10px] text-white uppercase tracking-widest text-center">Secure checkout powered by ElectroShop</p>
             </div>
           </div>
         </div>

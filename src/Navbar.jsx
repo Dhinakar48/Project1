@@ -80,19 +80,19 @@ export default function Navbar() {
         </AnimatePresence>
       </div>
 
-      <div className="bg-stone-100/90 backdrop-blur-md text-stone-900 border-b border-stone-200 p-2 sticky top-0 z-50">
+      <div className="bg-white/95 backdrop-blur-md text-stone-900 border-b border-stone-100 p-2 sticky top-0 z-50">
 
         <div className="grid grid-cols-3 items-center max-w-7xl mx-auto py-1">
 
           {/* Left: Logo & Categories Dropdown */}
           <div className="flex items-center gap-8">
-            <Link to="/" className="text-xl font-bold tracking-tight text-stone-800">ElectroShop</Link>
+            <Link to="/" className="text-xl font-black tracking-tighter text-amber-600 uppercase italic">ElectroShop</Link>
             
             <div className="hidden md:block relative">
               <button 
                 onMouseEnter={() => setCatDropdown(true)}
                 onMouseLeave={() => setCatDropdown(false)}
-                className="mt-1 text-stone-600 hover:text-stone-900 font-bold text-xs uppercase tracking-widest flex items-center gap-1 transition"
+                className="mt-1 text-stone-500 hover:text-amber-600 font-bold text-xs uppercase tracking-widest flex items-center gap-1 transition"
               >
                 Categories 
                 <svg className={`w-3 h-3 transition-transform ${catDropdown ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7"></path></svg>
@@ -106,12 +106,12 @@ export default function Navbar() {
                     exit={{ opacity: 0, y: 10 }}
                     onMouseEnter={() => setCatDropdown(true)}
                     onMouseLeave={() => setCatDropdown(false)}
-                    className="absolute top-full left-0 mt-2 w-48 bg-white border border-stone-200 shadow-2xl p-4 flex flex-col gap-3 z-[60]"
+                    className="absolute top-full left-0 mt-2 w-48 bg-white border border-stone-100 p-4 flex flex-col gap-3 z-[60]"
                   >
-                    <Link to="/category/Audio" onClick={() => setCatDropdown(false)} className="text-stone-600 hover:text-stone-900 text-xs font-black uppercase tracking-widest cursor-pointer transition">Audio</Link>
-                    <Link to="/category/Wearables" onClick={() => setCatDropdown(false)} className="text-stone-600 hover:text-stone-900 text-xs font-black uppercase tracking-widest cursor-pointer transition">Wearables</Link>
-                    <Link to="/category/Computing" onClick={() => setCatDropdown(false)} className="text-stone-600 hover:text-stone-900 text-xs font-black uppercase tracking-widest cursor-pointer transition">Computing</Link>
-                    <Link to="/category/Accessories" onClick={() => setCatDropdown(false)} className="text-stone-600 hover:text-stone-900 text-xs font-black uppercase tracking-widest cursor-pointer transition">Accessories</Link>
+                    <Link to="/category/Audio" onClick={() => setCatDropdown(false)} className="text-stone-500 hover:text-amber-600 text-xs font-black uppercase tracking-widest cursor-pointer transition">Audio</Link>
+                    <Link to="/category/Wearables" onClick={() => setCatDropdown(false)} className="text-stone-500 hover:text-amber-600 text-xs font-black uppercase tracking-widest cursor-pointer transition">Wearables</Link>
+                    <Link to="/category/Computing" onClick={() => setCatDropdown(false)} className="text-stone-500 hover:text-amber-600 text-xs font-black uppercase tracking-widest cursor-pointer transition">Computing</Link>
+                    <Link to="/category/Accessories" onClick={() => setCatDropdown(false)} className="text-stone-500 hover:text-amber-600 text-xs font-black uppercase tracking-widest cursor-pointer transition">Accessories</Link>
                   </motion.div>
                 )}
               </AnimatePresence>
@@ -120,8 +120,8 @@ export default function Navbar() {
 
           {/* Center: Search Bar */}
           <div className="hidden md:flex justify-center relative" ref={searchRef}>
-            <div className="flex items-center bg-stone-200/50 rounded-full px-4 py-2 w-full max-w-md focus-within:bg-stone-200 transition-colors border border-transparent focus-within:border-stone-300">
-              <FaSearch className="text-stone-500 mr-3 text-sm" />
+            <div className="flex items-center bg-amber-100/50 rounded-full px-4 py-2 w-full max-w-md focus-within:bg-white transition-colors border border-amber-100/50 focus-within:border-amber-400">
+              <FaSearch className="text-amber-600 mr-3 text-sm" />
               <input 
                 type="text" 
                 value={searchQuery}
@@ -131,7 +131,7 @@ export default function Navbar() {
                 }}
                 onFocus={() => setShowSearch(true)}
                 placeholder="Search products..." 
-                className="bg-transparent outline-none text-sm w-full placeholder-stone-400 text-stone-900" 
+                className="bg-transparent outline-none text-sm w-full text-stone-900" 
               />
             </div>
 
@@ -142,7 +142,7 @@ export default function Navbar() {
                   initial={{ opacity: 0, y: 10 }}
                   animate={{ opacity: 1, y: 0 }}
                   exit={{ opacity: 0, y: 10 }}
-                  className="absolute top-full mt-2 w-full max-w-md bg-white border border-stone-200 shadow-2xl z-[60] overflow-hidden rounded-xl"
+                  className="absolute top-full mt-2 w-full max-w-md bg-white border border-stone-200 z-[60] overflow-hidden rounded-xl"
                 >
                   {searchResults.length > 0 ? (
                     <div className="p-2">
@@ -155,11 +155,11 @@ export default function Navbar() {
                            <div className="w-12 h-12 bg-stone-100 rounded-lg overflow-hidden flex-shrink-0">
                              <img src={product.variants[0].img} className="w-full h-full object-contain p-1" alt={product.name} />
                            </div>
-                           <div className="flex-grow">
-                             <h4 className="text-sm font-bold text-stone-900 group-hover:text-stone-600 transition truncate">{product.name}</h4>
-                             <p className="text-[10px] text-stone-400 uppercase tracking-widest font-black">{product.title}</p>
+                          <div className="group-hover:text-amber-600 transition">
+                             <h4 className="text-sm font-bold text-stone-900 truncate">{product.name}</h4>
+                             <p className="text-[10px] text-amber-500/60 uppercase tracking-widest font-black">{product.title}</p>
                            </div>
-                           <div className="text-sm font-black text-stone-900">
+                           <div className="text-sm font-black text-amber-600">
                              {product.variants[0].price}
                            </div>
                          </div>
@@ -176,30 +176,30 @@ export default function Navbar() {
           </div>
 
           {/* Right: Actions */}
-          <div className="flex gap-5 xl:gap-8 items-center justify-end text-stone-600">
+          <div className="flex gap-5 xl:gap-8 items-center justify-end text-stone-400">
             <div className="md:hidden">
-              <FaSearch className="text-stone-500 text-sm" />
+              <FaSearch className="text-amber-600 text-sm" />
             </div>
             
-            <Link to="/wishlist" className="relative hover:text-stone-900 cursor-pointer transition">
+            <Link to="/wishlist" className="relative hover:text-amber-600 cursor-pointer transition">
               <PiHeartStraight size={22} />
               {wishlist.length > 0 && (
-                <span className="absolute -top-1.5 -right-1.5 bg-stone-900 text-stone-50 text-[10px] w-4 h-4 flex items-center justify-center rounded-full font-bold">
+                <span className="absolute -top-1.5 -right-1.5 bg-amber-600 text-white text-[10px] w-4 h-4 flex items-center justify-center rounded-full font-bold">
                   {wishlist.length}
                 </span>
               )}
             </Link>
 
-            <Link to="/cart" className="relative hover:text-stone-900 cursor-pointer transition">
+            <Link to="/cart" className="relative hover:text-amber-600 cursor-pointer transition">
               <FaOpencart size={24} />
               {cart.length > 0 && (
-                <span className="absolute -top-1.5 -right-1.5 bg-stone-900 text-stone-50 text-[10px] w-4 h-4 flex items-center justify-center rounded-full font-bold">
+                <span className="absolute -top-1.5 -right-1.5 bg-amber-600 text-white text-[10px] w-4 h-4 flex items-center justify-center rounded-full font-bold">
                   {cart.reduce((total, item) => total + item.quantity, 0)}
                 </span>
               )}
             </Link>
 
-            <FaUser size={18} className="hover:text-stone-900 cursor-pointer transition hidden md:block" />
+            <FaUser size={18} className="hover:text-amber-600 cursor-pointer transition hidden md:block" />
 
             <div className="md:hidden">
               {open ? (
@@ -212,7 +212,7 @@ export default function Navbar() {
         </div>
 
         {open && (
-          <div className="md:hidden mt-4 flex flex-col gap-4 px-4 bg-stone-100 shadow-lg pb-6 pt-4 rounded-b-2xl absolute left-0 right-0 z-50 border-t border-stone-200">
+          <div className="md:hidden mt-4 flex flex-col gap-4 px-4 bg-stone-100 pb-6 pt-4 rounded-b-2xl absolute left-0 right-0 z-50 border-t border-stone-200">
             <div className="flex items-center bg-stone-200 rounded-full px-4 py-2.5 mb-2">
               <FaSearch className="text-stone-500 mr-3" />
               <input 
@@ -226,7 +226,7 @@ export default function Navbar() {
 
             {/* Mobile Search Results */}
             {searchQuery.length > 0 && (
-              <div className="max-h-60 overflow-y-auto mb-4 bg-white rounded-xl shadow-inner border border-stone-200 p-2">
+              <div className="max-h-60 overflow-y-auto mb-4 bg-white rounded-xl border border-stone-200 p-2">
                  {searchResults.length > 0 ? (
                     searchResults.map(p => (
                       <div key={p.id} onClick={() => handleSearchResultClick(p.id)} className="flex items-center gap-3 p-3 border-b border-stone-50 last:border-none">

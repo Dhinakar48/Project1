@@ -52,11 +52,11 @@ export default function ProductDetails() {
     }, [id]);
 
     return (
-        <div className="min-h-screen bg-stone-50 text-stone-900 pt-24 pb-16 px-6 md:px-16 overflow-hidden relative font-sans">
+        <div className="min-h-screen bg-stone-50 text-stone-900 pt-12 pb-4 px-6 md:px-16 overflow-hidden relative font-sans">
             
             {/* Back Button */}
             <motion.div 
-                className="max-w-7xl mx-auto mb-8"
+                className="max-w-7xl mx-auto mb-4"
                 initial={{ opacity: 0, x: -20 }}
                 animate={{ opacity: 1, x: 0 }}
                 transition={{ duration: 0.5 }}
@@ -69,123 +69,125 @@ export default function ProductDetails() {
                 </Link>
             </motion.div>
 
-            <div className="max-w-7xl mx-auto flex flex-col md:flex-row items-center gap-12 md:gap-24">
-                
-                {/* Image Section */}
-                <motion.div 
-                    className="flex-1 w-full relative group"
-                    initial={{ opacity: 0, x: -50 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    transition={{ duration: 0.8 }}
-                >
-                    <div className="absolute inset-0 bg-stone-200 blur-3xl opacity-30 rounded-full"></div>
+            {/* Main Product Card - Just Border */}
+            <div className="max-w-7xl mx-auto rounded-[40px] p-8 md:p-1 relative z-10 bg-amber-100/20">
+                <div className="flex flex-col md:flex-row items-center gap-12 md:gap-22">
                     
-                    {/* Navigation Arrows */}
-                    <div className="absolute inset-y-0 left-0 z-20 flex items-center">
-                        <button 
-                            onClick={() => setSelectedColorIndex((prev) => (prev - 1 + product.variants.length) % product.variants.length)}
-                            className="p-2 ml-2 bg-white/50 backdrop-blur-md rounded-full shadow-lg opacity-0 group-hover:opacity-100 transition-all hover:bg-white text-stone-900"
-                        >
-                            <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-                            </svg>
-                        </button>
-                    </div>
-
-                    <div className="absolute inset-y-0 right-0 z-20 flex items-center">
-                        <button 
-                            onClick={() => setSelectedColorIndex((prev) => (prev + 1) % product.variants.length)}
-                            className="p-2 mr-2 bg-white/50 backdrop-blur-md rounded-full shadow-lg opacity-0 group-hover:opacity-100 transition-all hover:bg-white text-stone-900"
-                        >
-                            <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                            </svg>
-                        </button>
-                    </div>
-
-                    <motion.img 
-                        key={selectedColorIndex}
-                        src={activeVariant.img} 
-                        alt={product.name} 
-                        className="w-full h-auto max-h-[600px] object-contain rounded-2xl shadow-2xl relative z-10 p-8"
-                        initial={{ opacity: 0.6 }}
-                        animate={{ opacity: 1, y: [0, -10, 0] }}
-                        transition={{ opacity: { duration: 0.4 }, y: { repeat: Infinity, duration: 6, ease: "easeInOut" } }}
-                    />
-                </motion.div>
-
-                {/* Details Section */}
-                <motion.div 
-                    className="flex-1 w-full flex flex-col justify-center"
-                    initial="hidden"
-                    animate="visible"
-                    variants={{
-                        hidden: { opacity: 0 },
-                        visible: { opacity: 1, transition: { staggerChildren: 0.2 } }
-                    }}
-                >
-                    <motion.p variants={{ hidden: { opacity: 0, y: 20 }, visible: { opacity: 1, y: 0 } }} className="text-stone-400 text-xs md:text-sm font-black tracking-[0.3em] uppercase mb-4">
-                        {product.title}
-                    </motion.p>
-                    <motion.h1 variants={{ hidden: { opacity: 0, y: 20 }, visible: { opacity: 1, y: 0 } }} className="text-5xl md:text-7xl font-black mb-6 tracking-tighter leading-tight text-stone-900">
-                        {product.name}
-                    </motion.h1>
-                    <motion.div variants={{ hidden: { opacity: 0, y: 20 }, visible: { opacity: 1, y: 0 } }} className="flex items-center gap-6 mb-8 border-b border-stone-200 pb-8 w-full">
-                        <p className="text-3xl font-black text-stone-900">
-                            {activeVariant.price}
-                        </p>
-                        <span className="px-3 py-1 bg-stone-900 text-stone-50 text-[10px] font-black uppercase tracking-widest rounded-full">
-                            In Stock
-                        </span>
-                    </motion.div>
-                    <motion.p variants={{ hidden: { opacity: 0, y: 20 }, visible: { opacity: 1, y: 0 } }} className="text-stone-500 mb-10 leading-relaxed max-w-lg text-lg font-medium">
-                        {product.desc}
-                    </motion.p>
-
-                    <motion.div variants={{ hidden: { opacity: 0, y: 20 }, visible: { opacity: 1, y: 0 } }} className="mb-12">
-                        <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-stone-400 mb-4">Select Finish: <span className="text-stone-900">{activeVariant.colorName}</span></h3>
-                        <div className="flex gap-4">
-                            {product.variants.map((variant, index) => (
-                                <div 
-                                    key={index}
-                                    onClick={() => setSelectedColorIndex(index)}
-                                    className={`w-10 h-10 rounded-full cursor-pointer transition-all duration-300 border overflow-hidden shadow-inner ${selectedColorIndex === index ? `ring-2 ring-offset-2 ring-offset-stone-50 ring-stone-900 scale-110` : 'hover:scale-110 opacity-60 hover:opacity-100 border-stone-200'}`}
-                                >
-                                    {variant.colorBg ? (
-                                        <div className={`w-full h-full ${variant.colorBg}`}></div>
-                                    ) : (
-                                        <img src={variant.img} className="w-full h-full object-cover" alt="Finish" />
-                                    )}
-                                </div>
-                            ))}
-                        </div>
-                    </motion.div>
-
                     <motion.div 
-                        variants={{ hidden: { opacity: 0, y: 20 }, visible: { opacity: 1, y: 0 } }}
-                        className="flex flex-col sm:flex-row gap-4"
+                        className="md:flex-[1.4] w-full relative group aspect-square flex items-center justify-center rounded-[40px] overflow-hidden border border-amber-200"
+                        initial={{ opacity: 0, x: -50 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        transition={{ duration: 0.8 }}
                     >
-                        <motion.button 
-                            onClick={handleAddToCart}
-                            whileHover={{ scale: 1.02 }}
-                            whileTap={{ scale: 0.98 }}
-                            className={`${addedToCart ? 'bg-green-600' : 'bg-stone-900'} text-stone-50 py-5 px-12 font-black text-xs uppercase tracking-[0.2em] shadow-2xl hover:bg-stone-800 transition-all duration-300 flex-grow md:flex-grow-0 border border-stone-900`}
-                        >
-                            {addedToCart ? 'Added to Bag' : 'Add to Shopping Bag'}
-                        </motion.button>
+                        <div className="absolute inset-0 blur-3xl opacity-10 rounded-full"></div>
                         
-                        <motion.button
-                            onClick={() => toggleWishlist(product)}
-                            whileHover={{ scale: 1.02 }}
-                            whileTap={{ scale: 0.98 }}
-                            className={`p-5 flex items-center justify-center border transition-all duration-300 shadow-lg ${isWishlisted ? 'border-red-500 text-red-500 bg-red-50' : 'border-stone-200 text-stone-600 hover:border-stone-900 hover:text-stone-900 bg-white'}`}
-                        >
-                            <svg xmlns="http://www.w3.org/2000/svg" className={`h-6 w-6 ${isWishlisted ? 'fill-current' : 'fill-none'}`} viewBox="0 0 24 24" stroke="currentColor">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
-                            </svg>
-                        </motion.button>
+                        {/* Navigation Arrows */}
+                        <div className="absolute inset-y-0 left-0 z-20 flex items-center">
+                            <button 
+                                onClick={() => setSelectedColorIndex((prev) => (prev - 1 + product.variants.length) % product.variants.length)}
+                                className="p-3 ml-6 bg-white/70 backdrop-blur-md rounded-full opacity-0 group-hover:opacity-100 transition-all hover:bg-white text-stone-900 border border-amber-100"
+                            >
+                                <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                                </svg>
+                            </button>
+                        </div>
+
+                        <div className="absolute inset-y-0 right-0 z-20 flex items-center">
+                            <button 
+                                onClick={() => setSelectedColorIndex((prev) => (prev + 1) % product.variants.length)}
+                                className="p-3 mr-6 bg-white/70 backdrop-blur-md rounded-full opacity-0 group-hover:opacity-100 transition-all hover:bg-white text-stone-900 border border-amber-100"
+                            >
+                                <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                                </svg>
+                            </button>
+                        </div>
+
+                            <motion.img 
+                                key={selectedColorIndex}
+                                src={activeVariant.img} 
+                                alt={product.name} 
+                                className="w-[90%] h-[90%] object-contain relative z-10"
+                                initial={{ opacity: 0.6 }}
+                                animate={{ opacity: 1, y: [0, -15, 0] }}
+                                transition={{ opacity: { duration: 0.4 }, y: { repeat: Infinity, duration: 6, ease: "easeInOut" } }}
+                            />
                     </motion.div>
-                </motion.div>
+
+                    {/* Details Section */}
+                    <motion.div 
+                        className="flex-1 w-full flex flex-col justify-center"
+                        initial="hidden"
+                        animate="visible"
+                        variants={{
+                            hidden: { opacity: 0 },
+                            visible: { opacity: 1, transition: { staggerChildren: 0.2 } }
+                        }}
+                    >
+                        <motion.p variants={{ hidden: { opacity: 0, y: 20 }, visible: { opacity: 1, y: 0 } }} className="text-amber-600 text-xs md:text-sm font-black tracking-[0.3em] uppercase mb-4">
+                            {product.title}
+                        </motion.p>
+                        <motion.h1 variants={{ hidden: { opacity: 0, y: 20 }, visible: { opacity: 1, y: 0 } }} className="text-3xl md:text-5xl font-black mb-6 tracking-tighter leading-tight text-stone-900 uppercase italic">
+                            {product.name}
+                        </motion.h1>
+                        <motion.div variants={{ hidden: { opacity: 0, y: 20 }, visible: { opacity: 1, y: 0 } }} className="flex items-center gap-6 mb-8 border-b border-amber-100 pb-8 w-full">
+                            <p className="text-3xl font-black text-amber-600">
+                                {activeVariant.price}
+                            </p>
+                            <span className="px-3 py-1 bg-amber-600 text-white text-[10px] font-black uppercase tracking-widest rounded-full">
+                                In Stock
+                            </span>
+                        </motion.div>
+                        <motion.p variants={{ hidden: { opacity: 0, y: 20 }, visible: { opacity: 1, y: 0 } }} className="text-stone-500 mb-10 leading-relaxed max-w-lg text-lg font-medium">
+                            {product.desc}
+                        </motion.p>
+
+                        <motion.div variants={{ hidden: { opacity: 0, y: 20 }, visible: { opacity: 1, y: 0 } }} className="mb-12">
+                            <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-stone-400 mb-4">Select Finish: <span className="text-stone-900">{activeVariant.colorName}</span></h3>
+                            <div className="flex gap-4">
+                                {product.variants.map((variant, index) => (
+                                    <div 
+                                        key={index}
+                                        onClick={() => setSelectedColorIndex(index)}
+                                        className={`w-10 h-10 rounded-full cursor-pointer transition-all duration-300 border overflow-hidden ${selectedColorIndex === index ? `ring-2 ring-offset-2 ring-offset-white ring-amber-600 scale-110` : 'hover:scale-110 opacity-60 hover:opacity-100 border-stone-200'}`}
+                                    >
+                                        {variant.colorBg ? (
+                                            <div className={`w-full h-full ${variant.colorBg}`}></div>
+                                        ) : (
+                                            <img src={variant.img} className="w-full h-full object-cover" alt="Finish" />
+                                        )}
+                                    </div>
+                                ))}
+                            </div>
+                        </motion.div>
+
+                        <motion.div 
+                            variants={{ hidden: { opacity: 0, y: 20 }, visible: { opacity: 1, y: 0 } }}
+                            className="flex flex-col sm:flex-row gap-4"
+                        >
+                            <motion.button 
+                                onClick={handleAddToCart}
+                                whileHover={{ scale: 1.02 }}
+                                whileTap={{ scale: 0.98 }}
+                                className={`${addedToCart ? 'bg-amber-500' : 'bg-amber-500'} text-white py-5 px-12 font-black text-xs uppercase tracking-[0.2em] hover:bg-amber-600 transition-all`}
+                            >
+                                {addedToCart ? 'Added to Bag' : 'Add to Shopping Bag'}
+                            </motion.button>
+                            
+                            <motion.button
+                                onClick={() => toggleWishlist(product)}
+                                whileHover={{ scale: 1.02 }}
+                                whileTap={{ scale: 0.98 }}
+                                className={`p-5 flex items-center justify-center border transition-all duration-300 ${isWishlisted ? 'border-red-500 text-red-500 bg-red-50' : 'border-amber-200 text-amber-600 hover:border-amber-600 hover:bg-amber-50 bg-white'}`}
+                            >
+                                <svg xmlns="http://www.w3.org/2000/svg" className={`h-6 w-6 ${isWishlisted ? 'fill-current' : 'fill-none'}`} viewBox="0 0 24 24" stroke="currentColor">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
+                                </svg>
+                            </motion.button>
+                        </motion.div>
+                    </motion.div>
+                </div>
             </div>
 
             {/* Extra information section */}
@@ -233,7 +235,7 @@ export default function ProductDetails() {
                     initial={{ opacity: 0, y: 20 }}
                     whileInView={{ opacity: 1, y: 0 }}
                     viewport={{ once: true }}
-                    className="mb-24 bg-white border border-stone-200 p-8 md:p-12 shadow-sm"
+                    className="mb-24 bg-white border border-stone-200 p-8 md:p-12"
                 >
                     <h4 className="text-xl font-bold mb-8 tracking-tight">Write a Review</h4>
                     <form onSubmit={handleReviewSubmit} className="grid grid-cols-1 md:grid-cols-2 gap-8">
@@ -298,7 +300,7 @@ export default function ProductDetails() {
                             </div>
                             <button 
                                 type="submit"
-                                className="w-full bg-stone-900 text-stone-50 py-4 text-[10px] font-black uppercase tracking-[0.2em] hover:bg-stone-800 transition shadow-xl"
+                                className="w-full bg-amber-600 text-white py-4 text-[10px] font-black uppercase tracking-[0.2em] hover:bg-amber-500 transition shadow-xl shadow-amber-600/10"
                             >
                                 Post Review
                             </button>
@@ -308,7 +310,7 @@ export default function ProductDetails() {
 
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
                     {reviews.map(review => (
-                        <div key={review.id} className="bg-white border border-stone-200 p-8 shadow-sm hover:shadow-xl transition-all duration-500">
+                        <div key={review.id} className="bg-white border border-stone-200 p-8 transition-all duration-500">
                             <div className="flex gap-1 mb-6">
                                 {[...Array(5)].map((_, i) => (
                                     <svg key={i} className={`w-4 h-4 ${i < review.rating ? 'text-black' : 'text-stone-200'}`} fill="currentColor" viewBox="0 0 20 20">
@@ -340,7 +342,7 @@ export default function ProductDetails() {
                  <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-8">
                     {relatedProducts.map((item) => (
                         <Link to={`/product/${item.id}`} key={item.id} className="group cursor-pointer">
-                            <div className="overflow-hidden bg-stone-50 border border-stone-200 p-6 mb-4 group-hover:shadow-xl transition-all duration-700">
+                            <div className="overflow-hidden bg-stone-50 border border-stone-200 p-6 mb-4 transition-all duration-700">
                                 <img
                                     src={item.variants[0].img}
                                     alt={item.name}

@@ -58,7 +58,7 @@ export default function Wishlist() {
                     <div className="pt-4 flex gap-3 mt-auto">
                       <button
                         onClick={() => navigate(`/product/${item.id}`)}
-                        className="flex-grow bg-stone-900 text-stone-50 py-3 text-xs font-bold uppercase tracking-widest hover:bg-stone-800 transition shadow-lg"
+                        className="flex-grow bg-amber-600 text-white py-3 text-xs font-black uppercase tracking-widest hover:bg-amber-500 transition shadow-lg shadow-amber-600/20"
                       >
                         View Details
                       </button>
@@ -80,7 +80,7 @@ export default function Wishlist() {
                 <p className="text-stone-400 font-medium text-lg italic tracking-wide">Your wishlist is looking lonely.</p>
                 <button
                   onClick={() => navigate("/")}
-                  className="bg-stone-900 text-stone-50 px-10 py-4 font-bold uppercase tracking-widest hover:bg-stone-800 transition shadow-2xl"
+                  className="bg-amber-600 text-white px-10 py-4 font-black uppercase tracking-widest hover:bg-amber-500 transition shadow-2xl shadow-amber-600/30"
                 >
                   Find Something You Love
                 </button>

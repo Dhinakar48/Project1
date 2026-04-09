@@ -38,7 +38,7 @@ export default function Hero() {
               className="absolute inset-0 w-full h-full object-cover object-center scale-105"
             />
             {/* Left side blur overlay for text readability */}
-            <div className="absolute inset-0 bg-stone-50/10 backdrop-blur-md [mask-image:linear-gradient(to_right,black_30%,transparent_60%)] md:[mask-image:linear-gradient(to_right,black_40%,transparent_70%)] pointer-events-none"></div>
+            <div className="absolute inset-0 bg-white/5 backdrop-blur-sm [mask-image:linear-gradient(to_right,black_30%,transparent_60%)] md:[mask-image:linear-gradient(to_right,black_40%,transparent_70%)] pointer-events-none"></div>
           </div>
 
           {/* Text Content - Moves in sync with the slide */}
@@ -48,7 +48,7 @@ export default function Hero() {
                 initial={{ opacity: 0, x: 50 }}
                 animate={{ opacity: 1, x: 0 }}
                 transition={{ duration: 0.8, delay: 0.3 }}
-                className={`text-5xl sm:text-6xl md:text-8xl font-black mb-6 leading-[0.9] tracking-tighter drop-shadow-sm ${
+                className={`text-5xl sm:text-6xl md:text-8xl font-black mb-6 leading-[0.9] tracking-tighter ${
                   slides[currentSlide].theme === "dark" ? "text-white" : "text-stone-900"
                 }`}
               >
@@ -59,8 +59,8 @@ export default function Hero() {
                 initial={{ opacity: 0, x: 40 }}
                 animate={{ opacity: 1, x: 0 }}
                 transition={{ duration: 0.8, delay: 0.4 }}
-                className={`text-sm sm:text-base md:text-lg mb-10 tracking-wide max-w-md font-semibold drop-shadow-sm ${
-                  slides[currentSlide].theme === "dark" ? "text-stone-200" : "text-stone-700"
+                className={`text-sm sm:text-base md:text-lg mb-10 tracking-wide max-w-md font-semibold ${
+                  slides[currentSlide].theme === "dark" ? "text-white/80" : "text-amber-700/70"
                 }`}
               >
                 {slides[currentSlide].desc}
@@ -71,10 +71,10 @@ export default function Hero() {
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.6, delay: 0.6 }}
                 onClick={() => navigate(`/product/${slides[currentSlide].linkToProductId}`)}
-                className={`px-10 py-5 text-sm sm:text-base font-bold shadow-2xl transition-all uppercase tracking-[0.2em] border active:scale-95 ${
+                className={`px-10 py-5 text-sm sm:text-base font-black transition-all uppercase tracking-[0.2em] border active:scale-95 ${
                   slides[currentSlide].theme === "dark" 
-                  ? "bg-white text-stone-900 hover:bg-stone-100 border-white" 
-                  : "bg-stone-900 text-stone-50 hover:bg-stone-800 border-stone-800"
+                  ? "bg-amber-500 text-stone-900 hover:bg-amber-400 border-amber-500" 
+                  : "bg-amber-600 text-white hover:bg-amber-500 border-amber-600 shadow-xl shadow-amber-600/20"
                 }`}
               >
                 {slides[currentSlide].btnText}

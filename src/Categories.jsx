@@ -1,9 +1,13 @@
-import { motion } from "framer-motion";
-import { Link } from "react-router-dom";
+import { useState } from "react";
+import { motion, AnimatePresence } from "framer-motion";
+import { Link, useNavigate } from "react-router-dom";
+import { featuredProductsArray as products } from "./data";
 import nothing from '../public/nothing.webp';
 import watch from '../public/watch.jpg';
 
 export function Categories() {
+    const navigate = useNavigate();
+
     return (
 
         <div>
@@ -24,12 +28,12 @@ export function Categories() {
                                 alt="Nothing"
                             />
 
-                            <div className="absolute inset-0 bg-black/50"></div>
+                            <div className="absolute inset-0 bg-amber-900/30"></div>
 
                             <div className="absolute bottom-8 left-8">
-                                <h4 className="text-[10px] font-black uppercase tracking-[0.3em] text-stone-400 mb-2">Collection</h4>
-                                <h2 className="text-4xl font-black text-gray-100 uppercase italic">Audios</h2>
-                                <p className="text-gray-300 text-xs mt-2 font-medium">Premium sound systems</p>
+                                <h4 className="text-[10px] font-black uppercase tracking-[0.3em] text-white/70 mb-2">Exclusive Series</h4>
+                                <h2 className="text-4xl font-black text-white uppercase italic tracking-tighter">Audios</h2>
+                                <p className="text-amber-100 text-xs mt-2 font-medium">Sonic Perfection</p>
                             </div>
                         </motion.div>
                     </Link>
@@ -48,12 +52,12 @@ export function Categories() {
                                 alt="Watch"
                             />
 
-                            <div className="absolute inset-0 bg-black/50"></div>
+                            <div className="absolute inset-0 bg-amber-900/30"></div>
 
                             <div className="absolute bottom-8 left-8">
-                                <h4 className="text-[10px] font-black uppercase tracking-[0.3em] text-stone-400 mb-2">Collection</h4>
-                                <h2 className="text-4xl font-black text-gray-100 uppercase italic">Wearables</h2>
-                                <p className="text-gray-300 text-xs mt-2 font-medium">Connected devices</p>
+                                <h4 className="text-[10px] font-black uppercase tracking-[0.3em] text-white/70 mb-2">Exclusive Series</h4>
+                                <h2 className="text-4xl font-black text-white uppercase italic tracking-tighter">Wearables</h2>
+                                <p className="text-amber-100 text-xs mt-2 font-medium">Future on Wrist</p>
                             </div>
                         </motion.div>
                     </Link>
@@ -82,16 +86,17 @@ export function Categories() {
                 </motion.p>
 
                 <motion.button
-                    className="bg-stone-900 text-stone-50 px-6 py-3 font-semibold hover:bg-stone-800 hover:scale-105 transition shadow-lg"
+                    onClick={() => navigate("/shop-all")}
+                    className="bg-amber-600 text-white px-10 py-5 font-black text-[10px] uppercase tracking-[0.4em] hover:bg-amber-500 transition shadow-2xl shadow-amber-600/20"
                     initial={{ opacity: 0, y: 30 }}
                     whileInView={{ opacity: 1, y: 0 }}
                     transition={{ delay: 0.4 }}
                 >
-                    Shop Now
+                    Explore Entire Collection
                 </motion.button>
 
             </div>
         </div>
-
+        
     );
 }

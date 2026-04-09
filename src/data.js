@@ -74,7 +74,7 @@ export const productsData = {
         category: "Audio",
         desc: "Immerse yourself in high-fidelity audio with active noise cancellation.",
         variants: [
-            { id: "v1_1", colorBg: "bg-white", ringColor: "ring-gray-300", img: img1, price: "₹24,999", colorName: "Pearl" },
+            { id: "v1_1", colorBg: "bg-gray-200", ringColor: "ring-gray-300", img: img1, price: "₹24,999", colorName: "Pearl" },
             { id: "v1_2", colorBg: "bg-gray-800", ringColor: "ring-gray-600", img: img1alt, price: "₹25,999", colorName: "Midnight" }
         ]
     },
@@ -107,7 +107,7 @@ export const productsData = {
         category: "Audio",
         desc: "Studio-quality sound with spatial audio capabilities.",
         variants: [
-            { id: "v4_1", colorBg: "bg-gray-100", ringColor: "ring-blue-400", img: hdp3, price: "₹34,999", colorName: "Ocean Blue" },
+            { id: "v4_1", colorBg: "bg-gray-200", ringColor: "ring-blue-400", img: hdp3, price: "₹34,999", colorName: "Ocean Blue" },
             { id: "v4_2", colorBg: "bg-blue-600", ringColor: "ring-red-400", img: hdp4, price: "₹35,999", colorName: "Ember Red" }
         ]
     },
@@ -185,7 +185,7 @@ export const productsData = {
         desc: "Luxury meets technology. Hand-polished titanium with smart guts.",
         variants: [
             { id: "v11_1", colorBg: "bg-stone-800", ringColor: "ring-stone-400", img: wt5, price: "₹84,999", colorName: "Raw Titan" },
-            { id: "v11_2", colorBg: "bg-white", ringColor: "ring-amber-700", img: wt6, price: "₹86,999", colorName: "Classic White" }
+            { id: "v11_2", colorBg: "bg-gray-200", ringColor: "ring-amber-700", img: wt6, price: "₹86,999", colorName: "Classic White" }
         ]
     },
     "12": {
@@ -284,7 +284,7 @@ export const productsData = {
         desc: "Power through your day with our most advanced 45W charger. Safe, efficient, and universally compatible.",
         variants: [
             { id: "v20_1", colorBg: "bg-black", ringColor: "ring-stone-100", img: acc_ch1, price: "₹3,499", colorName: "Classic" },
-            { id: "v20_2", colorBg: "bg-white", ringColor: "ring-stone-700", img: acc_ch2, price: "₹3,499", colorName: "Phantom" }
+            { id: "v20_2", colorBg: "bg-gray-200", ringColor: "ring-stone-700", img: acc_ch2, price: "₹3,499", colorName: "Phantom" }
         ]
     },
     "21": {
@@ -327,7 +327,7 @@ export const productsData = {
         category: "Wearables",
         desc: "Timeless design meets modern intelligence. A versatile smartwatch that fits perfectly in both the boardroom and the gym.",
         variants: [
-            { id: "v24_1", colorBg: "bg-white", ringColor: "ring-stone-400", img: wt1, price: "₹29,999", colorName: "Slate" },
+            { id: "v24_1", colorBg: "bg-gray-200", ringColor: "ring-stone-400", img: wt1, price: "₹29,999", colorName: "Slate" },
             { id: "v24_2", colorBg: "bg-stone-400", ringColor: "ring-stone-600", img: wt2, price: "₹29,999", colorName: "Charcoal" }
         ]
     },

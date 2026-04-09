@@ -52,7 +52,7 @@ export default function Offers() {
                             initial={{ opacity: 0, scale: 0.95 }}
                             whileInView={{ opacity: 1, scale: 1 }}
                             whileHover={{ y: -5 }}
-                            className={`${offer.color} ${offer.dark ? 'text-stone-50' : 'text-stone-900'} p-8 relative overflow-hidden group border border-stone-200 shadow-sm`}
+                            className={`${offer.color} ${offer.dark ? 'text-stone-50' : 'text-stone-900'} p-8 relative overflow-hidden group border border-stone-200`}
                         >
                             <div className="relative z-10">
                                 <span className="text-[10px] font-black uppercase tracking-[0.3em] opacity-60 mb-2 block">{offer.title}</span>
