@@ -1,11 +1,13 @@
 import { useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { useParams, Link } from "react-router-dom";
+import { useParams, Link, useLocation } from "react-router-dom";
 import { productsData, featuredProductsArray } from "./data";
 import { useStore } from "./StoreContext";
 
 export default function ProductDetails() {
     const { id } = useParams();
+    const location = useLocation();
+    const from = location.state?.from;
     const product = productsData[id] || productsData["default"];
     const [selectedColorIndex, setSelectedColorIndex] = useState(0);
     const activeVariant = product.variants[selectedColorIndex] || product.variants[0];
@@ -59,11 +61,11 @@ export default function ProductDetails() {
                 animate={{ opacity: 1, x: 0 }}
                 transition={{ duration: 0.5 }}
             >
-                <Link to="/" className="inline-flex items-center gap-2 text-stone-600 hover:text-stone-900 transition duration-300 group">
+                <Link to={from === 'home' ? '/' : (product.category ? `/category/${product.category}` : "/")} className="inline-flex items-center gap-2 text-stone-600 hover:text-stone-900 transition duration-300 group">
                     <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 group-hover:-translate-x-1 transition" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
                     </svg>
-                    <span className="text-sm font-bold tracking-widest uppercase text-stone-900">Back to Boutique</span>
+                    <span className="text-sm font-bold tracking-widest uppercase text-stone-900">{from === 'home' ? 'Back to Home' : 'Back to Collection'}</span>
                 </Link>
             </motion.div>
 
@@ -71,12 +73,36 @@ export default function ProductDetails() {
                 
                 {/* Image Section */}
                 <motion.div 
-                    className="flex-1 w-full relative"
+                    className="flex-1 w-full relative group"
                     initial={{ opacity: 0, x: -50 }}
                     animate={{ opacity: 1, x: 0 }}
                     transition={{ duration: 0.8 }}
                 >
                     <div className="absolute inset-0 bg-stone-200 blur-3xl opacity-30 rounded-full"></div>
+                    
+                    {/* Navigation Arrows */}
+                    <div className="absolute inset-y-0 left-0 z-20 flex items-center">
+                        <button 
+                            onClick={() => setSelectedColorIndex((prev) => (prev - 1 + product.variants.length) % product.variants.length)}
+                            className="p-2 ml-2 bg-white/50 backdrop-blur-md rounded-full shadow-lg opacity-0 group-hover:opacity-100 transition-all hover:bg-white text-stone-900"
+                        >
+                            <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                            </svg>
+                        </button>
+                    </div>
+
+                    <div className="absolute inset-y-0 right-0 z-20 flex items-center">
+                        <button 
+                            onClick={() => setSelectedColorIndex((prev) => (prev + 1) % product.variants.length)}
+                            className="p-2 mr-2 bg-white/50 backdrop-blur-md rounded-full shadow-lg opacity-0 group-hover:opacity-100 transition-all hover:bg-white text-stone-900"
+                        >
+                            <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                            </svg>
+                        </button>
+                    </div>
+
                     <motion.img 
                         key={selectedColorIndex}
                         src={activeVariant.img} 
@@ -123,8 +149,14 @@ export default function ProductDetails() {
                                 <div 
                                     key={index}
                                     onClick={() => setSelectedColorIndex(index)}
-                                    className={`w-10 h-10 rounded-full ${variant.colorBg} cursor-pointer transition-all duration-300 border shadow-inner ${selectedColorIndex === index ? `ring-2 ring-offset-2 ring-offset-stone-50 ring-stone-900 scale-110` : 'hover:scale-110 opacity-60 hover:opacity-100 border-stone-200'}`}
-                                ></div>
+                                    className={`w-10 h-10 rounded-full cursor-pointer transition-all duration-300 border overflow-hidden shadow-inner ${selectedColorIndex === index ? `ring-2 ring-offset-2 ring-offset-stone-50 ring-stone-900 scale-110` : 'hover:scale-110 opacity-60 hover:opacity-100 border-stone-200'}`}
+                                >
+                                    {variant.colorBg ? (
+                                        <div className={`w-full h-full ${variant.colorBg}`}></div>
+                                    ) : (
+                                        <img src={variant.img} className="w-full h-full object-cover" alt="Finish" />
+                                    )}
+                                </div>
                             ))}
                         </div>
                     </motion.div>
@@ -187,7 +219,92 @@ export default function ProductDetails() {
                         <h4 className="text-[10px] font-black uppercase tracking-[0.3em] text-stone-400 mb-2">Social</h4>
                         <h3 className="text-4xl md:text-5xl font-black tracking-tighter">Voices of Electro</h3>
                     </div>
+                    <button 
+                        onClick={() => document.getElementById('review-form').scrollIntoView({ behavior: 'smooth' })}
+                        className="text-[10px] font-black uppercase tracking-[0.3em] border-b-2 border-stone-900 pb-1 hover:text-stone-500 hover:border-stone-500 transition-all"
+                    >
+                        Share Your Experience
+                    </button>
                 </div>
+
+                {/* Review Form */}
+                <motion.div 
+                    id="review-form"
+                    initial={{ opacity: 0, y: 20 }}
+                    whileInView={{ opacity: 1, y: 0 }}
+                    viewport={{ once: true }}
+                    className="mb-24 bg-white border border-stone-200 p-8 md:p-12 shadow-sm"
+                >
+                    <h4 className="text-xl font-bold mb-8 tracking-tight">Write a Review</h4>
+                    <form onSubmit={handleReviewSubmit} className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                        <div className="space-y-6">
+                            <div>
+                                <label className="text-[10px] font-black uppercase tracking-widest text-stone-400 block mb-2">Your Name</label>
+                                <input 
+                                    type="text" 
+                                    value={newReview.name}
+                                    onChange={(e) => setNewReview({...newReview, name: e.target.value})}
+                                    className="w-full bg-stone-50 border-none p-4 text-sm focus:ring-1 focus:ring-stone-900 outline-none transition"
+                                    placeholder="Enter your name"
+                                    required
+                                />
+                            </div>
+                            <div>
+                                <label className="text-[10px] font-black uppercase tracking-widest text-stone-400 block mb-2">Rating</label>
+                                <div className="flex gap-2">
+                                    {[1, 2, 3, 4, 5].map((star) => (
+                                        <button
+                                            key={star}
+                                            type="button"
+                                            onClick={() => setNewReview({...newReview, rating: star})}
+                                            className={`text-2xl transition ${star <= newReview.rating ? 'text-black' : 'text-stone-200'}`}
+                                        >
+                                            ★
+                                        </button>
+                                    ))}
+                                </div>
+                            </div>
+                            <div>
+                                <label className="text-[10px] font-black uppercase tracking-widest text-stone-400 block mb-2">Upload Image</label>
+                                <div className="flex items-center gap-4">
+                                    <input 
+                                        type="file" 
+                                        accept="image/*"
+                                        onChange={handleImageUpload}
+                                        className="hidden" 
+                                        id="review-img"
+                                    />
+                                    <label 
+                                        htmlFor="review-img"
+                                        className="bg-stone-100 px-6 py-3 text-[10px] font-black uppercase tracking-widest cursor-pointer hover:bg-stone-200 transition"
+                                    >
+                                        Choose File
+                                    </label>
+                                    {newReview.img && <img src={newReview.img} alt="preview" className="w-12 h-12 object-cover rounded" />}
+                                </div>
+                            </div>
+                        </div>
+                        <div className="space-y-6 flex flex-col">
+                            <div className="flex-grow">
+                                <label className="text-[10px] font-black uppercase tracking-widest text-stone-400 block mb-2">Your Review</label>
+                                <textarea 
+                                    rows="5"
+                                    value={newReview.comment}
+                                    onChange={(e) => setNewReview({...newReview, comment: e.target.value})}
+                                    className="w-full bg-stone-50 border-none p-4 text-sm focus:ring-1 focus:ring-stone-900 outline-none transition h-full resize-none"
+                                    placeholder="Tell us about your experience..."
+                                    required
+                                ></textarea>
+                            </div>
+                            <button 
+                                type="submit"
+                                className="w-full bg-stone-900 text-stone-50 py-4 text-[10px] font-black uppercase tracking-[0.2em] hover:bg-stone-800 transition shadow-xl"
+                            >
+                                Post Review
+                            </button>
+                        </div>
+                    </form>
+                </motion.div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
                     {reviews.map(review => (
@@ -199,7 +316,12 @@ export default function ProductDetails() {
                                     </svg>
                                 ))}
                             </div>
-                            <p className="text-stone-600 text-sm leading-relaxed mb-8 font-medium">"{review.comment}"</p>
+                            <p className="text-stone-600 text-sm leading-relaxed mb-6 font-medium">"{review.comment}"</p>
+                            {review.img && (
+                                <div className="mb-6 overflow-hidden">
+                                    <img src={review.img} alt="Review" className="w-full h-40 object-cover rounded-sm hover:scale-105 transition duration-500" />
+                                </div>
+                            )}
                             <div className="flex items-center gap-4 border-t border-stone-100 pt-6">
                                 <span className="w-10 h-10 rounded-full bg-stone-100 flex items-center justify-center text-[10px] font-black text-stone-900 border border-stone-200 uppercase">
                                     {review.name.charAt(0)}

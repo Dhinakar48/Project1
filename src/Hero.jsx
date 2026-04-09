@@ -34,21 +34,23 @@ export default function Hero() {
           <div className="absolute inset-0 z-0 pointer-events-none overflow-hidden">
             <img
               src={slides[currentSlide].image}
-              alt="hero"
-              className="absolute right-0 top-0 h-full w-full md:w-3/4 object-cover object-center opacity-30 md:opacity-50"
+              alt={slides[currentSlide].title}
+              className="absolute inset-0 w-full h-full object-cover object-center scale-105"
             />
-            {/* Gradient Mask */}
-            <div className="absolute inset-0 bg-gradient-to-r from-stone-50 via-stone-50/90 to-transparent"></div>
+            {/* Left side blur overlay for text readability */}
+            <div className="absolute inset-0 bg-stone-50/10 backdrop-blur-md [mask-image:linear-gradient(to_right,black_30%,transparent_60%)] md:[mask-image:linear-gradient(to_right,black_40%,transparent_70%)] pointer-events-none"></div>
           </div>
 
           {/* Text Content - Moves in sync with the slide */}
-          <div className="relative z-10 w-full px-6 sm:px-10 md:px-16 max-w-7xl mx-auto">
+          <div className="relative z-10 w-full px-4 sm:px-8 md:px-16 max-w-7xl mr-auto">
             <div className="max-w-2xl">
               <motion.h1 
                 initial={{ opacity: 0, x: 50 }}
                 animate={{ opacity: 1, x: 0 }}
                 transition={{ duration: 0.8, delay: 0.3 }}
-                className="text-5xl sm:text-6xl md:text-8xl font-black mb-6 leading-[0.9] tracking-tighter text-stone-900"
+                className={`text-5xl sm:text-6xl md:text-8xl font-black mb-6 leading-[0.9] tracking-tighter drop-shadow-sm ${
+                  slides[currentSlide].theme === "dark" ? "text-white" : "text-stone-900"
+                }`}
               >
                 {slides[currentSlide].title}
               </motion.h1>
@@ -57,7 +59,9 @@ export default function Hero() {
                 initial={{ opacity: 0, x: 40 }}
                 animate={{ opacity: 1, x: 0 }}
                 transition={{ duration: 0.8, delay: 0.4 }}
-                className="text-stone-600 text-sm sm:text-base md:text-lg mb-10 tracking-wide max-w-md font-medium"
+                className={`text-sm sm:text-base md:text-lg mb-10 tracking-wide max-w-md font-semibold drop-shadow-sm ${
+                  slides[currentSlide].theme === "dark" ? "text-stone-200" : "text-stone-700"
+                }`}
               >
                 {slides[currentSlide].desc}
               </motion.p>
@@ -67,7 +71,11 @@ export default function Hero() {
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.6, delay: 0.6 }}
                 onClick={() => navigate(`/product/${slides[currentSlide].linkToProductId}`)}
-                className="bg-stone-900 text-stone-50 px-10 py-5 text-sm sm:text-base font-bold shadow-2xl hover:bg-stone-800 transition-all uppercase tracking-[0.2em] border border-stone-800 active:scale-95"
+                className={`px-10 py-5 text-sm sm:text-base font-bold shadow-2xl transition-all uppercase tracking-[0.2em] border active:scale-95 ${
+                  slides[currentSlide].theme === "dark" 
+                  ? "bg-white text-stone-900 hover:bg-stone-100 border-white" 
+                  : "bg-stone-900 text-stone-50 hover:bg-stone-800 border-stone-800"
+                }`}
               >
                 {slides[currentSlide].btnText}
               </motion.button>
@@ -82,7 +90,11 @@ export default function Hero() {
           <button
             key={idx}
             onClick={() => setCurrentSlide(idx)}
-            className={`h-1 transition-all duration-700 ease-in-out ${currentSlide === idx ? "w-20 bg-stone-900" : "w-10 bg-stone-300 hover:bg-stone-400"}`}
+            className={`h-1 transition-all duration-700 ease-in-out ${
+              currentSlide === idx 
+                ? `w-20 ${slides[currentSlide].theme === "dark" ? "bg-white" : "bg-stone-900"}` 
+                : `w-10 ${slides[currentSlide].theme === "dark" ? "bg-white/30 hover:bg-white/50" : "bg-stone-300 hover:bg-stone-400"}`
+            }`}
             aria-label={`Go to slide ${idx + 1}`}
           ></button>
         ))}

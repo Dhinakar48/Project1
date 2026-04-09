@@ -13,6 +13,8 @@ export function StoreProvider({ children }) {
     return saved ? JSON.parse(saved) : [];
   });
 
+  const [appliedDiscount, setAppliedDiscount] = useState(null);
+
   useEffect(() => {
     localStorage.setItem("cart", JSON.stringify(cart));
   }, [cart]);
@@ -61,6 +63,40 @@ export function StoreProvider({ children }) {
 
   const clearCart = () => setCart([]);
 
+  const applyDiscountCode = (code) => {
+    const uppercaseCode = code.toUpperCase();
+    if (uppercaseCode === "SUMMER20") {
+      setAppliedDiscount({ type: 'percentage', value: 20, code: 'SUMMER20' });
+      return { success: true, message: "20% discount applied!" };
+    }
+    if (uppercaseCode === "FLASH5K") {
+      setAppliedDiscount({ type: 'fixed', value: 5000, code: 'FLASH5K' });
+      return { success: true, message: "₹5,000 discount applied!" };
+    }
+    if (uppercaseCode === "FREESHIP") {
+      setAppliedDiscount({ type: 'shipping', value: 0, code: 'FREESHIP' });
+      return { success: true, message: "Free shipping applied!" };
+    }
+    return { success: false, message: "Invalid discount code." };
+  };
+
+  const removeDiscount = () => setAppliedDiscount(null);
+
+  const subtotal = cart.reduce((total, item) => {
+    const price = parseInt(item.variant.price.replace(/[^\d]/g, ""));
+    return total + price * item.quantity;
+  }, 0);
+
+  const calculateDiscount = () => {
+    if (!appliedDiscount) return 0;
+    if (appliedDiscount.type === 'percentage') return (subtotal * appliedDiscount.value) / 100;
+    if (appliedDiscount.type === 'fixed') return appliedDiscount.value;
+    return 0; // shipping handled separately if needed
+  };
+
+  const discountAmount = calculateDiscount();
+  const finalTotal = subtotal - discountAmount;
+
   return (
     <StoreContext.Provider
       value={{
@@ -71,10 +107,12 @@ export function StoreProvider({ children }) {
         updateQuantity,
         toggleWishlist,
         clearCart,
-        cartTotal: cart.reduce((total, item) => {
-          const price = parseInt(item.variant.price.replace(/[^\d]/g, ""));
-          return total + price * item.quantity;
-        }, 0)
+        appliedDiscount,
+        applyDiscountCode,
+        removeDiscount,
+        subtotal,
+        discountAmount,
+        finalTotal
       }}
     >
       {children}

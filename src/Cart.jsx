@@ -4,7 +4,16 @@ import { useNavigate } from "react-router-dom";
 import { FaTrash, FaMinus, FaPlus, FaArrowLeft } from "react-icons/fa6";
 
 export default function Cart() {
-  const { cart, removeFromCart, updateQuantity, cartTotal } = useStore();
+  const { 
+    cart, 
+    removeFromCart, 
+    updateQuantity, 
+    subtotal, 
+    discountAmount, 
+    finalTotal, 
+    appliedDiscount, 
+    removeDiscount 
+  } = useStore();
   const navigate = useNavigate();
 
   return (
@@ -103,11 +112,22 @@ export default function Cart() {
               <div className="space-y-4">
                 <div className="flex justify-between text-stone-400 text-sm">
                   <span>Subtotal</span>
-                  <span className="text-stone-50">₹{cartTotal.toLocaleString()}</span>
+                  <span className="text-stone-50">₹{subtotal.toLocaleString()}</span>
                 </div>
+                {appliedDiscount && (
+                  <div className="flex justify-between text-green-400 text-sm">
+                    <div className="flex items-center gap-2">
+                       <span>Discount ({appliedDiscount.code})</span>
+                       <button onClick={removeDiscount} className="text-[8px] border border-green-900 px-1 hover:bg-green-900 transition mt-0.5">REMOVE</button>
+                    </div>
+                    <span>- ₹{discountAmount.toLocaleString()}</span>
+                  </div>
+                )}
                 <div className="flex justify-between text-stone-400 text-sm">
                   <span>Shipping</span>
-                  <span className="text-stone-50 italic">Calculated at next step</span>
+                  <span className={appliedDiscount?.type === 'shipping' ? 'text-green-400 font-bold' : 'text-stone-50'}>
+                    {appliedDiscount?.type === 'shipping' ? 'FREE' : '₹500'}
+                  </span>
                 </div>
                 <div className="flex justify-between text-stone-400 text-sm">
                   <span>Tax</span>
@@ -117,7 +137,7 @@ export default function Cart() {
 
               <div className="border-t border-stone-800 pt-6 flex justify-between items-end">
                 <p className="text-stone-400 font-bold uppercase tracking-widest text-[10px]">Total Amount</p>
-                <p className="text-3xl font-black">₹{cartTotal.toLocaleString()}</p>
+                <p className="text-3xl font-black">₹{(finalTotal + (appliedDiscount?.type === 'shipping' ? 0 : 500)).toLocaleString()}</p>
               </div>
 
               <button className="w-full bg-stone-50 text-stone-900 py-4 font-black uppercase tracking-widest hover:bg-white transition-all shadow-xl hover:shadow-2xl hover:-translate-y-1 active:translate-y-0 active:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none" disabled={cart.length === 0}>
