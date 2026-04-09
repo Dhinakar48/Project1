@@ -19,8 +19,8 @@ export default function Wishlist() {
         </button>
 
         <div className="flex items-center gap-4 mb-12">
-          <FaHeart className="text-stone-900 text-3xl md:text-5xl" />
-          <h1 className="text-4xl md:text-6xl font-black tracking-tighter">My Wishlist</h1>
+          <FaHeart className="text-stone-900 text-2xl md:text-4xl" />
+          <h1 className="text-3xl md:text-5xl font-black tracking-tighter">My Wishlist</h1>
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8 md:gap-12">

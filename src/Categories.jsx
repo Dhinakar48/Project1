@@ -15,7 +15,7 @@ export function Categories() {
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
 
-                    <Link to="/category/Audio">
+                    <Link>
                         <motion.div
                             className="relative h-[400px] overflow-hidden group cursor-pointer"
                             initial={{ opacity: 0, x: -70 }}
@@ -39,7 +39,7 @@ export function Categories() {
                     </Link>
 
                     {/* Wearables */}
-                    <Link to="/category/Wearables">
+                    <Link>
                         <motion.div
                             className="relative h-[400px] overflow-hidden group cursor-pointer"
                             initial={{ opacity: 0, x: 50 }}
