@@ -16,9 +16,9 @@ const img6alt = '/featured/watch4.jpg';
 
 // Audios
 const mic1 = '/audios/microphone1.jpg';
-const mic2 = '/audios/microphone2.jpg';
+const mic2 = '/audios/microphone2.png';
 const mic3 = '/audios/microphone3.jpg';
-const mic4 = '/audios/microphone4.jpg';
+const mic4 = '/audios/microphone4.png';
 const spk1 = '/audios/speaker1.jpg';
 const spk2 = '/audios/speaker2.jpg';
 const spk3 = '/audios/speaker3.jpg';
@@ -162,8 +162,8 @@ export const productsData = {
         category: "Audio",
         desc: "Experience sound in its purest form with open-back acoustics.",
         variants: [
-            { id: "v9_1", colorBg: "bg-blue-100", ringColor: "ring-blue-600", img: hdp1, price: "₹42,999", colorName: "Deep Sea" },
-            { id: "v9_2", colorBg: "bg-stone-100", ringColor: "ring-stone-600", img: hdp2, price: "₹42,999", colorName: "Matte" }
+            { id: "v9_1", colorBg: "bg-gray-200", ringColor: "ring-blue-600", img: hdp1, price: "₹42,999", colorName: "Deep Sea" },
+            { id: "v9_2", colorBg: "bg-violet-300", ringColor: "ring-stone-600", img: hdp2, price: "₹42,999", colorName: "Matte" }
         ]
     },
     "10": {
