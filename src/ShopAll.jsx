@@ -15,7 +15,7 @@ export default function ShopAll() {
                     transition={{ duration: 0.8 }}
                     className="mb-20 text-center"
                 >
-                    <h1 className="text-5xl md:text-7xl font-black tracking-tighter uppercase italic leading-none mb-6">
+                    <h1 className="text-4xl md:text-6xl font-black tracking-tighter uppercase italic leading-none mb-6">
                         The Master <br />
                         <span className="text-amber-600">Catalog</span>
                     </h1>

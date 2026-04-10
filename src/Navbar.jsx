@@ -1,10 +1,10 @@
 import { useState, useEffect, useRef } from "react";
-import { FaOpencart, FaUser } from "react-icons/fa6";
+import { FaOpencart, FaUser, FaShopify } from "react-icons/fa6";
 import { FaBars, FaTimes, FaSearch } from "react-icons/fa";
 import { PiHeartStraight } from "react-icons/pi";
 import { motion, AnimatePresence } from "framer-motion";
 import { useStore } from "./StoreContext";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate, useLocation } from "react-router-dom";
 import { featuredProductsArray as products } from "./data";
 
 const offers = [
@@ -16,9 +16,13 @@ const offers = [
 export default function Navbar() {
   const [open, setOpen] = useState(false);
   const [catDropdown, setCatDropdown] = useState(false);
+  const [userDropdown, setUserDropdown] = useState(false);
   const [currentOffer, setCurrentOffer] = useState(0);
+  const location = useLocation();
+  const isSellerDashboard = location.pathname === "/seller-dashboard";
   const { cart, wishlist } = useStore();
   const navigate = useNavigate();
+  const userRef = useRef(null);
 
   // Search logic
   const [searchQuery, setSearchQuery] = useState("");
@@ -51,6 +55,9 @@ export default function Navbar() {
     function handleClickOutside(event) {
       if (searchRef.current && !searchRef.current.contains(event.target)) {
         setShowSearch(false);
+      }
+      if (userRef.current && !userRef.current.contains(event.target)) {
+        setUserDropdown(false);
       }
     }
     document.addEventListener("mousedown", handleClickOutside);
@@ -88,7 +95,7 @@ export default function Navbar() {
           <div className="flex items-center gap-8">
             <Link to="/" className="text-xl font-black tracking-tighter text-amber-600 uppercase italic">ElectroShop</Link>
             
-            <div className="hidden md:block relative">
+            <div className={`hidden md:block relative ${isSellerDashboard ? 'hidden' : ''}`}>
               <button 
                 onMouseEnter={() => setCatDropdown(true)}
                 onMouseLeave={() => setCatDropdown(false)}
@@ -119,8 +126,8 @@ export default function Navbar() {
           </div>
 
           {/* Center: Search Bar */}
-          <div className="hidden md:flex justify-center relative" ref={searchRef}>
-            <div className="flex items-center bg-amber-100/50 rounded-full px-4 py-2 w-full max-w-md focus-within:bg-white transition-colors border border-amber-100/50 focus-within:border-amber-400">
+          <div className={`hidden md:flex justify-center relative ${isSellerDashboard ? 'invisible opacity-0' : ''}`} ref={searchRef}>
+            <div className="flex items-center rounded-full px-4 py-2 w-full max-w-md focus-within:bg-white transition-colors border border-amber-400">
               <FaSearch className="text-amber-600 mr-3 text-sm" />
               <input 
                 type="text" 
@@ -181,25 +188,74 @@ export default function Navbar() {
               <FaSearch className="text-amber-600 text-sm" />
             </div>
             
-            <Link to="/wishlist" className="relative hover:text-amber-600 cursor-pointer transition">
-              <PiHeartStraight size={22} />
-              {wishlist.length > 0 && (
-                <span className="absolute -top-1.5 -right-1.5 bg-amber-600 text-white text-[10px] w-4 h-4 flex items-center justify-center rounded-full font-bold">
-                  {wishlist.length}
-                </span>
-              )}
-            </Link>
+            {!isSellerDashboard && (
+              <>
+                <Link to="/wishlist" className="relative hover:text-amber-600 cursor-pointer transition">
+                  <PiHeartStraight size={22} />
+                  {wishlist.length > 0 && (
+                    <span className="absolute -top-1.5 -right-1.5 bg-amber-600 text-white text-[10px] w-4 h-4 flex items-center justify-center rounded-full font-bold">
+                      {wishlist.length}
+                    </span>
+                  )}
+                </Link>
 
-            <Link to="/cart" className="relative hover:text-amber-600 cursor-pointer transition">
-              <FaOpencart size={24} />
-              {cart.length > 0 && (
-                <span className="absolute -top-1.5 -right-1.5 bg-amber-600 text-white text-[10px] w-4 h-4 flex items-center justify-center rounded-full font-bold">
-                  {cart.reduce((total, item) => total + item.quantity, 0)}
-                </span>
-              )}
-            </Link>
+                <Link to="/cart" className="relative hover:text-amber-600 cursor-pointer transition">
+                  <FaOpencart size={24} />
+                  {cart.length > 0 && (
+                    <span className="absolute -top-1.5 -right-1.5 bg-amber-600 text-white text-[10px] w-4 h-4 flex items-center justify-center rounded-full font-bold">
+                      {cart.reduce((total, item) => total + item.quantity, 0)}
+                    </span>
+                  )}
+                </Link>
+              </>
+            )}
 
-            <FaUser size={18} className="hover:text-amber-600 cursor-pointer transition hidden md:block" />
+            <div className="relative" ref={userRef}>
+              <div 
+                onClick={() => setUserDropdown(!userDropdown)}
+                className="hover:text-amber-600 transition cursor-pointer"
+              >
+                <FaUser size={18} />
+              </div>
+              
+              <AnimatePresence>
+                {userDropdown && (
+                  <motion.div 
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: 10 }}
+                    className="absolute top-full right-0 mt-3 w-48 bg-white border border-stone-100 shadow-xl rounded-xl overflow-hidden z-[60]"
+                  >
+                    <div className="p-2 flex flex-col">
+                      <Link onClick={() => setUserDropdown(false)} className="px-4 py-2.5 text-xs font-black uppercase tracking-widest text-stone-500 hover:text-amber-600 hover:bg-stone-50 transition rounded-lg flex items-center gap-3">
+                        <FaUser size={12} /> My Account
+                      </Link>
+                      <Link to="/seller-login" onClick={() => setUserDropdown(false)} className="px-4 py-2.5 text-xs font-black uppercase tracking-widest text-stone-500 hover:text-amber-600 hover:bg-stone-50 transition rounded-lg flex items-center gap-3">
+                        <FaShopify size={12} /> Seller Portal
+                      </Link>
+                      <div className="h-[1px] bg-stone-50 my-1 mx-2" />
+                      
+                      {localStorage.getItem("user") ? (
+                        <button 
+                          onClick={() => {
+                            localStorage.removeItem("user");
+                            setUserDropdown(false);
+                            navigate("/login");
+                          }} 
+                          className="px-4 py-2.5 text-xs font-black uppercase tracking-widest text-red-600 hover:bg-red-50 transition rounded-lg text-left"
+                        >
+                          Sign Out
+                        </button>
+                      ) : (
+                        <Link to="/login" onClick={() => setUserDropdown(false)} className="px-4 py-2 text-xs font-black uppercase tracking-widest text-stone-900 hover:text-amber-600 transition rounded-lg">
+                          Sign In
+                        </Link>
+                      )}
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
 
             <div className="md:hidden">
               {open ? (
@@ -243,29 +299,65 @@ export default function Navbar() {
               </div>
             )}
 
-            <Link to="/category/Audio" onClick={() => setOpen(false)} className="border-b border-stone-200 pb-2 text-stone-700 font-medium">Audio</Link>
-            <Link to="/category/Wearables" onClick={() => setOpen(false)} className="border-b border-stone-200 pb-2 text-stone-700 font-medium">Wearables</Link>
-            <Link to="/category/Computing" onClick={() => setOpen(false)} className="border-b border-stone-200 pb-2 text-stone-700 font-medium">Computing</Link>
-            <Link to="/category/Accessories" onClick={() => setOpen(false)} className="border-b border-stone-200 pb-2 text-stone-700 font-medium">Accessories</Link>
+            {!isSellerDashboard && (
+              <>
+                <Link to="/category/Audio" onClick={() => setOpen(false)} className="border-b border-stone-200 pb-2 text-stone-700 font-medium">Audio</Link>
+                <Link to="/category/Wearables" onClick={() => setOpen(false)} className="border-b border-stone-200 pb-2 text-stone-700 font-medium">Wearables</Link>
+                <Link to="/category/Computing" onClick={() => setOpen(false)} className="border-b border-stone-200 pb-2 text-stone-700 font-medium">Computing</Link>
+                <Link to="/category/Accessories" onClick={() => setOpen(false)} className="border-b border-stone-200 pb-2 text-stone-700 font-medium">Accessories</Link>
+              </>
+            )}
 
             <div className="flex gap-6 pt-4 text-stone-700">
-              <Link to="/wishlist" onClick={() => setOpen(false)} className="relative">
-                <PiHeartStraight size={20} />
-                {wishlist.length > 0 && (
-                  <span className="absolute -top-1.5 -right-1.5 bg-stone-900 text-stone-50 text-[10px] w-3.5 h-3.5 flex items-center justify-center rounded-full font-bold">
-                    {wishlist.length}
-                  </span>
+              {!isSellerDashboard && (
+                <>
+                  <Link to="/wishlist" onClick={() => setOpen(false)} className="relative">
+                    <PiHeartStraight size={20} />
+                    {wishlist.length > 0 && (
+                      <span className="absolute -top-1.5 -right-1.5 bg-stone-900 text-stone-50 text-[10px] w-3.5 h-3.5 flex items-center justify-center rounded-full font-bold">
+                        {wishlist.length}
+                      </span>
+                    )}
+                  </Link>
+                  <Link to="/cart" onClick={() => setOpen(false)} className="relative">
+                    <FaOpencart size={24} />
+                    {cart.length > 0 && (
+                      <span className="absolute -top-1.5 -right-1.5 bg-stone-900 text-stone-50 text-[10px] w-3.5 h-3.5 flex items-center justify-center rounded-full font-bold">
+                        {cart.reduce((total, item) => total + item.quantity, 0)}
+                      </span>
+                    )}
+                  </Link>
+                </>
+              )}
+              <div className="flex flex-col gap-5 w-full pt-2">
+                <Link to="/login" onClick={() => setOpen(false)} className="flex items-center gap-3 text-stone-700">
+                  <FaUser size={18} />
+                  <span className="text-sm font-bold">My Account</span>
+                </Link>
+                <Link to="/seller-login" onClick={() => setOpen(false)} className="flex items-center gap-3 text-stone-700">
+                  <FaShopify size={18} />
+                  <span className="text-sm font-bold">Seller Portal</span>
+                </Link>
+                
+                {localStorage.getItem("user") ? (
+                  <button 
+                    onClick={() => {
+                      localStorage.removeItem("user");
+                      setOpen(false);
+                      navigate("/login");
+                    }} 
+                    className="flex items-center gap-3 text-red-600 font-black pt-2 border-t border-stone-200 mt-2 text-left w-full"
+                  >
+                    <span className="text-sm">Sign Out</span>
+                  </button>
+                ) : (
+                   <div className="flex flex-col gap-3 pt-2 border-t border-stone-200 mt-2 text-left">
+                      <Link to="/login" onClick={() => setOpen(false)} className="text-stone-900 font-black text-sm">
+                        Sign In
+                      </Link>
+                  </div>
                 )}
-              </Link>
-              <Link to="/cart" onClick={() => setOpen(false)} className="relative">
-                <FaOpencart size={24} />
-                {cart.length > 0 && (
-                  <span className="absolute -top-1.5 -right-1.5 bg-stone-900 text-stone-50 text-[10px] w-3.5 h-3.5 flex items-center justify-center rounded-full font-bold">
-                    {cart.reduce((total, item) => total + item.quantity, 0)}
-                  </span>
-                )}
-              </Link>
-              <FaUser size={20} />
+              </div>
             </div>
           </div>
         )}

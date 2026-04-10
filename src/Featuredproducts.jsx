@@ -35,7 +35,7 @@ export default function Featured() {
                             viewport={{ once: true }}
                         >
                             {/* Product Card Image Wrapper */}
-                            <div className="relative aspect-[4/5] bg-amber-100/20 overflow-hidden mb-6 transition-all duration-700">
+                            <div className="relative aspect-[4/5] bg-amber-100/20 border border-amber-100 overflow-hidden mb-6 transition-all duration-700">
                                 <img
                                     src={item.variants[0].img}
                                     alt={item.name}

@@ -2,8 +2,8 @@ import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Link, useNavigate } from "react-router-dom";
 import { featuredProductsArray as products } from "./data";
-import nothing from '../public/nothing.webp';
-import watch from '../public/watch.jpg';
+const nothing = '/nothing.webp';
+const watch = '/watch.jpg';
 
 export function Categories() {
     const navigate = useNavigate();

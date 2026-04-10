@@ -1,70 +1,70 @@
 // Featured/Home specific images
-import img1 from '../public/featured/buds1.avif';
-import img1alt from '../public/featured/buds2.jpg';
-import img2 from '../public/featured/watch1.avif';
-import img2alt from '../public/featured/watch2.webp';
-import img3 from '../public/laptop.jpg';
-import img3alt from '../public/featured/laptop2.jpg';
-import img4 from '../public/featured/headphone3.jpg';
-import img4alt from '../public/featured/headphone4.png';
-import img5 from '../public/featured/buds3.jpg';
-import img5alt from '../public/featured/buds4.webp';
-import img6 from '../public/featured/watch3.jpg';
-import img6alt from '../public/featured/watch4.jpg';
+const img1 = '/featured/buds1.avif';
+const img1alt = '/featured/buds2.jpg';
+const img2 = '/featured/watch1.avif';
+const img2alt = '/featured/watch2.webp';
+const img3 = '/laptop.jpg';
+const img3alt = '/featured/laptop2.jpg';
+const img4 = '/featured/headphone3.jpg';
+const img4alt = '/featured/headphone4.png';
+const img5 = '/featured/buds3.jpg';
+const img5alt = '/featured/buds4.webp';
+const img6 = '/featured/watch3.jpg';
+const img6alt = '/featured/watch4.jpg';
 
 // --- ALL PRODUCT IMAGES BY CATEGORY ---
 
 // Audios
-import mic1 from '../public/audios/microphone1.jpg';
-import mic2 from '../public/audios/microphone2.jpg';
-import mic3 from '../public/audios/microphone3.jpg';
-import mic4 from '../public/audios/microphone4.jpg';
-import spk1 from '../public/audios/speaker1.jpg';
-import spk2 from '../public/audios/speaker2.jpg';
-import spk3 from '../public/audios/speaker3.jpg';
-import spk4 from '../public/audios/speaker4.jpg';
-import hdp1 from '../public/audios/headphone1.jpg';
-import hdp2 from '../public/audios/headphone2.jpg';
-import hdp3 from '../public/audios/headphone3.avif';
-import hdp4 from '../public/audios/headphone4.png';
-import bd1 from '../public/audios/buds1.jpg';
-import bd2 from '../public/audios/buds2.jpg';
-import bd3 from '../public/audios/buds3.jpg';
-import bd4 from '../public/audios/buds4.jpg';
+const mic1 = '/audios/microphone1.jpg';
+const mic2 = '/audios/microphone2.jpg';
+const mic3 = '/audios/microphone3.jpg';
+const mic4 = '/audios/microphone4.jpg';
+const spk1 = '/audios/speaker1.jpg';
+const spk2 = '/audios/speaker2.jpg';
+const spk3 = '/audios/speaker3.jpg';
+const spk4 = '/audios/speaker4.jpg';
+const hdp1 = '/audios/headphone1.jpg';
+const hdp2 = '/audios/headphone2.jpg';
+const hdp3 = '/audios/headphone3.avif';
+const hdp4 = '/audios/headphone4.png';
+const bd1 = '/audios/buds1.jpg';
+const bd2 = '/audios/buds2.jpg';
+const bd3 = '/audios/buds3.jpg';
+const bd4 = '/audios/buds4.jpg';
 
 // Wearables
-import glass1 from '../public/wearables/glass1.avif';
-import glass2 from '../public/wearables/glass2.jpg';
-import wt1 from '../public/wearables/watch1.jpg';
-import wt2 from '../public/wearables/watch2.webp';
-import wt3 from '../public/wearables/watch3.webp';
-import wt4 from '../public/wearables/watch4.webp';
-import wt5 from '../public/wearables/watch5.avif';
-import wt6 from '../public/wearables/watch6.webp';
+const glass1 = '/wearables/glass1.avif';
+const glass2 = '/wearables/glass2.jpg';
+const wt1 = '/wearables/watch1.jpg';
+const wt2 = '/wearables/watch2.webp';
+const wt3 = '/wearables/watch3.webp';
+const wt4 = '/wearables/watch4.webp';
+const wt5 = '/wearables/watch5.avif';
+const wt6 = '/wearables/watch6.webp';
 
 // Computing
-import cp_lp1 from '../public/computing/laptop1.jpg';
-import cp_lp2 from '../public/computing/laptop2.jpg';
-import cp_lp3 from '../public/computing/laptop3.jpg';
-import cp_lp4 from '../public/computing/laptop4.jpg';
-import cp_mb1 from '../public/computing/mobile1.webp';
-import cp_mb2 from '../public/computing/mobile2.webp';
-import cp_mb3 from '../public/computing/mobile3.webp';
-import cp_mb4 from '../public/computing/mobile4.webp';
-import cp_mb5 from '../public/computing/mobile5.avif';
-import cp_mb6 from '../public/computing/mobile6.avif';
-import cp_mn1 from '../public/computing/monitor1.avif';
-import cp_mn2 from '../public/computing/monitor2.avif';
+const cp_lp1 = '/computing/laptop1.jpg';
+const cp_lp2 = '/computing/laptop2.jpg';
+const cp_lp3 = '/computing/laptop3.jpg';
+const cp_lp4 = '/computing/laptop4.jpg';
+const cp_mb1 = '/computing/mobile1.webp';
+const cp_mb2 = '/computing/mobile2.webp';
+const cp_mb3 = '/computing/mobile3.webp';
+const cp_mb4 = '/computing/mobile4.webp';
+const cp_mb5 = '/computing/mobile5.avif';
+const cp_mb6 = '/computing/mobile6.avif';
+const cp_mn1 = '/computing/monitor1.avif';
+const cp_mn2 = '/computing/monitor2.avif';
 
 // Accessories
-import acc_cs1 from '../public/accessories/case1.jpg';
-import acc_cs2 from '../public/accessories/case2.jpg';
-import acc_cs3 from '../public/accessories/case3.avif';
-import acc_cs4 from '../public/accessories/case4.webp';
-import acc_ch1 from '../public/accessories/charger1.jpg';
-import acc_ch2 from '../public/accessories/charger2.avif';
-import acc_pb1 from '../public/accessories/powerbank1.jpg';
-import acc_pb2 from '../public/accessories/powerbank2.jpg';
+const acc_cs1 = '/accessories/case1.jpg';
+const acc_cs2 = '/accessories/case2.jpg';
+const acc_cs3 = '/accessories/case3.avif';
+const acc_cs4 = '/accessories/case4.webp';
+const acc_ch1 = '/accessories/charger1.jpg';
+const acc_ch2 = '/accessories/charger2.avif';
+const acc_pb1 = '/accessories/powerbank1.jpg';
+const acc_pb2 = '/accessories/powerbank2.jpg';
 
 export const productsData = {
     "1": {
@@ -125,7 +125,7 @@ export const productsData = {
     "6": {
         id: "6",
         name: "Chronos Alpine",
-        title: "Rugged Smartwatch",
+        title: "Luxury watch",
         category: "Wearables",
         desc: "Built for the outdoors. Massive battery and precise GPS.",
         variants: [
@@ -180,7 +180,7 @@ export const productsData = {
     "11": {
         id: "11",
         name: "G-Shock Watch",
-        title: "Luxury Watch",
+        title: "Rugged Watch",
         category: "Wearables",
         desc: "Luxury meets technology. Hand-polished titanium with smart guts.",
         variants: [
@@ -346,10 +346,10 @@ export const productsData = {
 
 export const featuredProductsArray = Object.values(productsData);
 
-import hero1 from '../public/headphone.jpg';
-import hero2 from '../public/watch.jpg';
-import hero3 from '../public/featured/buds3.jpg';
-import hero4 from '../public/laptop.jpg';
+const hero1 = '/headphone.jpg';
+const hero2 = '/watch.jpg';
+const hero3 = '/featured/buds3.jpg';
+const hero4 = '/laptop.jpg';
 
 export const heroSlides = [
     { id: 1, linkToProductId: "4", image: hero1, title: "Pure Sound", desc: "Precision audio.", btnText: "Explore", theme: "dark" },
