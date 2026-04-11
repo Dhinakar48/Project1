@@ -1,50 +1,140 @@
-import React from "react";
+import React, { useState } from "react";
+import { motion, AnimatePresence } from "framer-motion";
+import { FaUserShield, FaCrown, FaEnvelope, FaSearchDollar, FaArrowRight } from "react-icons/fa";
 
 export default function Customers({ globalSearch, setViewedCustomer }) {
+  const [filter, setFilter] = useState("All");
+
+  const customers = [
+    { name: 'Alexandar Graham', email: 'alex@example.com', order: 'Vertex Laptop 16', spend: '₹2,45,000', id: 'AG', color: 'bg-emerald-100 text-emerald-600 border-emerald-200', tier: 'Platinum' },
+    { name: 'Sophia Loren', email: 'sophia@example.com', order: 'Pulse Watch X', spend: '₹34,000', id: 'SL', color: 'bg-blue-100 text-blue-600 border-blue-200', tier: 'Silver' },
+    { name: 'Marcus Aurelius', email: 'marcus@example.com', order: 'Sonic Buds Pro', spend: '₹18,499', id: 'MA', color: 'bg-amber-100 text-amber-600 border-amber-200', tier: 'Gold' },
+    { name: 'Elena Gilbert', email: 'elena@example.com', order: 'Aura Headphones', spend: '₹35,000', id: 'EG', color: 'bg-purple-100 text-purple-600 border-purple-200', tier: 'Silver' },
+    { name: 'David Wallace', email: 'david@dm.com', order: 'Quantum Keyboard', spend: '₹1,55,000', id: 'DW', color: 'bg-rose-100 text-rose-600 border-rose-200', tier: 'Platinum' },
+    { name: 'Michael Scott', email: 'michael@dunder.com', order: 'Plasma TV 65"', spend: '₹85,000', id: 'MS', color: 'bg-stone-100 text-stone-600 border-stone-200', tier: 'Gold' },
+  ];
+
+  const filteredCustomers = customers
+    .filter(c => filter === "All" ? true : c.tier === filter)
+    .filter(c => 
+      c.name.toLowerCase().includes(globalSearch.toLowerCase()) || 
+      c.email.toLowerCase().includes(globalSearch.toLowerCase())
+    );
+
+  const getTierIcon = (tier) => {
+    switch(tier) {
+      case 'Platinum': return <FaCrown className="text-amber-500" />;
+      case 'Gold': return <FaSearchDollar className="text-yellow-600" />;
+      default: return <FaUserShield className="text-stone-400" />;
+    }
+  };
+
   return (
-    <div className="space-y-8 animate-in slide-in-from-bottom duration-700">
-      <div className="space-y-2">
-        <h1 className="text-4xl font-black text-stone-900 italic uppercase">customer details</h1>
+    <div className="space-y-8 animate-in fade-in zoom-in-95 duration-1000">
+      {/* HEADER SECTION */}
+      <div className="flex flex-col lg:flex-row lg:items-end justify-between gap-6">
+        <div className="space-y-2">
+          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-500/10 text-emerald-600">
+             <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+             <span className="text-[9px] font-semibold">Client Ecosystem</span>
+          </div>
+          <h1 className="text-4xl font-semibold text-stone-900">
+            Customer Details
+          </h1>
+        </div>
+
+        {/* TIERS FILTER */}
+        <div className="flex flex-wrap items-center gap-2">
+           {['All', 'Platinum', 'Gold', 'Silver'].map(t => (
+              <button 
+                key={t}
+                onClick={() => setFilter(t)}
+                className={`px-4 py-2 rounded-xl text-[10px] font-semibold transition-all ${filter === t ? 'bg-stone-900 text-amber-500 shadow-xl' : 'bg-white text-stone-400 border border-stone-100 hover:border-stone-300 shadow-sm'}`}
+              >
+                {t}
+              </button>
+           ))}
+        </div>
       </div>
 
-      <div className="bg-white rounded-[2.5rem] border border-stone-100 shadow-2xl shadow-stone-200/40 overflow-hidden">
-        <table className="w-full text-left">
-          <thead>
-            <tr className="border-b border-stone-50">
-              <th className="px-8 py-8 text-[10px] font-black text-stone-900 uppercase tracking-widest">Customer Identity</th>
-              <th className="px-8 py-8 text-[10px] font-black text-stone-900 uppercase tracking-widest">Last Order</th>
-              <th className="px-8 py-8 text-[10px] font-black text-stone-900 uppercase tracking-widest">Total Spend</th>
-              <th className="px-8 py-8 text-right text-[10px] font-black text-stone-900 uppercase tracking-widest">Profile</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-stone-50">
-            {[
-              { name: 'Alexandar Graham', email: 'alex@example.com', order: 'Vertex Laptop', spend: '₹2,45,000', id: 'AG', color: 'bg-emerald-100 text-emerald-600' },
-              { name: 'Sophia Loren', email: 'sophia@example.com', order: 'Pulse Watch', spend: '₹34,000', id: 'SL', color: 'bg-blue-100 text-blue-600' },
-              { name: 'Marcus Aurelius', email: 'marcus@example.com', order: 'Sonic Buds', spend: '₹18,000', id: 'MA', color: 'bg-amber-100 text-amber-600' },
-              { name: 'Elena Gilbert', email: 'elena@example.com', order: 'Bose QC Ultra', spend: '₹35,000', id: 'EG', color: 'bg-purple-100 text-purple-600' },
-            ]
-              .filter(c => c.name.toLowerCase().includes(globalSearch.toLowerCase()) || c.email.toLowerCase().includes(globalSearch.toLowerCase()))
-              .map((customer, i) => (
-              <tr key={i} className="group hover:bg-stone-50/50 transition-colors">
-                <td className="px-8 py-6">
-                  <div className="flex items-center gap-4">
-                    <div className={`w-10 h-10 rounded-xl flex items-center justify-center font-black text-xs ${customer.color}`}>{customer.id}</div>
-                    <div>
-                      <span className="font-black text-stone-900 text-sm block">{customer.name}</span>
-                      <span className="text-[10px] font-bold text-stone-400">{customer.email}</span>
-                    </div>
-                  </div>
-                </td>
-                <td className="px-8 py-6 font-bold text-stone-600 text-sm">{customer.order}</td>
-                <td className="px-8 py-6 font-black text-stone-900 text-sm">{customer.spend}</td>
-                <td className="px-8 py-6 text-right">
-                  <button onClick={() => setViewedCustomer(customer)} className="text-[10px] font-black text-amber-600 uppercase tracking-widest hover:underline">View Transactions</button>
-                </td>
+      {/* CUSTOMER GRID / TABLE */}
+      <div className="bg-white rounded-[2.5rem] border border-stone-100 shadow-2xl shadow-stone-200/40 overflow-hidden relative" style={{ minHeight: '400px' }}>
+        <div className="absolute top-0 right-0 w-[400px] h-[400px] bg-emerald-500/5 rounded-full blur-[100px] -mr-48 -mt-48 pointer-events-none" />
+        
+        <div className="overflow-x-auto relative z-10 w-full">
+          <table className="w-full text-left min-w-[800px]">
+            <thead>
+              <tr className="border-b border-stone-100 bg-stone-50/50 backdrop-blur-md">
+                <th className="px-8 py-6 text-[9px] font-semibold text-stone-400">Client Identity</th>
+                <th className="px-8 py-6 text-[9px] font-semibold text-stone-400">Status Tier</th>
+                <th className="px-8 py-6 text-[9px] font-semibold text-stone-400">Recent Acquisition</th>
+                <th className="px-8 py-6 text-[9px] font-semibold text-stone-400">Lifetime Value</th>
+                <th className="px-8 py-6 text-right text-[9px] font-semibold text-stone-400">Profile</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody className="divide-y divide-stone-50">
+              <AnimatePresence>
+                {filteredCustomers.map((customer, i) => (
+                  <motion.tr 
+                    key={customer.name}
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, scale: 0.95 }}
+                    transition={{ delay: i * 0.05 }}
+                    className="group hover:bg-stone-50/50 transition-colors cursor-default"
+                  >
+                    <td className="px-8 py-6">
+                      <div className="flex items-center gap-4">
+                        <div className={`w-12 h-12 rounded-[1rem] flex items-center justify-center font-semibold text-sm border shadow-sm ${customer.color}`}>
+                          {customer.id}
+                        </div>
+                        <div>
+                          <span className="font-semibold text-stone-900 text-sm tracking-tight block">{customer.name}</span>
+                          <span className="text-[10px] font-bold text-stone-400 flex items-center gap-1 mt-0.5"><FaEnvelope size={10}/> {customer.email}</span>
+                        </div>
+                      </div>
+                    </td>
+                    <td className="px-8 py-6">
+                       <div className="flex items-center gap-2">
+                          <div className="w-8 h-8 rounded-full bg-white border border-stone-200 shadow-sm flex items-center justify-center">
+                             {getTierIcon(customer.tier)}
+                          </div>
+                          <span className="font-bold text-stone-700 text-xs">{customer.tier}</span>
+                       </div>
+                    </td>
+                    <td className="px-8 py-6">
+                       <span className="font-bold text-stone-600 text-sm tracking-tight block">{customer.order}</span>
+                       <span className="text-[9px] font-semibold text-stone-400 mt-1 block">Latest Order</span>
+                    </td>
+                    <td className="px-8 py-6">
+                      <span className="font-semibold text-stone-900 text-[15px]">{customer.spend}</span>
+                    </td>
+                    <td className="px-8 py-6 text-right">
+                      <button 
+                        onClick={() => setViewedCustomer(customer)} 
+                        className="inline-flex items-center justify-center gap-2 px-5 py-2.5 bg-stone-900 text-white rounded-xl text-[9px] font-semibold hover:bg-amber-500 hover:text-stone-900 hover:shadow-lg hover:shadow-amber-500/30 transition-all group/btn"
+                      >
+                        Client Details
+                        <FaArrowRight size={10} className="group-hover/btn:translate-x-1 transition-transform" />
+                      </button>
+                    </td>
+                  </motion.tr>
+                ))}
+              </AnimatePresence>
+              {filteredCustomers.length === 0 && (
+                 <tr>
+                   <td colSpan="5" className="px-8 py-24 text-center">
+                     <div className="w-16 h-16 bg-stone-100 rounded-full flex items-center justify-center mx-auto mb-4 text-stone-300">
+                        <FaUserShield size={24} />
+                     </div>
+                     <h3 className="font-semibold text-stone-900 text-sm mb-1">No Clients Found</h3>
+                     <p className="text-[10px] font-bold text-stone-400">Try adjusting your search criteria.</p>
+                   </td>
+                 </tr>
+               )}
+            </tbody>
+          </table>
+        </div>
       </div>
     </div>
   );

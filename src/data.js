@@ -19,16 +19,16 @@ const mic1 = '/audios/microphone1.jpg';
 const mic2 = '/audios/microphone2.png';
 const mic3 = '/audios/microphone3.jpg';
 const mic4 = '/audios/microphone4.png';
-const spk1 = '/audios/speaker1.jpg';
-const spk2 = '/audios/speaker2.jpg';
+const spk1 = '/audios/speaker1.avif';
+const spk2 = '/audios/speaker2.avif';
 const spk3 = '/audios/speaker3.jpg';
-const spk4 = '/audios/speaker4.jpg';
+const spk4 = '/audios/speaker4.avif';
 const hdp1 = '/audios/headphone1.jpg';
 const hdp2 = '/audios/headphone2.jpg';
 const hdp3 = '/audios/headphone3.avif';
 const hdp4 = '/audios/headphone4.png';
-const bd1 = '/audios/buds1.jpg';
-const bd2 = '/audios/buds2.jpg';
+const bd1 = '/audios/buds1.webp';
+const bd2 = '/audios/buds2.webp';
 const bd3 = '/audios/buds3.jpg';
 const bd4 = '/audios/buds4.jpg';
 
@@ -295,7 +295,7 @@ export const productsData = {
         desc: "The original studio-quality earbuds. Unmatched clarity and comfortable fit for all-day listening.",
         variants: [
             { id: "v21_1", colorBg: "bg-violet-200", ringColor: "ring-stone-200", img: bd1, price: "₹14,999", colorName: "Pure White" },
-            { id: "v21_2", colorBg: "bg-green-900", ringColor: "ring-stone-700", img: bd2, price: "₹15,499", colorName: "Space Black" }
+            { id: "v21_2", colorBg: "bg-green-600", ringColor: "ring-stone-700", img: bd2, price: "₹15,499", colorName: "Space Black" }
         ]
     },
     "22": {

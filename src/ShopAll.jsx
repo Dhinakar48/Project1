@@ -6,7 +6,7 @@ export default function ShopAll() {
     const navigate = useNavigate();
 
     return (
-        <div className="min-h-screen bg-stone-50 pt-32 pb-24 px-6 md:px-16 font-sans">
+        <div className="min-h-screen bg-stone-50 pt-12 pb-24 px-6 md:px-16 font-sans">
             <div className="max-w-7xl mx-auto text-stone-900">
 
                 <motion.div
@@ -15,11 +15,11 @@ export default function ShopAll() {
                     transition={{ duration: 0.8 }}
                     className="mb-20 text-center"
                 >
-                    <h1 className="text-4xl md:text-6xl font-black tracking-tighter uppercase italic leading-none mb-6">
+                    <h1 className="text-3xl md:text-5xl font-black tracking-tighter uppercase italic leading-none mb-6">
                         The Master <br />
                         <span className="text-amber-600">Catalog</span>
                     </h1>
-                    <p className="text-stone-500 max-w-xl mx-auto text-lg font-medium">
+                    <p className="text-stone-500 max-w-xl mx-auto text-md font-medium">
                         Explore every masterpiece in our collection. From precision audio to high-performance computing.
                     </p>
                 </motion.div>

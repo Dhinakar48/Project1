@@ -42,9 +42,6 @@ function App () {
 
 
 
-
-
-
       {!isAuthPage && <Footer />}
     </div>
   )

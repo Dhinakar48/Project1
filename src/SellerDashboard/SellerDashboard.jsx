@@ -27,7 +27,13 @@ const stats = [
 ];
 
 export default function SellerDashboard() {
-  const [activeTab, setActiveTab] = useState('Overview');
+  const [activeTab, setActiveTab] = useState(() => {
+    return localStorage.getItem('sellerActiveTab') || 'Overview';
+  });
+
+  useEffect(() => {
+    localStorage.setItem('sellerActiveTab', activeTab);
+  }, [activeTab]);
   const [selectedCategory, setSelectedCategory] = useState('All');
   const [timeRange, setTimeRange] = useState('Today');
   const [globalSearch, setGlobalSearch] = useState("");
@@ -58,7 +64,7 @@ export default function SellerDashboard() {
           <div className="w-8 h-8 bg-amber-500 rounded-lg flex items-center justify-center text-stone-900">
             <FaBox size={16} />
           </div>
-          <span className="text-lg font-black tracking-tighter uppercase italic text-amber-500">ElectroSeller</span>
+          <span className="text-lg font-semibold text-amber-500">ElectroSeller</span>
         </div>
 
         <nav className="flex-1 space-y-2">
@@ -93,7 +99,7 @@ export default function SellerDashboard() {
              <FaArrowRightFromBracket size={18} className="text-stone-600 group-hover:text-red-500 transition-colors" />
              Logout
            </button>
-           <p className="text-[10px] font-black text-stone-700 uppercase tracking-[0.3em] text-center italic opacity-30 hover:opacity-100 transition-opacity">Neural Terminal v1.0</p>
+           <p className="text-[10px] font-semibold text-stone-700 text-center opacity-30 hover:opacity-100 transition-opacity">Neural Terminal v1.0</p>
         </div>
       </aside>
 
@@ -108,7 +114,7 @@ export default function SellerDashboard() {
           </div>
 
           <div className="w-1/3">
-             <h2 className="text-xl font-black text-stone-900 tracking-tight hidden sm:block uppercase italic">
+             <h2 className="text-xl font-semibold text-stone-900 tracking-tight hidden sm:block">
                Seller <span className="text-amber-600">Dashboard</span>
              </h2>
           </div>
@@ -128,10 +134,10 @@ export default function SellerDashboard() {
               {showNotifications && (
                 <div className="absolute right-0 mt-4 w-80 bg-white rounded-[2rem] shadow-2xl border border-stone-100 overflow-hidden z-[60] animate-in fade-in slide-in-from-top-4 duration-300">
                   <div className="p-6 border-b border-stone-100 flex items-center justify-between">
-                    <h4 className="font-black text-stone-900 uppercase tracking-widest text-[10px]">Real-time Alerts</h4>
-                    <span className="text-[8px] font-black text-amber-600 uppercase">3 New</span>
+                    <h4 className="font-semibold text-stone-900 text-[10px]">Real-time Alerts</h4>
+                    <span className="text-[10px] font-semibold text-amber-600">3 New</span>
                   </div>
-                  <div className="divide-y divide-stone-50 max-h-[350px] overflow-y-auto">
+                  <div className="divide-y divide-stone-200 max-h-[350px] overflow-y-auto">
                     {[
                       { title: 'New Order Received', desc: 'Order #ORD-882 awaits processing', time: '2m ago', icon: '📦' },
                       { title: 'Inventory Alert', desc: 'Sonic Buds Pro stock is critical (2 units)', time: '14m ago', icon: '⚠️' },
@@ -141,15 +147,15 @@ export default function SellerDashboard() {
                         <div className="flex gap-4">
                           <div className="w-10 h-10 bg-stone-100 rounded-xl flex items-center justify-center text-lg">{n.icon}</div>
                           <div className="flex-1">
-                            <h5 className="font-black text-stone-900 text-[11px] mb-0.5">{n.title}</h5>
+                            <h5 className="font-semibold text-stone-900 text-[11px] mb-0.5">{n.title}</h5>
                             <p className="text-[10px] font-bold text-stone-400 leading-tight">{n.desc}</p>
-                            <span className="text-[8px] font-black text-stone-300 uppercase mt-2 block">{n.time}</span>
+                            <span className="text-[8px] font-semibold text-stone-300 mt-2 block">{n.time}</span>
                           </div>
                         </div>
                       </div>
                     ))}
                   </div>
-                  <button onClick={() => setShowNotifications(false)} className="w-full p-4 text-[9px] font-black text-stone-400 uppercase hover:bg-stone-50 transition-colors border-t border-stone-50">Close Feed</button>
+                  <button onClick={() => setShowNotifications(false)} className="w-full p-4 text-[9px] font-semibold text-stone-400 hover:bg-stone-50 transition-colors border-t border-stone-50">Close Feed</button>
                 </div>
               )}
             </div>
@@ -157,7 +163,7 @@ export default function SellerDashboard() {
             <div className="relative">
               <div 
                 onClick={() => setShowProfileMenu(!showProfileMenu)}
-                className="w-10 h-10 bg-amber-100 rounded-[1rem] flex items-center justify-center text-amber-700 font-black text-xs border border-amber-200 cursor-pointer hover:bg-white hover:border-amber-400 transition-all group active:scale-95"
+                className="w-10 h-10 bg-amber-100 rounded-[1rem] flex items-center justify-center text-amber-700 font-semibold text-xs border border-amber-200 cursor-pointer hover:bg-white hover:border-amber-400 transition-all group active:scale-95"
               >
                 D
               </div>
@@ -165,20 +171,20 @@ export default function SellerDashboard() {
               {showProfileMenu && (
                 <div className="absolute right-0 mt-4 w-56 bg-white rounded-[1.5rem] shadow-2xl border border-stone-100 overflow-hidden z-[60] animate-in fade-in slide-in-from-top-4 duration-300">
                   <div className="p-5 border-b border-stone-100 bg-stone-50/50">
-                    <span className="text-[10px] font-black text-stone-400 uppercase tracking-widest block mb-1">Signed in as</span>
-                    <span className="text-xs font-black text-stone-900">Dhinakar</span>
+                    <span className="text-[10px] font-semibold text-stone-400 block mb-1">Signed in as</span>
+                    <span className="text-xs font-semibold text-stone-900">Dhinakar</span>
                   </div>
                   <div className="p-2">
                     <button 
                       onClick={() => { setActiveTab('Settings'); setShowProfileMenu(false); }}
-                      className="w-full flex items-center gap-3 p-3 rounded-xl hover:bg-stone-50 text-[10px] font-black text-stone-500 hover:text-amber-600 transition-all uppercase tracking-widest group"
+                      className="w-full flex items-center gap-3 p-3 rounded-xl hover:bg-stone-50 text-[10px] font-semibold text-stone-500 hover:text-amber-600 transition-all group"
                     >
                       <FaGear size={14} className="text-stone-300 group-hover:text-amber-600 transition-colors" />
                       Account Settings
                     </button>
                     <button 
                       onClick={() => { setActiveTab('Overview'); setShowProfileMenu(false); }}
-                      className="w-full flex items-center gap-3 p-3 rounded-xl hover:bg-stone-50 text-[10px] font-black text-stone-500 hover:text-amber-600 transition-all uppercase tracking-widest group"
+                      className="w-full flex items-center gap-3 p-3 rounded-xl hover:bg-stone-50 text-[10px] font-semibold text-stone-500 hover:text-amber-600 transition-all group"
                     >
                       <FaUser size={14} className="text-stone-300 group-hover:text-amber-600 transition-colors" />
                       Public Profile
@@ -186,7 +192,7 @@ export default function SellerDashboard() {
                     <div className="my-2 border-t border-stone-50" />
                     <button 
                       onClick={() => window.location.href = '/seller-login'}
-                      className="w-full flex items-center gap-3 p-3 rounded-xl hover:bg-red-50 text-[10px] font-black text-red-400 hover:text-red-500 transition-all uppercase tracking-widest group"
+                      className="w-full flex items-center gap-3 p-3 rounded-xl hover:bg-red-50 text-[10px] font-semibold text-red-400 hover:text-red-500 transition-all group"
                     >
                       <FaArrowRightFromBracket size={14} className="text-red-300 group-hover:text-red-500 transition-colors" />
                       Logout
@@ -214,31 +220,31 @@ export default function SellerDashboard() {
                 <div className="absolute top-0 right-0 w-64 h-64 bg-amber-500/10 rounded-full blur-3xl -mr-32 -mt-32 pointer-events-none" />
                 <div className="flex justify-between items-center mb-10 relative z-10">
                   <div className="flex items-center gap-5">
-                    <div className={`w-14 h-14 rounded-2xl flex items-center justify-center font-black text-xl shadow-lg border border-white/50 ${viewedCustomer.color}`}>
+                    <div className={`w-14 h-14 rounded-2xl flex items-center justify-center font-semibold text-xl shadow-lg border border-white/50 ${viewedCustomer.color}`}>
                       {viewedCustomer.id}
                     </div>
                     <div>
-                      <h3 className="font-black text-3xl text-stone-900 tracking-tighter uppercase italic">{viewedCustomer.name}</h3>
-                      <p className="text-[10px] font-black text-stone-400 uppercase tracking-[0.3em] ml-1">Lifetime Value: {viewedCustomer.spend}</p>
+                      <h3 className="font-semibold text-3xl text-stone-900">{viewedCustomer.name}</h3>
+                      <p className="text-[10px] font-semibold text-stone-400 ml-1">Lifetime Value: {viewedCustomer.spend}</p>
                     </div>
                   </div>
                   <button onClick={() => setViewedCustomer(null)} className="w-12 h-12 bg-stone-50 rounded-2xl flex items-center justify-center border border-stone-100 text-stone-400 hover:text-stone-900 hover:shadow-xl hover:bg-white transition-all"><FaTimes size={16} /></button>
                 </div>
 
                 <div className="space-y-6 relative z-10">
-                  <h4 className="text-[10px] font-black text-amber-600 uppercase tracking-widest block border-b border-stone-100 pb-3">Dossier / Financial Footprint</h4>
+                  <h4 className="text-[10px] font-semibold text-amber-600 block border-b border-stone-100 pb-3">Dossier / Financial Footprint</h4>
                   <div className="bg-stone-50 rounded-[2rem] border border-stone-100 p-2 overflow-hidden shadow-inner">
                     <div className="flex items-center justify-between p-6 hover:bg-white transition-all rounded-3xl cursor-default group">
                       <div className="flex items-center gap-5">
                         <div className="w-12 h-12 bg-stone-900 rounded-[1.25rem] flex items-center justify-center text-amber-500 shadow-md transform group-hover:scale-105 transition-transform"><FaBox size={16} /></div>
                         <div>
-                          <span className="font-black text-stone-900 block text-lg tracking-tight italic">{viewedCustomer.order}</span>
-                          <span className="text-[10px] font-black text-stone-400 uppercase tracking-widest">ORD-{viewedCustomer.id}-A101</span>
+                          <span className="font-semibold text-stone-900 block text-lg tracking-tight">{viewedCustomer.order}</span>
+                          <span className="text-[10px] font-semibold text-stone-400">ORD-{viewedCustomer.id}-A101</span>
                         </div>
                       </div>
                       <div className="text-right">
-                        <span className="font-black text-stone-900 block text-lg tracking-tighter italic">{viewedCustomer.spend}</span>
-                        <span className="text-[9px] font-black text-green-500 uppercase tracking-widest">Completed</span>
+                        <span className="font-semibold text-stone-900 block text-lg">{viewedCustomer.spend}</span>
+                        <span className="text-[9px] font-semibold text-green-500">Completed</span>
                       </div>
                     </div>
                   </div>
@@ -267,7 +273,7 @@ export default function SellerDashboard() {
 
           {activeTab === 'Customers' && <Customers globalSearch={globalSearch} setViewedCustomer={setViewedCustomer} />}
 
-          {activeTab === 'Analytics' && <Analytics timeRange={timeRange} setTimeRange={setTimeRange} />}
+          {activeTab === 'Analytics' && <Analytics timeRange={timeRange} setTimeRange={setTimeRange} setActiveTab={setActiveTab} />}
 
           {activeTab === 'Reviews' && <Reviews />}
 

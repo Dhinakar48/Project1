@@ -2,7 +2,7 @@ import React, { useState } from "react";
 import { motion } from "framer-motion";
 import { 
   FaArrowRight, FaLock, FaEnvelope, FaShopify, 
-  FaArrowLeftLong, FaUser, FaStore, FaBriefcase 
+  FaArrowLeftLong, FaUser, FaStore, FaBriefcase, FaPhone
 } from "react-icons/fa6";
 import { Link, useNavigate } from "react-router-dom";
 
@@ -12,7 +12,7 @@ export default function SellerRegister() {
     ownerName: "",
     email: "",
     password: "",
-    businessType: "Electronics"
+    mobile: ""
   });
   const navigate = useNavigate();
 
@@ -180,43 +180,41 @@ export default function SellerRegister() {
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                 <div className="space-y-1.5">
-                   <label className="text-[9px] font-black text-stone-400 uppercase tracking-widest ml-4">Niche Sector</label>
-                   <div className="relative group">
-                     <div className="absolute left-5 top-1/2 -translate-y-1/2 text-stone-300 group-focus-within:text-amber-500 transition-all pointer-events-none">
-                       <FaBriefcase size={14} />
-                     </div>
-                     <select
-                       name="businessType"
-                       value={formData.businessType}
-                       onChange={handleChange}
-                       className="w-full bg-stone-50/50 border border-stone-100 rounded-2xl py-3.5 pl-12 pr-6 outline-none focus:border-amber-600/30 focus:bg-white transition-all text-stone-900 text-xs font-semibold appearance-none"
-                     >
-                       <option value="Electronics">Electronics</option>
-                       <option value="Accessories">Accessories</option>
-                       <option value="Computing">Computing</option>
-                       <option value="Wearables">Wearables</option>
-                     </select>
-                   </div>
-                 </div>
+                <div className="space-y-1.5">
+                  <label className="text-[9px] font-black text-stone-400 uppercase tracking-widest ml-4">Mobile Number</label>
+                  <div className="relative group">
+                    <div className="absolute left-5 top-1/2 -translate-y-1/2 text-stone-300 group-focus-within:text-amber-500 transition-all">
+                      <FaPhone size={14} />
+                    </div>
+                    <input
+                      type="tel"
+                      name="mobile"
+                      value={formData.mobile}
+                      onChange={handleChange}
+                      className="w-full bg-stone-50/50 border border-stone-100 rounded-2xl py-3.5 pl-12 pr-6 outline-none focus:border-amber-600/30 focus:bg-white transition-all text-stone-900 text-xs font-semibold"
+                      placeholder="+91"
+                      required
+                    />
+                  </div>
+                </div>
 
-                 <div className="space-y-1.5">
-                   <label className="text-[9px] font-black text-stone-400 uppercase tracking-widest ml-4">Secure Password</label>
-                   <div className="relative group">
-                     <div className="absolute left-5 top-1/2 -translate-y-1/2 text-stone-300 group-focus-within:text-amber-500 transition-all">
-                       <FaLock size={14} />
-                     </div>
-                     <input
-                       type="password"
-                       name="password"
-                       value={formData.password}
-                       onChange={handleChange}
-                       className="w-full bg-stone-50/50 border border-stone-100 rounded-2xl py-3.5 pl-12 pr-6 outline-none focus:border-amber-600/30 focus:bg-white transition-all text-stone-900 text-xs font-semibold"
-                       placeholder="••••••••"
-                       required
-                     />
-                   </div>
-                 </div>
+                <div className="space-y-1.5">
+                  <label className="text-[9px] font-black text-stone-400 uppercase tracking-widest ml-4">Secure Password</label>
+                  <div className="relative group">
+                    <div className="absolute left-5 top-1/2 -translate-y-1/2 text-stone-300 group-focus-within:text-amber-500 transition-all">
+                      <FaLock size={14} />
+                    </div>
+                    <input
+                      type="password"
+                      name="password"
+                      value={formData.password}
+                      onChange={handleChange}
+                      className="w-full bg-stone-50/50 border border-stone-100 rounded-2xl py-3.5 pl-12 pr-6 outline-none focus:border-amber-600/30 focus:bg-white transition-all text-stone-900 text-xs font-semibold"
+                      placeholder="••••••••"
+                      required
+                    />
+                  </div>
+                </div>
               </div>
 
               <div className="pt-4">
@@ -231,10 +229,10 @@ export default function SellerRegister() {
             </form>
 
             <div className="mt-8 pt-6 border-t border-stone-50 text-center">
-              <p className="text-stone-400 text-[10px] font-bold tracking-wide uppercase">
+              <p className="text-stone-400 text-[12px] font-bold tracking-wide">
                 Active Partnership?{" "}
                 <Link to="/seller-login" className="text-stone-900 hover:text-amber-600 transition-colors underline underline-offset-4 decoration-stone-200">
-                  Authenticate Terminal
+                  Sign In 
                 </Link>
               </p>
             </div>
