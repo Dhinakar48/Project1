@@ -1,24 +1,130 @@
-import React from "react";
-import { motion } from "framer-motion";
+import React, { useState } from "react";
+import { motion, AnimatePresence } from "framer-motion";
 import { FaDownload, FaBox, FaPlus, FaPen } from "react-icons/fa6";
+import { FaTimes } from "react-icons/fa";
 
 export default function Products({ 
   inventoryProducts, 
+  setInventoryProducts,
   selectedCategory, 
   setSelectedCategory, 
   globalSearch, 
-  handleEditClick, 
-  downloadReceipt,
-  setEditingIndex,
-  setNewProduct,
-  setShowAddProduct
+  downloadReceipt
 }) {
+  const [showAddProduct, setShowAddProduct] = useState(false);
+  const [editingIndex, setEditingIndex] = useState(null);
+  const [newProduct, setNewProduct] = useState({ name: "", price: "", category: "", stock: "", img: "" });
+
+  const handleEditClick = (product, idx) => {
+     setEditingIndex(idx);
+     setNewProduct(product);
+     setShowAddProduct(true);
+  };
+
+  const handleAddProduct = (e) => {
+    e.preventDefault();
+    if (editingIndex !== null) {
+      const updated = [...inventoryProducts];
+      updated[editingIndex] = newProduct;
+      setInventoryProducts(updated);
+      setEditingIndex(null);
+    } else {
+      setInventoryProducts([...inventoryProducts, { ...newProduct, id: Date.now() }]);
+    }
+    
+    setShowAddProduct(false);
+    setNewProduct({ name: "", price: "", category: "", stock: "", img: "" });
+  };
+
+  const handleImageUpload = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setNewProduct({ ...newProduct, img: reader.result });
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
   return (
     <div className="space-y-8 animate-in fade-in duration-700">
+      <AnimatePresence>
+        {showAddProduct && (
+          <motion.div
+            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-stone-900/40 backdrop-blur-sm z-[100] flex items-center justify-center p-4"
+          >
+            <motion.div
+              initial={{ scale: 0.95, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.95, opacity: 0 }}
+              className="bg-white rounded-3xl w-full max-w-lg p-8 shadow-2xl"
+            >
+              <div className="flex justify-between items-center mb-6">
+                <h3 className="font-black text-lg">{editingIndex !== null ? 'Edit Product' : 'Add New Product'}</h3>
+                <button onClick={() => { setShowAddProduct(false); setEditingIndex(null); setNewProduct({ name: "", price: "", category: "", stock: "", img: "" }); }} className="text-stone-400 hover:text-stone-900"><FaTimes /></button>
+              </div>
+              <form className="space-y-4" onSubmit={handleAddProduct}>
+                <input
+                  type="text"
+                  placeholder="Product Name"
+                  className="w-full p-3 bg-stone-50 rounded-xl text-sm border-2 border-transparent focus:border-amber-500/20 outline-none transition-all"
+                  value={newProduct.name}
+                  onChange={(e) => setNewProduct({ ...newProduct, name: e.target.value })}
+                  required
+                />
+                <input
+                  type="text"
+                  placeholder="Category (e.g. Audio, Smart Home)"
+                  className="w-full p-3 bg-stone-50 rounded-xl text-sm border-2 border-transparent focus:border-amber-500/20 outline-none transition-all"
+                  value={newProduct.category}
+                  onChange={(e) => setNewProduct({ ...newProduct, category: e.target.value })}
+                  required
+                />
+                <input
+                  type="text"
+                  placeholder="Price (e.g. 24999)"
+                  className="w-full p-3 bg-stone-50 rounded-xl text-sm border-2 border-transparent focus:border-amber-500/20 outline-none transition-all"
+                  value={newProduct.price}
+                  onChange={(e) => setNewProduct({ ...newProduct, price: e.target.value })}
+                  required
+                />
+                <input
+                  type="number"
+                  placeholder="Stock Quantity"
+                  className="w-full p-3 bg-stone-50 rounded-xl text-sm border-2 border-transparent focus:border-amber-500/20 outline-none transition-all"
+                  value={newProduct.stock}
+                  onChange={(e) => setNewProduct({ ...newProduct, stock: e.target.value })}
+                  required
+                />
+
+                <div className="space-y-2">
+                  <label className="text-[10px] font-black uppercase tracking-widest text-stone-400 ml-1">Upload Product Image</label>
+                  <div className="flex items-center gap-4">
+                    <label className="flex-1 cursor-pointer bg-stone-50 border-2 border-dashed border-stone-200 rounded-xl p-4 hover:border-amber-500 transition-colors flex flex-col items-center justify-center gap-2">
+                      <FaPlus className="text-stone-300" />
+                      <span className="text-[10px] font-bold text-stone-400">SELECT IMAGE</span>
+                      <input type="file" className="hidden" accept="image/*" onChange={handleImageUpload} />
+                    </label>
+                    {newProduct.img && (
+                      <div className="w-20 h-20 rounded-xl overflow-hidden border border-stone-100">
+                        <img src={newProduct.img} className="w-full h-full object-cover" alt="Preview" />
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                <button type="submit" className="w-full bg-stone-900 text-amber-500 py-4 rounded-xl font-black uppercase text-xs tracking-[0.2em] hover:bg-stone-800 transition-all shadow-xl shadow-stone-900/20 mt-4">
+                  {editingIndex !== null ? 'Update Inventory' : 'Save to Inventory'}
+                </button>
+              </form>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
       <div className="flex flex-col lg:flex-row lg:items-end justify-between gap-6 overflow-hidden">
         <div className="space-y-2">
           <h1 className="text-4xl font-black text-stone-900 tracking-tighter uppercase italic">
-            Products <span className="text-amber-600">DETAILS</span>
+            Products details
           </h1>
         </div>
 
@@ -37,7 +143,7 @@ export default function Products({
           ))}
           <div className="w-px h-6 bg-stone-200/60 mx-1 hidden sm:block" />
           <button 
-             onClick={() => { setEditingIndex(null); setNewProduct({ name: "", price: "", category: "", type: "", stock: "", img: "" }); setShowAddProduct(true); }}
+             onClick={() => { setEditingIndex(null); setNewProduct({ name: "", price: "", category: "", stock: "", img: "" }); setShowAddProduct(true); }}
              className="flex items-center gap-2 px-6 py-2.5 bg-stone-900 text-amber-500 hover:bg-stone-800 rounded-xl font-black text-[10px] uppercase tracking-widest transition-all shadow-xl shadow-stone-900/10 active:scale-95 ml-auto sm:ml-0"
           >
             <FaPlus size={10} /> Add Product
@@ -61,15 +167,18 @@ export default function Products({
               </tr>
             </thead>
             <tbody className="divide-y divide-stone-50">
-              {inventoryProducts
+              {[...inventoryProducts]
+                .reverse()
                 .filter(p => selectedCategory === 'All' || p.category === selectedCategory)
                 .filter(p => p.name.toLowerCase().includes(globalSearch.toLowerCase()) || p.category.toLowerCase().includes(globalSearch.toLowerCase()))
-                .map((p, i) => (
+                .map((p, i) => {
+                  const originalIndex = inventoryProducts.findIndex(item => item.name === p.name);
+                  return (
                   <motion.tr
                     initial={{ opacity: 0, x: -10 }}
                     animate={{ opacity: 1, x: 0 }}
                     transition={{ delay: i * 0.05 }}
-                    key={i}
+                    key={originalIndex}
                     className="group hover:bg-stone-50/50 transition-all cursor-default"
                   >
                     <td className="px-8 py-6">
@@ -82,7 +191,7 @@ export default function Products({
                              <span className="font-black text-stone-900 text-sm block tracking-tight">{p.name}</span>
                              {p.type && <span className="text-[8px] font-black bg-stone-100 text-stone-500 px-1.5 py-0.5 rounded-md uppercase">{p.type}</span>}
                           </div>
-                          <span className="text-[9px] font-black text-stone-300 uppercase tracking-widest">UID: #{(8192 + i).toString(16)}</span>
+                          <span className="text-[9px] font-black text-stone-300 uppercase tracking-widest">UID: #{(8192 + originalIndex).toString(16)}</span>
                         </div>
                       </div>
                     </td>
@@ -117,7 +226,7 @@ export default function Products({
                           <FaDownload size={12} className="group-hover/btn:scale-110 transition-transform" />
                         </button>
                         <button 
-                          onClick={() => handleEditClick(p, inventoryProducts.findIndex(item => item.name === p.name))}
+                          onClick={() => handleEditClick(p, originalIndex)}
                           className="p-3 bg-stone-50 text-stone-900 border border-stone-100 rounded-2xl hover:bg-amber-600 hover:text-white transition-all shadow-sm group/edit"
                         >
                           <FaPen size={12} className="group-hover/edit:scale-110 transition-transform" />
@@ -125,7 +234,7 @@ export default function Products({
                       </div>
                     </td>
                   </motion.tr>
-                ))}
+                )})}
             </tbody>
           </table>
         </div>

@@ -7,7 +7,7 @@ export default function Analytics({ timeRange, setTimeRange, setActiveTab }) {
       <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
         <div className="space-y-2">
           <h1 className="text-4xl font-black text-stone-900 tracking-tighter uppercase italic">
-            Neural <span className="text-amber-600">Flow</span>
+            Sales insights
           </h1>
         </div>
 

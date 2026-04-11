@@ -21,7 +21,7 @@ export default function Overview({ setActiveTab, stats }) {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: i * 0.1 }}
-            className="bg-white p-6 rounded-3xl border border-stone-100 shadow-sm hover:shadow-xl transition-all group cursor-pointer transform hover:-translate-y-1"
+            className="bg-white p-6 rounded-3xl border border-stone-100 shadow-sm transition-all group cursor-pointer transform hover:-translate-y-1"
           >
             <div className="flex justify-between items-start mb-4">
               <div className={`p-3 rounded-2xl bg-stone-50 text-stone-900 group-hover:bg-amber-500 group-hover:text-white transition-colors`}>

@@ -4,7 +4,7 @@ const sellerData = {
     { name: "Sonic Buds Pro", category: "Audio", price: "₹18,499", stock: 0, status: "Out of Stock", "img": "/audios/buds1.jpg" },
     { name: "Vertex Laptop 16", category: "Computing", price: "₹1,89,999", stock: 5, status: "Low Stock", "img": "/computing/laptop1.jpg" },
     { name: "Aura Headphones", category: "Audio", price: "₹34,999", stock: 24, status: "In Stock", "img": "/audios/headphone1.jpg" },
-    { name: "MagSafe Pro Dock", category: "Accessories", price: "₹8,499", stock: 45, status: "In Stock", "img": "/features/charger.jpg" }
+    { name: "Volt Power 100", category: "Accessories", price: "₹7,999", stock: 45, status: "In Stock", "img": "/accessories/powerbank1.jpg" }
   ]
 };
 

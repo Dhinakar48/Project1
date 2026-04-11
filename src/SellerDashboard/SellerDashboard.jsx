@@ -31,46 +31,12 @@ export default function SellerDashboard() {
   const [selectedCategory, setSelectedCategory] = useState('All');
   const [timeRange, setTimeRange] = useState('Today');
   const [globalSearch, setGlobalSearch] = useState("");
-  const [showAddProduct, setShowAddProduct] = useState(false);
   const [showNotifications, setShowNotifications] = useState(false);
   const [showProfileMenu, setShowProfileMenu] = useState(false);
-  const [editingIndex, setEditingIndex] = useState(null);
   const [viewedCustomer, setViewedCustomer] = useState(null);
   const [inventoryProducts, setInventoryProducts] = useState(sellerData.inventoryProducts);
 
-  const [newProduct, setNewProduct] = useState({ name: "", price: "", category: "", type: "", stock: "", img: "" });
 
-  const handleEditClick = (product, idx) => {
-     setEditingIndex(idx);
-     setNewProduct(product);
-     setShowAddProduct(true);
-  };
-
-  const handleAddProduct = (e) => {
-    e.preventDefault();
-    if (editingIndex !== null) {
-      const updated = [...inventoryProducts];
-      updated[editingIndex] = newProduct;
-      setInventoryProducts(updated);
-      setEditingIndex(null);
-    } else {
-      setInventoryProducts([{ ...newProduct, id: Date.now() }, ...inventoryProducts]);
-    }
-    
-    setShowAddProduct(false);
-    setNewProduct({ name: "", price: "", category: "", type: "", stock: "", img: "" });
-  };
-
-  const handleImageUpload = (e) => {
-    const file = e.target.files[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setNewProduct({ ...newProduct, img: reader.result });
-      };
-      reader.readAsDataURL(file);
-    }
-  };
 
   const downloadReceipt = (p) => {
     const data = `Product: ${p.name}\nCategory: ${p.category}\nPrice: ${p.price}\nStock: ${p.stock}\nGenerated on: ${new Date().toLocaleString()}`;
@@ -200,7 +166,7 @@ export default function SellerDashboard() {
                 <div className="absolute right-0 mt-4 w-56 bg-white rounded-[1.5rem] shadow-2xl border border-stone-100 overflow-hidden z-[60] animate-in fade-in slide-in-from-top-4 duration-300">
                   <div className="p-5 border-b border-stone-100 bg-stone-50/50">
                     <span className="text-[10px] font-black text-stone-400 uppercase tracking-widest block mb-1">Signed in as</span>
-                    <span className="text-xs font-black text-stone-900">electroshop@store.com</span>
+                    <span className="text-xs font-black text-stone-900">Dhinakar</span>
                   </div>
                   <div className="p-2">
                     <button 
@@ -234,84 +200,7 @@ export default function SellerDashboard() {
 
         {/* Global Modals */}
         <AnimatePresence>
-          {showAddProduct && (
-            <motion.div
-              initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-              className="fixed inset-0 bg-stone-900/40 backdrop-blur-sm z-[100] flex items-center justify-center p-4"
-            >
-              <motion.div
-                initial={{ scale: 0.95, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.95, opacity: 0 }}
-                className="bg-white rounded-3xl w-full max-w-lg p-8 shadow-2xl"
-              >
-                <div className="flex justify-between items-center mb-6">
-                  <h3 className="font-black text-lg">{editingIndex !== null ? 'Edit Product' : 'Add New Product'}</h3>
-                  <button onClick={() => { setShowAddProduct(false); setEditingIndex(null); setNewProduct({ name: "", price: "", category: "", type: "", stock: "", img: "" }); }} className="text-stone-400 hover:text-stone-900"><FaTimes /></button>
-                </div>
-                <form className="space-y-4" onSubmit={handleAddProduct}>
-                  <input
-                    type="text"
-                    placeholder="Product Name"
-                    className="w-full p-3 bg-stone-50 rounded-xl text-sm border-2 border-transparent focus:border-amber-500/20 outline-none transition-all"
-                    value={newProduct.name}
-                    onChange={(e) => setNewProduct({ ...newProduct, name: e.target.value })}
-                    required
-                  />
-                  <input
-                    type="text"
-                    placeholder="Category (e.g. Audio, Smart Home)"
-                    className="w-full p-3 bg-stone-50 rounded-xl text-sm border-2 border-transparent focus:border-amber-500/20 outline-none transition-all"
-                    value={newProduct.category}
-                    onChange={(e) => setNewProduct({ ...newProduct, category: e.target.value })}
-                    required
-                  />
-                  <input
-                    type="text"
-                    placeholder="Product Type (e.g. Flagship, Wireless)"
-                    className="w-full p-3 bg-stone-50 rounded-xl text-sm border-2 border-transparent focus:border-amber-500/20 outline-none transition-all"
-                    value={newProduct.type}
-                    onChange={(e) => setNewProduct({ ...newProduct, type: e.target.value })}
-                    required
-                  />
-                  <input
-                    type="text"
-                    placeholder="Price (e.g. 24999)"
-                    className="w-full p-3 bg-stone-50 rounded-xl text-sm border-2 border-transparent focus:border-amber-500/20 outline-none transition-all"
-                    value={newProduct.price}
-                    onChange={(e) => setNewProduct({ ...newProduct, price: e.target.value })}
-                    required
-                  />
-                  <input
-                    type="number"
-                    placeholder="Stock Quantity"
-                    className="w-full p-3 bg-stone-50 rounded-xl text-sm border-2 border-transparent focus:border-amber-500/20 outline-none transition-all"
-                    value={newProduct.stock}
-                    onChange={(e) => setNewProduct({ ...newProduct, stock: e.target.value })}
-                    required
-                  />
 
-                  <div className="space-y-2">
-                    <label className="text-[10px] font-black uppercase tracking-widest text-stone-400 ml-1">Upload Product Image</label>
-                    <div className="flex items-center gap-4">
-                      <label className="flex-1 cursor-pointer bg-stone-50 border-2 border-dashed border-stone-200 rounded-xl p-4 hover:border-amber-500 transition-colors flex flex-col items-center justify-center gap-2">
-                        <FaPlus className="text-stone-300" />
-                        <span className="text-[10px] font-bold text-stone-400">SELECT IMAGE</span>
-                        <input type="file" className="hidden" accept="image/*" onChange={handleImageUpload} />
-                      </label>
-                      {newProduct.img && (
-                        <div className="w-20 h-20 rounded-xl overflow-hidden border border-stone-100">
-                          <img src={newProduct.img} className="w-full h-full object-cover" alt="Preview" />
-                        </div>
-                      )}
-                    </div>
-                  </div>
-
-                  <button type="submit" className="w-full bg-stone-900 text-amber-500 py-4 rounded-xl font-black uppercase text-xs tracking-[0.2em] hover:bg-stone-800 transition-all shadow-xl shadow-stone-900/20 mt-4">
-                    {editingIndex !== null ? 'Update Inventory' : 'Save to Inventory'}
-                  </button>
-                </form>
-              </motion.div>
-            </motion.div>
-          )}
 
           {viewedCustomer && (
             <motion.div
@@ -366,14 +255,11 @@ export default function SellerDashboard() {
           {activeTab === 'Products' && (
             <Products 
               inventoryProducts={inventoryProducts}
+              setInventoryProducts={setInventoryProducts}
               selectedCategory={selectedCategory}
               setSelectedCategory={setSelectedCategory}
               globalSearch={globalSearch}
-              handleEditClick={handleEditClick}
               downloadReceipt={downloadReceipt}
-              setEditingIndex={setEditingIndex}
-              setNewProduct={setNewProduct}
-              setShowAddProduct={setShowAddProduct}
             />
           )}
 

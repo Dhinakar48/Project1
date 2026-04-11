@@ -4,7 +4,7 @@ export default function Customers({ globalSearch, setViewedCustomer }) {
   return (
     <div className="space-y-8 animate-in slide-in-from-bottom duration-700">
       <div className="space-y-2">
-        <h1 className="text-4xl font-black text-stone-900 italic uppercase">CUSTOMER <span className="text-amber-600">DETAILS</span></h1>
+        <h1 className="text-4xl font-black text-stone-900 italic uppercase">customer details</h1>
       </div>
 
       <div className="bg-white rounded-[2.5rem] border border-stone-100 shadow-2xl shadow-stone-200/40 overflow-hidden">
