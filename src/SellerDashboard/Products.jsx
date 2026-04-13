@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { FaDownload, FaBox, FaPlus, FaPen, FaTrash } from "react-icons/fa6";
 import { FaTimes } from "react-icons/fa";
+import AddProduct from "./AddProduct";
 
 export default function Products({
   inventoryProducts,
@@ -11,40 +12,46 @@ export default function Products({
   globalSearch,
   downloadReceipt
 }) {
-  const [showAddProduct, setShowAddProduct] = useState(false);
+  const [isAddingNewPage, setIsAddingNewPage] = useState(false);
   const [editingIndex, setEditingIndex] = useState(null);
   const [newProduct, setNewProduct] = useState({ name: "", price: "", category: "", stock: "", img: "" });
 
+  if (isAddingNewPage) {
+    return (
+      <AddProduct 
+        initialData={editingIndex !== null ? inventoryProducts[editingIndex] : null}
+        onBack={() => {
+          setIsAddingNewPage(false);
+          setEditingIndex(null);
+        }} 
+        onAddProduct={(newProduct) => {
+          if (editingIndex !== null) {
+            const updated = [...inventoryProducts];
+            updated[editingIndex] = {
+              ...updated[editingIndex],
+              ...newProduct,
+              category: newProduct.type || updated[editingIndex].category,
+              img: newProduct.images && newProduct.images.length > 0 ? newProduct.images[0] : updated[editingIndex].img
+            };
+            setInventoryProducts(updated);
+          } else {
+            setInventoryProducts([...inventoryProducts, {
+              ...newProduct,
+              id: Date.now(),
+              category: newProduct.type,
+              img: newProduct.images && newProduct.images.length > 0 ? newProduct.images[0] : ''
+            }]);
+          }
+          setIsAddingNewPage(false);
+          setEditingIndex(null);
+        }}
+      />
+    );
+  }
+
   const handleEditClick = (product, idx) => {
     setEditingIndex(idx);
-    setNewProduct(product);
-    setShowAddProduct(true);
-  };
-
-  const handleAddProduct = (e) => {
-    e.preventDefault();
-    if (editingIndex !== null) {
-      const updated = [...inventoryProducts];
-      updated[editingIndex] = newProduct;
-      setInventoryProducts(updated);
-      setEditingIndex(null);
-    } else {
-      setInventoryProducts([...inventoryProducts, { ...newProduct, id: Date.now() }]);
-    }
-
-    setShowAddProduct(false);
-    setNewProduct({ name: "", price: "", category: "", stock: "", img: "" });
-  };
-
-  const handleImageUpload = (e) => {
-    const file = e.target.files[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setNewProduct({ ...newProduct, img: reader.result });
-      };
-      reader.readAsDataURL(file);
-    }
+    setIsAddingNewPage(true);
   };
 
   const handleDeleteProduct = (idx) => {
@@ -57,78 +64,6 @@ export default function Products({
 
   return (
     <div className="space-y-8 animate-in fade-in duration-700">
-      <AnimatePresence>
-        {showAddProduct && (
-          <motion.div
-            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-            className="fixed inset-0 bg-stone-900/40 backdrop-blur-sm z-[100] flex items-center justify-center p-4"
-          >
-            <motion.div
-              initial={{ scale: 0.95, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.95, opacity: 0 }}
-              className="bg-white rounded-3xl w-full max-w-lg p-8 shadow-2xl"
-            >
-              <div className="flex justify-between items-center mb-6">
-                <h3 className="font-semibold text-lg">{editingIndex !== null ? 'Edit Product' : 'Add New Product'}</h3>
-                <button onClick={() => { setShowAddProduct(false); setEditingIndex(null); setNewProduct({ name: "", price: "", category: "", stock: "", img: "" }); }} className="text-stone-400 hover:text-stone-900"><FaTimes /></button>
-              </div>
-              <form className="space-y-4" onSubmit={handleAddProduct}>
-                <input
-                  type="text"
-                  placeholder="Product Name"
-                  className="w-full p-3 bg-stone-50 rounded-xl text-sm border-2 border-transparent focus:border-amber-500/20 outline-none transition-all"
-                  value={newProduct.name}
-                  onChange={(e) => setNewProduct({ ...newProduct, name: e.target.value })}
-                  required
-                />
-                <input
-                  type="text"
-                  placeholder="Category (e.g. Audio, Smart Home)"
-                  className="w-full p-3 bg-stone-50 rounded-xl text-sm border-2 border-transparent focus:border-amber-500/20 outline-none transition-all"
-                  value={newProduct.category}
-                  onChange={(e) => setNewProduct({ ...newProduct, category: e.target.value })}
-                  required
-                />
-                <input
-                  type="text"
-                  placeholder="Price (e.g. 24999)"
-                  className="w-full p-3 bg-stone-50 rounded-xl text-sm border-2 border-transparent focus:border-amber-500/20 outline-none transition-all"
-                  value={newProduct.price}
-                  onChange={(e) => setNewProduct({ ...newProduct, price: e.target.value })}
-                  required
-                />
-                <input
-                  type="number"
-                  placeholder="Stock Quantity"
-                  className="w-full p-3 bg-stone-50 rounded-xl text-sm border-2 border-transparent focus:border-amber-500/20 outline-none transition-all"
-                  value={newProduct.stock}
-                  onChange={(e) => setNewProduct({ ...newProduct, stock: e.target.value })}
-                  required
-                />
-
-                <div className="space-y-2">
-                  <label className="text-[10px] font-semibold text-stone-400 ml-1">Upload Product Image</label>
-                  <div className="flex items-center gap-4">
-                    <label className="flex-1 cursor-pointer bg-stone-50 border-2 border-dashed border-stone-200 rounded-xl p-4 hover:border-amber-500 transition-colors flex flex-col items-center justify-center gap-2">
-                      <FaPlus className="text-stone-300" />
-                      <span className="text-[10px] font-bold text-stone-400">SELECT IMAGE</span>
-                      <input type="file" className="hidden" accept="image/*" onChange={handleImageUpload} />
-                    </label>
-                    {newProduct.img && (
-                      <div className="w-20 h-20 rounded-xl overflow-hidden border border-stone-100">
-                        <img src={newProduct.img} className="w-full h-full object-cover" alt="Preview" />
-                      </div>
-                    )}
-                  </div>
-                </div>
-
-                <button type="submit" className="w-full bg-stone-900 text-amber-500 py-4 rounded-xl font-semibold text-xs hover:bg-stone-800 transition-all shadow-xl shadow-stone-900/20 mt-4">
-                  {editingIndex !== null ? 'Update Inventory' : 'Save to Inventory'}
-                </button>
-              </form>
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
       <div className="flex flex-col lg:flex-row lg:items-end justify-between gap-6 overflow-hidden">
         <div className="space-y-2">
           <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-blue-500/10 text-blue-600">
@@ -155,7 +90,7 @@ export default function Products({
           ))}
           <div className="w-px h-6 bg-stone-200/60 mx-1 hidden sm:block" />
           <button
-            onClick={() => { setEditingIndex(null); setNewProduct({ name: "", price: "", category: "", stock: "", img: "" }); setShowAddProduct(true); }}
+            onClick={() => setIsAddingNewPage(true)}
             className="flex items-center gap-2 px-6 py-2.5 bg-stone-900 text-amber-500 hover:bg-stone-800 rounded-xl font-semibold text-[10px] transition-all shadow-xl shadow-stone-900/10 active:scale-95 ml-auto sm:ml-0"
           >
             <FaPlus size={10} /> Add Product

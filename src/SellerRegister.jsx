@@ -2,7 +2,8 @@ import React, { useState } from "react";
 import { motion } from "framer-motion";
 import { 
   FaArrowRight, FaLock, FaEnvelope, FaShopify, 
-  FaArrowLeftLong, FaUser, FaStore, FaBriefcase, FaPhone
+  FaArrowLeftLong, FaUser, FaStore, FaBriefcase, FaPhone,
+  FaLaptop, FaMobileScreen, FaHeadphones, FaCamera, FaStopwatch
 } from "react-icons/fa6";
 import { Link, useNavigate } from "react-router-dom";
 
@@ -34,47 +35,52 @@ export default function SellerRegister() {
          <div className="absolute top-[-20%] left-[-20%] w-[80%] h-[80%] bg-amber-500/10 rounded-full blur-[120px]" />
          <div className="absolute bottom-[-10%] right-[-10%] w-[60%] h-[60%] bg-stone-800 rounded-full blur-[100px]" />
          
-         <div className="relative z-10 space-y-8 max-w-md">
+         {/* Floating Electronic Items */}
+         <div className="absolute inset-0 overflow-hidden pointer-events-none z-0">
+           <motion.div animate={{ y: [0, -20, 0], rotate: [0, 5, 0] }} transition={{ duration: 5, repeat: Infinity, ease: "easeInOut" }} className="absolute top-[15%] left-[10%] text-white/[0.03]">
+              <FaLaptop size={140} />
+           </motion.div>
+           <motion.div animate={{ y: [0, 30, 0], x: [0, 10, 0], rotate: [0, -10, 0] }} transition={{ duration: 6, repeat: Infinity, ease: "easeInOut", delay: 1 }} className="absolute bottom-[10%] left-[15%] text-amber-500/[0.05]">
+              <FaMobileScreen size={90} />
+           </motion.div>
+           <motion.div animate={{ y: [0, -15, 0], x: [0, -15, 0], rotate: [0, 15, 0] }} transition={{ duration: 7, repeat: Infinity, ease: "easeInOut", delay: 2 }} className="absolute top-[10%] right-[10%] text-white/[0.04]">
+              <FaHeadphones size={180} />
+           </motion.div>
+           <motion.div animate={{ y: [0, 25, 0], rotate: [0, -5, 0] }} transition={{ duration: 5.5, repeat: Infinity, ease: "easeInOut", delay: 0.5 }} className="absolute bottom-[20%] right-[15%] text-white/[0.03]">
+              <FaCamera size={120} />
+           </motion.div>
+           <motion.div animate={{ y: [0, -20, 0], x: [0, 20, 0], rotate: [0, 10, 0] }} transition={{ duration: 6.5, repeat: Infinity, ease: "easeInOut", delay: 1.5 }} className="absolute top-[45%] left-[50%] translate-x-[-50%] text-amber-500/[0.04]">
+              <FaStopwatch size={100} />
+           </motion.div>
+         </div>
+
+         <div className="relative z-10 flex flex-col items-center text-center">
             <motion.div
-               initial={{ opacity: 0, x: -50 }}
-               animate={{ opacity: 1, x: 0 }}
-               transition={{ duration: 0.8 }}
-               className="inline-block px-4 py-2 bg-amber-500/10 border border-amber-500/20 rounded-full"
+              initial={{ rotate: -10, opacity: 0, scale: 0.8 }}
+              animate={{ rotate: 0, opacity: 1, scale: 1 }}
+              transition={{ duration: 0.8, type: "spring" }}
+              className="w-32 h-32 bg-white/5 border border-white/10 rounded-[3xl] flex items-center justify-center text-amber-500 shadow-2xl backdrop-blur-md mb-8"
             >
-               <span className="text-[10px] font-black text-amber-500 uppercase tracking-[0.4em]">Partnership Program</span>
+              <FaShopify size={70} />
             </motion.div>
             
             <motion.h2 
                initial={{ opacity: 0, y: 30 }}
                animate={{ opacity: 1, y: 0 }}
                transition={{ duration: 0.8, delay: 0.2 }}
-               className="text-6xl font-black text-white italic leading-none tracking-tighter"
+               className="text-6xl md:text-7xl font-black text-white italic tracking-tighter mix-blend-lighten"
             >
-               EXPAND YOUR <br />
-               <span className="text-amber-500">HORIZONS</span> <br />
-               GLOBALLY.
+               Electro<span className="text-amber-500">Shop</span>
             </motion.h2>
-            
-            <motion.p 
+
+            <motion.p
                initial={{ opacity: 0 }}
                animate={{ opacity: 1 }}
                transition={{ duration: 1, delay: 0.4 }}
-               className="text-stone-400 text-sm font-medium leading-relaxed"
+               className="text-stone-400 text-xs font-bold uppercase tracking-[0.4em] mt-6 backdrop-blur-sm"
             >
-               Join the world's most innovative seller network. Our platform provides the tools, 
-               audience, and infrastructure to turn your local business into a global logistics powerhouse.
+               Premium Electronics
             </motion.p>
-
-            <div className="pt-10 flex gap-12 border-t border-stone-800">
-               <div>
-                  <span className="block text-2xl font-black text-white italic">0%</span>
-                  <span className="text-[9px] font-black text-stone-500 uppercase tracking-widest">Listing Fees</span>
-               </div>
-               <div>
-                  <span className="block text-2xl font-black text-white italic">24/7</span>
-                  <span className="text-[9px] font-black text-stone-500 uppercase tracking-widest">Support Core</span>
-               </div>
-            </div>
          </div>
 
          {/* Cyber Circuit Overlay */}

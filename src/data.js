@@ -129,7 +129,7 @@ export const productsData = {
         category: "Wearables",
         desc: "Built for the outdoors. Massive battery and precise GPS.",
         variants: [
-            { id: "v6_1", colorBg: "bg-blue-900", ringColor: "ring-orange-500", img: wt3, price: "₹52,999", colorName: "Sunset Orange" },
+            { id: "v6_1", colorBg: "bg-blue-900", ringColor: "ring-orange-500", img: wt3, price: "₹52,999", colorName: "Navy Blue" },
             { id: "v6_2", colorBg: "bg-stone-300", ringColor: "ring-stone-700", img: wt4, price: "₹54,999", colorName: "Obsidian" }
         ]
     },
@@ -250,8 +250,8 @@ export const productsData = {
         category: "Computing",
         desc: "Forged in titanium. Featuring the groundbreaking A17 Pro chip and a customizable Action button.",
         variants: [
-            { id: "v17_1", colorBg: "bg-blue-100", ringColor: "ring-stone-600", img: cp_mb3, price: "₹1,34,900", colorName: "Black Titanium" },
-            { id: "v17_2", colorBg: "bg-orange-400", ringColor: "ring-stone-200", img: cp_mb4, price: "₹1,34,900", colorName: "White Titanium" }
+            { id: "v17_1", colorBg: "bg-blue-100", ringColor: "ring-stone-600", img: cp_mb3, price: "₹1,34,900", colorName: "Sky Blue Titanium" },
+            { id: "v17_2", colorBg: "bg-orange-400", ringColor: "ring-stone-200", img: cp_mb4, price: "₹1,34,900", colorName: "Orange Titanium" }
         ]
     },
     "18": {

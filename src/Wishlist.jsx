@@ -58,15 +58,15 @@ export default function Wishlist() {
                     <div className="pt-4 flex gap-3 mt-auto">
                       <button
                         onClick={() => navigate(`/product/${item.id}`)}
-                        className="flex-grow bg-amber-600 text-white py-3 text-xs font-black uppercase tracking-widest hover:bg-amber-500 transition shadow-lg shadow-amber-600/20"
+                        className="flex-grow bg-amber-600 text-white rounded-2xl py-3 text-xs font-black uppercase tracking-widest hover:bg-amber-500 transition shadow-lg shadow-amber-600/20"
                       >
                         View Details
                       </button>
                       <button
                         onClick={() => toggleWishlist(item)}
-                        className="p-3 border border-stone-200 text-stone-400 hover:text-red-500 hover:border-red-200 transition bg-stone-50"
+                        className="w-12 h-12 flex items-center justify-center bg-red-50 text-red-500 rounded-2xl hover:bg-red-500 hover:text-white transition-all duration-500 shadow-sm active:scale-95 group/remove"
                       >
-                        <FaTrash size={14} />
+                        <FaTrash size={14} className="group-hover/remove:rotate-12 transition-transform" />
                       </button>
                     </div>
                   </div>

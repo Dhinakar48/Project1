@@ -172,7 +172,7 @@ export default function SellerDashboard() {
                 <div className="absolute right-0 mt-4 w-56 bg-white rounded-[1.5rem] shadow-2xl border border-stone-100 overflow-hidden z-[60] animate-in fade-in slide-in-from-top-4 duration-300">
                   <div className="p-5 border-b border-stone-100 bg-stone-50/50">
                     <span className="text-[10px] font-semibold text-stone-400 block mb-1">Signed in as</span>
-                    <span className="text-xs font-semibold text-stone-900">Dhinakar</span>
+                    <span className="text-xs font-semibold text-stone-900">electoshop@gmail.com</span>
                   </div>
                   <div className="p-2">
                     <button 
