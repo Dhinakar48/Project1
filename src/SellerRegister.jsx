@@ -9,17 +9,40 @@ import { Link, useNavigate } from "react-router-dom";
 
 export default function SellerRegister() {
   const [formData, setFormData] = useState({
-    shopName: "",
-    ownerName: "",
+    fullName: "",
     email: "",
-    password: "",
-    mobile: ""
+    mobile: "",
+    otp: "",
+    password: ""
   });
   const navigate = useNavigate();
 
+  const handleGetOTP = () => {
+    if (!formData.mobile) {
+      alert("Please enter a mobile number first to receive your OTP.");
+      return;
+    }
+    alert("Developer Sandbox Mode: Your OTP is 3616");
+    setFormData({ ...formData, otp: "3616" });
+  };
+
   const handleSubmit = (e) => {
     e.preventDefault();
+    if (formData.otp !== "3616") {
+      alert("Invalid OTP Verification Code.");
+      return;
+    }
+    
     console.log("Seller registration data:", formData);
+    
+    // Persist new seller credentials
+    const savedSellers = JSON.parse(localStorage.getItem('registeredSellers') || '[]');
+    savedSellers.push({
+      email: formData.email,
+      password: formData.password
+    });
+    localStorage.setItem('registeredSellers', JSON.stringify(savedSellers));
+    
     navigate("/seller-login");
   };
 
@@ -116,11 +139,11 @@ export default function SellerRegister() {
                 initial={{ rotate: -10, opacity: 0 }}
                 animate={{ rotate: 3, opacity: 1 }}
                 transition={{ delay: 0.2, duration: 0.6 }}
-                className="w-16 h-16 bg-stone-900 rounded-2xl flex items-center justify-center text-amber-500 shadow-2xl shadow-stone-950/20 mb-6"
+                className="w-14 h-14 bg-stone-900 rounded-2xl flex items-center justify-center text-amber-500 shadow-2xl shadow-stone-950/20 mb-3"
               >
-                <FaShopify size={32} />
+                <FaShopify size={28} />
               </motion.div>
-              <h1 className="text-3xl font-black text-stone-900 tracking-tight text-center mb-2">
+              <h1 className="text-2xl font-black text-stone-900 tracking-tight text-center mb-1">
                 Merchant Application
               </h1>
               <p className="text-stone-400 text-[10px] font-bold uppercase tracking-[0.2em] text-center">
@@ -128,42 +151,22 @@ export default function SellerRegister() {
               </p>
             </div>
 
-            <form onSubmit={handleSubmit} className="space-y-6">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div className="space-y-1.5">
-                  <label className="text-[9px] font-black text-stone-400 uppercase tracking-widest ml-4">Shop Name</label>
-                  <div className="relative group">
-                    <div className="absolute left-5 top-1/2 -translate-y-1/2 text-stone-300 group-focus-within:text-amber-500 transition-all">
-                      <FaStore size={14} />
-                    </div>
-                    <input
-                      type="text"
-                      name="shopName"
-                      value={formData.shopName}
-                      onChange={handleChange}
-                      className="w-full bg-stone-50/50 border border-stone-100 rounded-2xl py-3.5 pl-12 pr-6 outline-none focus:border-amber-600/30 focus:bg-white transition-all text-stone-900 text-xs font-semibold"
-                      placeholder="e.g. Pixel Perfect"
-                      required
-                    />
+            <form onSubmit={handleSubmit} className="space-y-4">
+              <div className="space-y-1.5">
+                <label className="text-[9px] font-black text-stone-400 uppercase tracking-widest ml-4">Full Name</label>
+                <div className="relative group">
+                  <div className="absolute left-5 top-1/2 -translate-y-1/2 text-stone-300 group-focus-within:text-amber-500 transition-all">
+                    <FaUser size={14} />
                   </div>
-                </div>
-
-                <div className="space-y-1.5">
-                  <label className="text-[9px] font-black text-stone-400 uppercase tracking-widest ml-4">Full Name</label>
-                  <div className="relative group">
-                    <div className="absolute left-5 top-1/2 -translate-y-1/2 text-stone-300 group-focus-within:text-amber-500 transition-all">
-                      <FaUser size={14} />
-                    </div>
-                    <input
-                      type="text"
-                      name="ownerName"
-                      value={formData.ownerName}
-                      onChange={handleChange}
-                      className="w-full bg-stone-50/50 border border-stone-100 rounded-2xl py-3.5 pl-12 pr-6 outline-none focus:border-amber-600/30 focus:bg-white transition-all text-stone-900 text-xs font-semibold"
-                      placeholder="John Doe"
-                      required
-                    />
-                  </div>
+                  <input
+                    type="text"
+                    name="fullName"
+                    value={formData.fullName}
+                    onChange={handleChange}
+                    className="w-full bg-stone-50/50 border border-stone-100 rounded-2xl py-3 pl-12 pr-6 outline-none focus:border-amber-600/30 focus:bg-white transition-all text-stone-900 text-xs font-semibold"
+                    placeholder="John Doe"
+                    required
+                  />
                 </div>
               </div>
 
@@ -178,17 +181,17 @@ export default function SellerRegister() {
                     name="email"
                     value={formData.email}
                     onChange={handleChange}
-                    className="w-full bg-stone-50/50 border border-stone-100 rounded-2xl py-3.5 pl-12 pr-6 outline-none focus:border-amber-600/30 focus:bg-white transition-all text-stone-900 text-xs font-semibold"
+                    className="w-full bg-stone-50/50 border border-stone-100 rounded-2xl py-3 pl-12 pr-6 outline-none focus:border-amber-600/30 focus:bg-white transition-all text-stone-900 text-xs font-semibold"
                     placeholder="partner@business.com"
                     required
                   />
                 </div>
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-1.5">
                   <label className="text-[9px] font-black text-stone-400 uppercase tracking-widest ml-4">Mobile Number</label>
-                  <div className="relative group">
+                  <div className="relative flex group">
                     <div className="absolute left-5 top-1/2 -translate-y-1/2 text-stone-300 group-focus-within:text-amber-500 transition-all">
                       <FaPhone size={14} />
                     </div>
@@ -197,36 +200,57 @@ export default function SellerRegister() {
                       name="mobile"
                       value={formData.mobile}
                       onChange={handleChange}
-                      className="w-full bg-stone-50/50 border border-stone-100 rounded-2xl py-3.5 pl-12 pr-6 outline-none focus:border-amber-600/30 focus:bg-white transition-all text-stone-900 text-xs font-semibold"
+                      className="w-full bg-stone-50/50 border border-stone-100 rounded-2xl py-3 pl-12 pr-20 outline-none focus:border-amber-600/30 focus:bg-white transition-all text-stone-900 text-xs font-semibold"
                       placeholder="+91"
                       required
                     />
+                    <button type="button" onClick={handleGetOTP} className="absolute right-2 top-1/2 -translate-y-1/2 text-[9px] font-black uppercase text-amber-600 bg-amber-50 hover:bg-amber-100 px-3 py-1.5 rounded-lg transition-colors">
+                      Get OTP
+                    </button>
                   </div>
                 </div>
 
                 <div className="space-y-1.5">
-                  <label className="text-[9px] font-black text-stone-400 uppercase tracking-widest ml-4">Secure Password</label>
+                  <label className="text-[9px] font-black text-stone-400 uppercase tracking-widest ml-4">OTP Verification</label>
                   <div className="relative group">
                     <div className="absolute left-5 top-1/2 -translate-y-1/2 text-stone-300 group-focus-within:text-amber-500 transition-all">
-                      <FaLock size={14} />
+                      <FaStopwatch size={14} />
                     </div>
                     <input
-                      type="password"
-                      name="password"
-                      value={formData.password}
+                      type="text"
+                      name="otp"
+                      value={formData.otp}
                       onChange={handleChange}
-                      className="w-full bg-stone-50/50 border border-stone-100 rounded-2xl py-3.5 pl-12 pr-6 outline-none focus:border-amber-600/30 focus:bg-white transition-all text-stone-900 text-xs font-semibold"
-                      placeholder="••••••••"
+                      className="w-full bg-stone-50/50 border border-stone-100 rounded-2xl py-3 pl-12 pr-6 outline-none focus:border-amber-600/30 focus:bg-white transition-all text-stone-900 text-xs font-semibold tracking-widest"
+                      placeholder="••••••"
                       required
                     />
                   </div>
                 </div>
               </div>
+              
+              <div className="space-y-1.5">
+                <label className="text-[9px] font-black text-stone-400 uppercase tracking-widest ml-4">Secure Password</label>
+                <div className="relative group">
+                  <div className="absolute left-5 top-1/2 -translate-y-1/2 text-stone-300 group-focus-within:text-amber-500 transition-all">
+                    <FaLock size={14} />
+                  </div>
+                  <input
+                    type="password"
+                    name="password"
+                    value={formData.password}
+                    onChange={handleChange}
+                    className="w-full bg-stone-50/50 border border-stone-100 rounded-2xl py-3 pl-12 pr-6 outline-none focus:border-amber-600/30 focus:bg-white transition-all text-stone-900 text-xs font-semibold"
+                    placeholder="••••••••"
+                    required
+                  />
+                </div>
+              </div>
 
-              <div className="pt-4">
+              <div className="pt-2">
                 <button
                   type="submit"
-                  className="w-full bg-stone-900 text-amber-500 rounded-2xl py-5 flex items-center justify-center gap-4 font-black uppercase tracking-[0.15em] text-xs hover:bg-stone-800 transition-all duration-300 group shadow-2xl shadow-stone-900/10 active:scale-[0.99]"
+                  className="w-full bg-stone-900 text-amber-500 rounded-2xl py-4 flex items-center justify-center gap-4 font-black uppercase tracking-[0.15em] text-xs hover:bg-stone-800 transition-all duration-300 group shadow-2xl shadow-stone-900/10 active:scale-[0.99]"
                 >
                   <span>Request Authorization</span>
                   <FaArrowRight size={16} className="group-hover:translate-x-1.5 transition-transform duration-300" />
@@ -234,7 +258,7 @@ export default function SellerRegister() {
               </div>
             </form>
 
-            <div className="mt-8 pt-6 border-t border-stone-50 text-center">
+            <div className="mt-5 pt-5 border-t border-stone-50 text-center">
               <p className="text-stone-400 text-[12px] font-bold tracking-wide">
                 Active Partnership?{" "}
                 <Link to="/seller-login" className="text-stone-900 hover:text-amber-600 transition-colors underline underline-offset-4 decoration-stone-200">

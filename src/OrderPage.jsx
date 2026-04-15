@@ -154,7 +154,7 @@ export default function OrderPage() {
 
   const handleApplyPromo = () => {
     if(!promoCode) return;
-    const res = applyDiscountCode(promoCode);
+    const res = applyDiscountCode(promoCode, cart.length);
     setPromoMessage(res.message);
     if(res.success) setPromoCode('');
     setTimeout(() => setPromoMessage(''), 3000);
@@ -281,9 +281,8 @@ export default function OrderPage() {
 
               {/* Order Summary Section */}
               <div className="lg:col-span-2">
-                <div className="bg-amber-500 text-black p-8 w-full h-full flex flex-col rounded-2xl shadow-2xl shadow-amber-900/20">
-                  <h3 className="text-xl font-bold border-b border-amber-500/30 pb-4 tracking-tight uppercase italic mb-6">Order Summary</h3>
-                  
+                <div className="bg-white shadow-sm border border-stone-200 text-black p-8 w-full h-full flex flex-col rounded-2xl">
+                  <h3 className="text-2xl font-black border-b border-stone-500/20 pb-4 tracking-tight uppercase italic mb-6">Order Summary</h3>
                   <div className="space-y-4 mb-4">
                     <div className="flex justify-between text-stone-800 text-sm font-semibold">
                       <span>Subtotal</span>
@@ -318,7 +317,7 @@ export default function OrderPage() {
 
                   {/* Promo Code Input */}
                   {!appliedDiscount && (
-                    <div className="space-y-2 border-t border-amber-500/30 pt-6 mb-8">
+                    <div className="space-y-2 border-t border-stone-500/20 pt-6 mb-8">
                       <span className="text-[10px] font-bold uppercase tracking-widest text-stone-800 block">Gift Card or Discount Code</span>
                       <div className="flex gap-2">
                         <input 
@@ -326,7 +325,7 @@ export default function OrderPage() {
                           value={promoCode} 
                           onChange={(e) => setPromoCode(e.target.value)} 
                           placeholder="Summer20..." 
-                          className="flex-1 bg-white border-0 text-sm font-bold text-stone-900 rounded-xl px-4 py-3 outline-none focus:ring-2 focus:ring-amber-600 placeholder:text-stone-400 shadow-sm"
+                          className="flex-1 bg-white border border-stone-200 text-sm font-bold text-stone-900 rounded-xl px-4 py-3 outline-none focus:ring-1 focus:ring-amber-500 placeholder:text-stone-400 shadow-sm"
                         />
                         <button 
                           type="button" 
@@ -340,7 +339,7 @@ export default function OrderPage() {
                     </div>
                   )}
 
-                  <div className="border-t border-amber-500/30 pt-2">
+                  <div className="border-t border-stone-500/20 pt-2">
                     <div className="flex justify-between items-end mb-6">
                       <span className="text-[10px] font-black uppercase tracking-widest text-stone-800 block">Total Amount</span>
                       <span className="text-3xl font-black text-stone-900 block">₹{totalPayable.toLocaleString()}</span>
@@ -349,7 +348,7 @@ export default function OrderPage() {
                       <button 
                         type="button" 
                         onClick={handleContinuePayment}
-                        className="w-full bg-stone-900 text-amber-500 py-5 rounded-2xl font-black uppercase tracking-widest hover:bg-stone-800 transition-all shadow-xl active:scale-[0.98] flex justify-center items-center gap-3"
+                        className="w-full bg-stone-900 text-amber-500 hover:text-white py-5 rounded-2xl font-black uppercase tracking-widest hover:bg-stone-800 transition-all shadow-xl active:scale-[0.98] flex justify-center items-center gap-3"
                       >
                         Continue to Payment
                       </button>
@@ -358,18 +357,18 @@ export default function OrderPage() {
                         <button 
                           type="submit" 
                           disabled={isProcessing}
-                          className="w-full bg-white text-amber-600 py-5 rounded-2xl font-black uppercase tracking-widest hover:bg-amber-50 transition-all shadow-xl active:scale-[0.98] flex justify-center items-center gap-3 disabled:opacity-70 disabled:cursor-not-allowed"
+                          className="w-full bg-black border border-stone-200 text-amber-500 py-5 rounded-2xl font-black uppercase tracking-widest transition-all shadow-sm active:scale-[0.98] flex justify-center items-center gap-3 disabled:opacity-70 disabled:cursor-not-allowed"
                         >
                           {isProcessing ? (
                             <span className="flex items-center gap-2">
-                              <span className="w-4 h-4 border-2 border-amber-600 border-t-transparent rounded-full animate-spin"></span>
+                              <span className="w-4 h-4 border rounded-full animate-spin"></span>
                               Processing...
                             </span>
                           ) : (
                             <><FaCircleCheck size={14} /> Confirm Order</>
                           )}
                         </button>
-                        <p className="text-center text-[9px] uppercase font-bold text-amber-900 tracking-widest mt-4 opacity-70 border border-amber-600/50 py-1.5 rounded-lg w-max mx-auto px-3">
+                        <p className="text-center text-[9px] uppercase font-bold text-amber-900 tracking-widest mt-4 opacity-70  py-1.5 rounded-lg w-max mx-auto px-3">
                           {formData.paymentMethod === 'cod' ? 'Cash on Delivery Pending' : 'Secure Encrypted Payment'}
                         </p>
                       </>

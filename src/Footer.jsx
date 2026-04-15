@@ -3,9 +3,9 @@ import { Link } from "react-router-dom";
 
 export default function Footer() {
     return (
-        <div className="bg-amber-50/30 text-stone-500 px-6 md:px-16 py-16 border-t border-amber-100/50">
-
-            <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-4 gap-8">
+        <footer className="w-full bg-amber-50/30 text-stone-500 border-t border-amber-100/50 overflow-hidden">
+            <div className="max-w-7xl mx-auto px-6 md:px-16 py-16">
+                <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-4 gap-8">
 
                 <motion.div
                     initial={{ opacity: 0, y: 30 }}
@@ -68,6 +68,7 @@ export default function Footer() {
                 <p className="font-bold tracking-widest text-[8px] uppercase">© 2026 ElectroShop. Luxury Electronics Defined.</p>
             </div>
 
-        </div>
+            </div>
+        </footer>
     );
 }

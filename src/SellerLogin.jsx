@@ -13,10 +13,21 @@ export default function SellerLogin() {
     e.preventDefault();
     setError("");
 
+    const savedSellers = JSON.parse(localStorage.getItem('registeredSellers') || '[]');
+    const registeredProvider = savedSellers.find(seller => seller.email === email && seller.password === password);
+
     if (email === "electroshop@gmail.com" && password === "Dhinakar3616") {
       localStorage.setItem('sellerActiveTab', 'Overview');
       navigate("/seller-dashboard");
-      console.log("Login successful!");
+    } else if (registeredProvider) {
+      if (registeredProvider.isOnboarded) {
+        localStorage.setItem('sellerActiveTab', 'Overview');
+        navigate("/seller-dashboard");
+      } else {
+        // Needs onboarding
+        localStorage.setItem('onboardingSellerEmail', email);
+        navigate("/seller-onboarding");
+      }
     } else {
       setError("Invalid corporate credentials. Access denied.");
     }

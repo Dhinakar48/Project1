@@ -20,7 +20,7 @@ export default function Navbar() {
   const [currentOffer, setCurrentOffer] = useState(0);
   const location = useLocation();
   const isSellerDashboard = location.pathname === "/seller-dashboard";
-  const { cart, wishlist } = useStore();
+  const { cart, wishlist, userProfile } = useStore();
   const navigate = useNavigate();
   const userRef = useRef(null);
 
@@ -42,8 +42,8 @@ export default function Navbar() {
       setSearchResults([]);
       return;
     }
-    const results = products.filter(p => 
-      p.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
+    const results = products.filter(p =>
+      p.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
       p.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
       (p.category && p.category.toLowerCase().includes(searchQuery.toLowerCase()))
     ).slice(0, 6);
@@ -94,20 +94,20 @@ export default function Navbar() {
           {/* Left: Logo & Categories Dropdown */}
           <div className="flex items-center gap-8">
             <Link to="/" className="text-xl font-black tracking-tighter text-amber-600 uppercase italic">ElectroShop</Link>
-            
+
             <div className={`hidden md:block relative ${isSellerDashboard ? 'hidden' : ''}`}>
-              <button 
+              <button
                 onMouseEnter={() => setCatDropdown(true)}
                 onMouseLeave={() => setCatDropdown(false)}
                 className="mt-1 text-stone-500 hover:text-amber-600 font-bold text-xs uppercase tracking-widest flex items-center gap-1 transition"
               >
-                Categories 
+                Categories
                 <svg className={`w-3 h-3 transition-transform ${catDropdown ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7"></path></svg>
               </button>
-              
+
               <AnimatePresence>
                 {catDropdown && (
-                  <motion.div 
+                  <motion.div
                     initial={{ opacity: 0, y: 10 }}
                     animate={{ opacity: 1, y: 0 }}
                     exit={{ opacity: 0, y: 10 }}
@@ -129,23 +129,23 @@ export default function Navbar() {
           <div className={`hidden md:flex justify-center relative ${isSellerDashboard ? 'invisible opacity-0' : ''}`} ref={searchRef}>
             <div className="flex items-center rounded-full px-4 py-2 w-full max-w-md focus-within:bg-white transition-colors border border-amber-400">
               <FaSearch className="text-amber-600 mr-3 text-sm" />
-              <input 
-                type="text" 
+              <input
+                type="text"
                 value={searchQuery}
                 onChange={(e) => {
                   setSearchQuery(e.target.value);
                   setShowSearch(true);
                 }}
                 onFocus={() => setShowSearch(true)}
-                placeholder="Search products..." 
-                className="bg-transparent outline-none text-sm w-full text-stone-900" 
+                placeholder="Search products..."
+                className="bg-transparent outline-none text-sm w-full text-stone-900"
               />
             </div>
 
             {/* Search Results Dropdown */}
             <AnimatePresence>
               {showSearch && (searchQuery.length > 0) && (
-                <motion.div 
+                <motion.div
                   initial={{ opacity: 0, y: 10 }}
                   animate={{ opacity: 1, y: 0 }}
                   exit={{ opacity: 0, y: 10 }}
@@ -153,24 +153,24 @@ export default function Navbar() {
                 >
                   {searchResults.length > 0 ? (
                     <div className="p-2">
-                       {searchResults.map((product) => (
-                         <div 
+                      {searchResults.map((product) => (
+                        <div
                           key={product.id}
                           onClick={() => handleSearchResultClick(product.id)}
                           className="flex items-center gap-4 p-3 hover:bg-stone-50 cursor-pointer transition group border-b border-stone-50 last:border-none"
-                         >
-                           <div className="w-12 h-12 bg-stone-100 rounded-lg overflow-hidden flex-shrink-0">
-                             <img src={product.variants[0].img} className="w-full h-full object-contain p-1" alt={product.name} />
-                           </div>
+                        >
+                          <div className="w-12 h-12 bg-stone-100 rounded-lg overflow-hidden flex-shrink-0">
+                            <img src={product.variants[0].img} className="w-full h-full object-contain p-1" alt={product.name} />
+                          </div>
                           <div className="group-hover:text-amber-600 transition">
-                             <h4 className="text-sm font-bold text-stone-900 truncate">{product.name}</h4>
-                             <p className="text-[10px] text-amber-500/60 uppercase tracking-widest font-black">{product.title}</p>
-                           </div>
-                           <div className="text-sm font-black text-amber-600">
-                             {product.variants[0].price}
-                           </div>
-                         </div>
-                       ))}
+                            <h4 className="text-sm font-bold text-stone-900 truncate">{product.name}</h4>
+                            <p className="text-[10px] text-amber-500/60 uppercase tracking-widest font-black">{product.title}</p>
+                          </div>
+                          <div className="text-sm font-black text-amber-600">
+                            {product.variants[0].price}
+                          </div>
+                        </div>
+                      ))}
                     </div>
                   ) : (
                     <div className="p-8 text-center text-stone-400 italic text-sm">
@@ -187,7 +187,7 @@ export default function Navbar() {
             <div className="md:hidden">
               <FaSearch className="text-amber-600 text-sm" />
             </div>
-            
+
             {!isSellerDashboard && (
               <>
                 <Link to="/wishlist" className="relative hover:text-amber-600 cursor-pointer transition">
@@ -211,37 +211,41 @@ export default function Navbar() {
             )}
 
             <div className="relative" ref={userRef}>
-              <div 
+              <div
                 onClick={() => setUserDropdown(!userDropdown)}
-                className="hover:text-amber-600 transition cursor-pointer"
+                className="hover:text-amber-600 transition cursor-pointer flex items-center justify-center p-1"
               >
-                <FaUser size={18} />
+                {userProfile?.image ? (
+                  <img src={userProfile.image} alt="Profile" className="w-7 h-7 md:w-6 md:h-6 rounded-full object-cover border border-stone-200 shadow-sm" />
+                ) : (
+                  <FaUser size={18} />
+                )}
               </div>
-              
+
               <AnimatePresence>
                 {userDropdown && (
-                  <motion.div 
+                  <motion.div
                     initial={{ opacity: 0, y: 10 }}
                     animate={{ opacity: 1, y: 0 }}
                     exit={{ opacity: 0, y: 10 }}
                     className="absolute top-full right-0 mt-3 w-48 bg-white border border-stone-100 shadow-xl rounded-xl overflow-hidden z-[60]"
                   >
                     <div className="p-2 flex flex-col">
-                      <Link onClick={() => setUserDropdown(false)} className="px-4 py-2.5 text-xs font-black uppercase tracking-widest text-stone-500 hover:text-amber-600 hover:bg-stone-50 transition rounded-lg flex items-center gap-3">
+                      <Link to="/my-account" onClick={() => setUserDropdown(false)} className="px-4 py-2.5 text-xs font-black uppercase tracking-widest text-stone-500 hover:text-amber-600 hover:bg-stone-50 transition rounded-lg flex items-center gap-3">
                         <FaUser size={12} /> My Account
                       </Link>
                       <Link to="/seller-login" onClick={() => setUserDropdown(false)} className="px-4 py-2.5 text-xs font-black uppercase tracking-widest text-stone-500 hover:text-amber-600 hover:bg-stone-50 transition rounded-lg flex items-center gap-3">
                         <FaShopify size={12} /> Seller Portal
                       </Link>
                       <div className="h-[1px] bg-stone-50 my-1 mx-2" />
-                      
+
                       {localStorage.getItem("user") ? (
-                        <button 
+                        <button
                           onClick={() => {
                             localStorage.removeItem("user");
                             setUserDropdown(false);
                             navigate("/login");
-                          }} 
+                          }}
                           className="px-4 py-2.5 text-xs font-black uppercase tracking-widest text-red-600 hover:bg-red-50 transition rounded-lg text-left"
                         >
                           Sign Out
@@ -271,31 +275,31 @@ export default function Navbar() {
           <div className="md:hidden mt-4 flex flex-col gap-4 px-4 bg-stone-100 pb-6 pt-4 rounded-b-2xl absolute left-0 right-0 z-50 border-t border-stone-200">
             <div className="flex items-center bg-stone-200 rounded-full px-4 py-2.5 mb-2">
               <FaSearch className="text-stone-500 mr-3" />
-              <input 
-                type="text" 
+              <input
+                type="text"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Search products..." 
-                className="bg-transparent outline-none w-full text-stone-900 placeholder-stone-500" 
+                placeholder="Search products..."
+                className="bg-transparent outline-none w-full text-stone-900 placeholder-stone-500"
               />
             </div>
 
             {/* Mobile Search Results */}
             {searchQuery.length > 0 && (
               <div className="max-h-60 overflow-y-auto mb-4 bg-white rounded-xl border border-stone-200 p-2">
-                 {searchResults.length > 0 ? (
-                    searchResults.map(p => (
-                      <div key={p.id} onClick={() => handleSearchResultClick(p.id)} className="flex items-center gap-3 p-3 border-b border-stone-50 last:border-none">
-                         <img src={p.variants[0].img} className="w-10 h-10 object-contain" alt={p.name} />
-                         <div>
-                            <div className="text-xs font-bold text-stone-900">{p.name}</div>
-                            <div className="text-[10px] text-stone-400 font-bold">{p.variants[0].price}</div>
-                         </div>
+                {searchResults.length > 0 ? (
+                  searchResults.map(p => (
+                    <div key={p.id} onClick={() => handleSearchResultClick(p.id)} className="flex items-center gap-3 p-3 border-b border-stone-50 last:border-none">
+                      <img src={p.variants[0].img} className="w-10 h-10 object-contain" alt={p.name} />
+                      <div>
+                        <div className="text-xs font-bold text-stone-900">{p.name}</div>
+                        <div className="text-[10px] text-stone-400 font-bold">{p.variants[0].price}</div>
                       </div>
-                    ))
-                 ) : (
-                   <div className="p-4 text-center text-xs text-stone-400 italic">No matches</div>
-                 )}
+                    </div>
+                  ))
+                ) : (
+                  <div className="p-4 text-center text-xs text-stone-400 italic">No matches</div>
+                )}
               </div>
             )}
 
@@ -330,31 +334,37 @@ export default function Navbar() {
                 </>
               )}
               <div className="flex flex-col gap-5 w-full pt-2">
-                <Link to="/login" onClick={() => setOpen(false)} className="flex items-center gap-3 text-stone-700">
-                  <FaUser size={18} />
+                <Link to="/my-account" onClick={() => setOpen(false)} className="flex items-center gap-3 text-stone-700">
+                  <div className="w-5 h-5 flex items-center justify-center">
+                    {userProfile?.image ? (
+                      <img src={userProfile.image} alt="Profile" className="w-full h-full rounded-full object-cover border border-stone-200 shadow-sm" />
+                    ) : (
+                      <FaUser size={18} />
+                    )}
+                  </div>
                   <span className="text-sm font-bold">My Account</span>
                 </Link>
                 <Link to="/seller-login" onClick={() => setOpen(false)} className="flex items-center gap-3 text-stone-700">
                   <FaShopify size={18} />
                   <span className="text-sm font-bold">Seller Portal</span>
                 </Link>
-                
+
                 {localStorage.getItem("user") ? (
-                  <button 
+                  <button
                     onClick={() => {
                       localStorage.removeItem("user");
                       setOpen(false);
                       navigate("/login");
-                    }} 
+                    }}
                     className="flex items-center gap-3 text-red-600 font-black pt-2 border-t border-stone-200 mt-2 text-left w-full"
                   >
                     <span className="text-sm">Sign Out</span>
                   </button>
                 ) : (
-                   <div className="flex flex-col gap-3 pt-2 border-t border-stone-200 mt-2 text-left">
-                      <Link to="/login" onClick={() => setOpen(false)} className="text-stone-900 font-black text-sm">
-                        Sign In
-                      </Link>
+                  <div className="flex flex-col gap-3 pt-2 border-t border-stone-200 mt-2 text-left">
+                    <Link to="/login" onClick={() => setOpen(false)} className="text-stone-900 font-black text-sm">
+                      Sign In
+                    </Link>
                   </div>
                 )}
               </div>

@@ -15,6 +15,22 @@ export function StoreProvider({ children }) {
 
   const [appliedDiscount, setAppliedDiscount] = useState(null);
 
+  const [userProfile, setUserProfile] = useState(() => {
+    const saved = localStorage.getItem("userProfile");
+    return saved ? JSON.parse(saved) : {
+      firstName: "John",
+      lastName: "Smith",
+      email: "john.smith@email.com",
+      phone: "+91 98765 43210",
+      dob: "1990-04-15",
+      image: null
+    };
+  });
+
+  useEffect(() => {
+    localStorage.setItem("userProfile", JSON.stringify(userProfile));
+  }, [userProfile]);
+
   useEffect(() => {
     localStorage.setItem("cart", JSON.stringify(cart));
   }, [cart]);
@@ -63,11 +79,12 @@ export function StoreProvider({ children }) {
 
   const clearCart = () => setCart([]);
 
-  const applyDiscountCode = (code) => {
+  const applyDiscountCode = (code, cartLength = 0) => {
     const uppercaseCode = code.toUpperCase();
     if (uppercaseCode === "SUMMER20") {
-      setAppliedDiscount({ type: 'percentage', value: 20, code: 'SUMMER20' });
-      return { success: true, message: "20% discount applied!" };
+      const value = cartLength >= 4 ? 10 : cartLength >= 3 ? 5 : 20;
+      setAppliedDiscount({ type: 'percentage', value, code: 'SUMMER20' });
+      return { success: true, message: `${value}% discount applied!` };
     }
     if (uppercaseCode === "FLASH5K") {
       setAppliedDiscount({ type: 'fixed', value: 5000, code: 'FLASH5K' });
@@ -112,7 +129,9 @@ export function StoreProvider({ children }) {
         removeDiscount,
         subtotal,
         discountAmount,
-        finalTotal
+        finalTotal,
+        userProfile,
+        setUserProfile
       }}
     >
       {children}

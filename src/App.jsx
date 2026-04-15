@@ -11,23 +11,25 @@ import ScrollToTop from "./ScrollToTop"
 import SellerLogin from "./SellerLogin"
 import SellerDashboard from "./SellerDashboard/SellerDashboard"
 import SellerRegister from "./SellerRegister"
+import SellerOnboarding from "./SellerOnboarding"
 import PortalSelection from "./PortalSelection"
 import Login from "./Login"
 import UserRegister from "./UserRegister"
 import OrderPage from "./OrderPage"
+import MyAccount from "./MyAccount"
 
 
 
 function App () {
   const location = useLocation();
-  const authPaths = ["/seller-login", "/seller-register", "/seller-dashboard", "/portal-selection", "/login", "/signup"];
+  const authPaths = ["/seller-login", "/seller-register", "/seller-dashboard", "/seller-onboarding", "/portal-selection", "/login", "/signup"];
   const isAuthPage = authPaths.includes(location.pathname);
 
   const hideFooterPaths = ["/order"];
   const isHideFooterPage = hideFooterPaths.includes(location.pathname);
 
   return (
-    <div className="overflow-x-hidden bg-white text-stone-900 min-h-screen">
+    <div className="bg-white text-stone-900 min-h-screen">
       <ScrollToTop />
       {!isAuthPage && <Navbar />}
       <Routes>
@@ -40,10 +42,12 @@ function App () {
         <Route path="/seller-login" element={<SellerLogin />} />
         <Route path="/seller-dashboard" element={<SellerDashboard />} />
         <Route path="/seller-register" element={<SellerRegister />} />
+        <Route path="/seller-onboarding" element={<SellerOnboarding />} />
         <Route path="/portal-selection" element={<PortalSelection />} />
         <Route path="/login" element={<Login />} />
         <Route path="/signup" element={<UserRegister />} />
         <Route path="/order" element={<OrderPage />} />
+        <Route path="/my-account" element={<MyAccount />} />
       </Routes>
 
 
