@@ -163,7 +163,7 @@ export default function Cart() {
 
                     <button
                       onClick={() => navigate('/order')}
-                      className="w-full bg-amber-500 text-stone-900 py-6 rounded-2xl font-black uppercase tracking-[0.2em] text-xs hover:bg-amber-400 transition-all duration-500 shadow-xl shadow-amber-500/20 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed group flex items-center justify-center gap-3"
+                      className="w-full bg-amber-500 text-stone-900 py-6 rounded-2xl font-black uppercase tracking-[0.2em] text-xs hover:bg-amber-400 transition-all duration-500 shadow-xl active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed group flex items-center justify-center gap-3"
                       disabled={cart.length === 0}
                     >
                       Process Final Checkout

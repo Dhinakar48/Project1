@@ -325,7 +325,7 @@ export default function OrderPage() {
                           type="text" 
                           value={promoCode} 
                           onChange={(e) => setPromoCode(e.target.value)} 
-                          placeholder="SUMMER20..." 
+                          placeholder="Summer20..." 
                           className="flex-1 bg-white border-0 text-sm font-bold text-stone-900 rounded-xl px-4 py-3 outline-none focus:ring-2 focus:ring-amber-600 placeholder:text-stone-400 shadow-sm"
                         />
                         <button 
