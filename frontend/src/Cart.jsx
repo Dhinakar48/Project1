@@ -21,13 +21,12 @@ export default function Cart() {
   } = useStore();
   const navigate = useNavigate();
 
-  const shippingFee = appliedDiscount?.type === "shipping" ? 0 : 150;
-  const gstAmount = Math.round(finalTotal * 0.06);
-  const totalPayable = finalTotal + shippingFee + gstAmount;
+  const platformFee = 15;
+  const totalPayable = finalTotal + platformFee;
   const offerPercent = cart.length >= 4 ? 10 : 5; // tiered: 3 items = 5%, 4+ items = 10%
 
   const perks = [
-    { icon: "🚚", bg: "bg-amber-100", text: "text-amber-600", title: "Free Delivery", sub: "On orders over ₹999" },
+    { icon: "🛡️", bg: "bg-amber-100", text: "text-amber-600", title: "Free Protection", sub: "Covered on every order" },
     { icon: "🔄", bg: "bg-violet-100", text: "text-violet-600", title: "Easy Returns", sub: "7-day hassle-free" },
     { icon: "🔒", bg: "bg-pink-100", text: "text-pink-600", title: "Secure Pay", sub: "256-bit encryption" },
     { icon: "⭐", bg: "bg-green-100", text: "text-green-600", title: "Quality Promise", sub: "Verified products" },
@@ -239,22 +238,17 @@ export default function Cart() {
                 )}
 
                 <div className="flex justify-between items-center mb-3.5">
-                  <span className="text-sm font-semibold text-stone-700">Shipping</span>
-                  <span className={`text-sm font-bold ${appliedDiscount?.type === "shipping" ? "text-green-900" : "text-stone-900"}`}>
-                    {appliedDiscount?.type === "shipping" ? "FREE" : "₹150"}
+                  <span className="text-sm font-semibold text-stone-700">Platform Fee</span>
+                  <span className="text-sm font-bold text-stone-900">
+                    ₹{platformFee}
                   </span>
                 </div>
 
-                <div className="flex justify-between items-center mb-3.5">
-                  <span className="text-sm font-semibold text-stone-700">Tax (6% GST)</span>
-                  <span className="text-sm font-bold text-stone-900">₹{gstAmount.toLocaleString()}</span>
-                </div>
 
                 {/* Total */}
                 <div className="flex justify-between items-end pt-4 mt-2 mb-6 border-t border-stone-900/15">
                   <div>
                     <p className="text-[10px] font-black uppercase tracking-[0.15em] text-stone-700">Total Payable</p>
-                    <p className="text-[10px] text-stone-600 font-medium mt-0.5">Incl. all taxes</p>
                   </div>
                   <p className="text-3xl font-black text-stone-900 tracking-tighter leading-none">
                     ₹{totalPayable.toLocaleString()}

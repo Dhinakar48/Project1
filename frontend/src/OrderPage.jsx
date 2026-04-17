@@ -41,42 +41,44 @@ export default function OrderPage() {
     }
   };
 
-  const shippingFee = appliedDiscount?.type === 'shipping' ? 0 : 150;
-  const gstAmount = Math.round(finalTotal * 0.06);
+  const platformFee = 15;
   const codFee = formData.paymentMethod === 'cod' ? 50 : 0;
-  const totalPayable = finalTotal + shippingFee + gstAmount + codFee;
+  const totalPayable = finalTotal + platformFee + codFee;
 
-  const finalizeOrder = async (paymentId = 'COD') => {
-    const productNames = cart.map((item) => `${item.name} (x${item.quantity})`).join(', ');
+    const finalizeOrder = async (paymentId = 'COD') => {
+        const productNames = cart.map((item) => `${item.name} (x${item.quantity})`).join(', ');
 
-    const templateParams = {
-      to_email: 'dhinakargmd@gmail.com', // Strict routing to site owner
-      user_name: formData.name,
-      user_email: formData.email,
-      products: productNames,
-      total_amount: `₹${totalPayable.toLocaleString()}`,
-      payment_method: formData.paymentMethod.toUpperCase(),
-      payment_id: paymentId,
-      shipping_address: `${formData.address}, ${formData.city}, ${formData.state}, ${formData.zip}, ${formData.country}`
+        const baseParams = {
+            user_name: formData.name,
+            user_email: formData.email,
+            products: productNames,
+            total_amount: `₹${totalPayable.toLocaleString()}`,
+            payment_method: formData.paymentMethod.toUpperCase(),
+            payment_id: paymentId,
+            shipping_address: `${formData.address}, ${formData.city}, ${formData.state}, ${formData.zip}, ${formData.country}`
+        };
+
+        // Using hardcoded keys as fallbacks because the Vite server was not restarted
+        const SERVICE_ID = import.meta.env.VITE_EMAILJS_SERVICE_ID || 'service_k11zocm';
+        const TEMPLATE_ID = import.meta.env.VITE_EMAILJS_TEMPLATE_ID || 'template_wz44bjr';
+        const PUBLIC_KEY = import.meta.env.VITE_EMAILJS_PUBLIC_KEY || 'lqlnFNDxsieXbjeNn';
+
+        try {
+            // Send Confirmation Receipt only to Customer
+            await emailjs.send(SERVICE_ID, TEMPLATE_ID, {
+                ...baseParams,
+                to_email: formData.email
+            }, PUBLIC_KEY);
+
+            console.log('ORDER CONFIRMATION SENT TO CUSTOMER!');
+        } catch (err) {
+            console.error('FAILED TO SEND EMAIL:', err);
+        }
+
+        clearCart();
+        setIsProcessing(false);
+        setIsOrderPlaced(true);
     };
-
-    // Using hardcoded keys as fallbacks because the Vite server was not restarted
-    const SERVICE_ID = import.meta.env.VITE_EMAILJS_SERVICE_ID || 'service_k11zocm';
-    const TEMPLATE_ID = import.meta.env.VITE_EMAILJS_TEMPLATE_ID || 'template_wz44bjr';
-    const PUBLIC_KEY = import.meta.env.VITE_EMAILJS_PUBLIC_KEY || 'lqlnFNDxsieXbjeNn';
-
-    try {
-      const response = await emailjs.send(SERVICE_ID, TEMPLATE_ID, templateParams, PUBLIC_KEY);
-      console.log('EMAIL SENT SUCCESSFULLY!', response.status, response.text);
-    } catch (err) {
-      console.error('FAILED TO SEND EMAIL:', err);
-      alert(`EmailJS Error: ${err?.text || err?.message}`);
-    }
-
-    clearCart();
-    setIsProcessing(false);
-    setIsOrderPlaced(true);
-  };
 
   const handleCheckout = async (e) => {
     e.preventDefault();
@@ -298,14 +300,10 @@ export default function OrderPage() {
                       </div>
                     )}
                     <div className="flex justify-between text-stone-800 text-sm font-semibold">
-                      <span>Shipping</span>
-                      <span className={appliedDiscount?.type === 'shipping' ? 'text-green-900 font-bold' : 'text-stone-900 font-semibold'}>
-                        {appliedDiscount?.type === 'shipping' ? 'FREE' : '₹150'}
+                      <span>Platform Fee</span>
+                      <span className="text-stone-900 font-bold">
+                        ₹{platformFee}
                       </span>
-                    </div>
-                    <div className="flex justify-between text-stone-800 text-sm font-semibold">
-                      <span>Tax (6% GST)</span>
-                      <span>₹{gstAmount.toLocaleString()}</span>
                     </div>
                     {codFee > 0 && (
                       <div className="flex justify-between text-stone-800 text-sm font-semibold">

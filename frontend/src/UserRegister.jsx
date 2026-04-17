@@ -45,7 +45,7 @@ export default function UserRegister() {
 
 
   return (
-    <div className="min-h-screen bg-white flex flex-col justify-center items-center px-4 py-12 relative overflow-hidden">
+    <div className="min-h-screen bg-white flex flex-col justify-center items-center px-4 py-10 relative overflow-hidden">
       <div className="absolute inset-0 pointer-events-none">
         <div className="absolute top-[-10%] right-[-5%] w-[45%] h-[45%] bg-amber-50 rounded-full blur-[110px] opacity-50" />
         <div className="absolute bottom-[-10%] left-[-5%] w-[45%] h-[45%] bg-stone-50 rounded-full blur-[110px] opacity-50" />
@@ -57,7 +57,7 @@ export default function UserRegister() {
         transition={{ duration: 0.7 }}
         className="w-full max-w-md relative z-10"
       >
-        <div className="bg-white rounded-[2.5rem] shadow-2xl shadow-stone-200/40 p-10 md:p-14 border border-stone-100">
+        <div className="bg-white rounded-[2.5rem] shadow-2xl shadow-stone-200/40 p-9 md:p-12 border border-stone-100">
           <div className="text-center mb-10">
             <h1 className="text-3xl font-bold text-stone-900 tracking-tight mb-2">Join ElectroShop</h1>
             <p className="text-stone-400 text-[10px] font-black uppercase tracking-widest">Create your personal access account</p>

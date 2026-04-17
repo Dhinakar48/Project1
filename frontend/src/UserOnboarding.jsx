@@ -25,9 +25,13 @@ export default function UserOnboarding() {
 
   useEffect(() => {
     if (!window.recaptchaVerifier) {
-      window.recaptchaVerifier = new RecaptchaVerifier(auth, 'recaptcha-container', {
-        'size': 'invisible'
-      });
+      window.recaptchaVerifier = new RecaptchaVerifier(
+        auth, // ✅ FIRST PARAM MUST BE auth
+        "recaptcha-container",
+        {
+          size: "invisible",
+        }
+      );
     }
 
     return () => {
@@ -41,49 +45,65 @@ export default function UserOnboarding() {
   const handleGetOTP = async () => {
     let formattedPhone = formData.phone.trim();
 
-    // Auto-prepend +91 if user forgets
-    if (!formattedPhone.startsWith('+')) {
-      formattedPhone = '+91' + formattedPhone;
-    }
+    formattedPhone = formattedPhone.replace(/\D/g, '');
 
-    if (formattedPhone.length < 13) {
-      setStatusMsg({ text: "Please enter a valid 10-digit mobile number", type: "error" });
+    if (formattedPhone.length === 10) {
+      formattedPhone = '+91' + formattedPhone;
+    } else if (formattedPhone.length === 12 && formattedPhone.startsWith('91')) {
+      formattedPhone = '+' + formattedPhone;
+    } else {
+      setStatusMsg({ text: "Invalid phone number", type: "error" });
       return;
     }
+
 
     try {
       setStatusMsg({ text: "Sending OTP...", type: "success" });
       const appVerifier = window.recaptchaVerifier;
-      const confirmation = await signInWithPhoneNumber(auth, formattedPhone, appVerifier);
+
+      if (!appVerifier) {
+        setStatusMsg({ text: "reCAPTCHA not ready. Refresh page.", type: "error" });
+        return;
+      } const confirmation = await signInWithPhoneNumber(auth, formattedPhone, appVerifier);
       setConfirmationResult(confirmation);
-      setStatusMsg({ text: "OTP sent to your mobile via Firebase 📱", type: "success" });
+      setStatusMsg({ text: "OTP sent to your mobile via Firebase ", type: "success" });
     } catch (err) {
       console.error(err);
-      setStatusMsg({ text: "Failed to send Firebase OTP! Check API Keys.", type: "error" });
+      setStatusMsg({ text: err.message, type: "error" });
     }
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
 
-    if (!confirmationResult && formData.otp) {
-      setStatusMsg({ text: "Please request an OTP first!", type: "error" });
+    if (!confirmationResult) {
+      setStatusMsg({ text: "Please request OTP first!", type: "error" });
       return;
     }
 
     try {
       setStatusMsg({ text: "Verifying Profile...", type: "success" });
 
-      // ✅ GET USER FROM LOCAL STORAGE (ADD THIS LINE)
+      // ✅ Get user safely
       const loggedInUser = JSON.parse(localStorage.getItem("user") || "{}");
+      if (!loggedInUser || !loggedInUser.email) {
+        setStatusMsg({ text: "User session expired. Login again.", type: "error" });
+        return;
+      }
 
-      // 1️⃣ Verify OTP
+      // ✅ Format phone
+      let formattedPhone = formData.phone.trim();
+      if (!formattedPhone.startsWith("+91")) {
+        formattedPhone = "+91" + formattedPhone;
+      }
+
+      // ✅ Verify OTP
       await confirmationResult.confirm(formData.otp);
 
-      // 2️⃣ Save to backend
+      // ✅ Save to backend
       await axios.post("http://127.0.0.1:5000/onboarding", {
         email: loggedInUser.email,
-        phone: formData.phone,
+        phone: formattedPhone,
         name: formData.name,
         gender: formData.gender,
         dob: formData.dob,
@@ -91,26 +111,25 @@ export default function UserOnboarding() {
         profilePicture: formData.profilePicture,
       });
 
-      // 3️⃣ Update localStorage
+      // ✅ Update localStorage
       const updatedUser = {
         ...loggedInUser,
-        phone: formData.phone,
+        phone: formattedPhone,
         name: formData.name,
-        profilePicture: formData.profilePicture,
         is_verified: true,
       };
 
       localStorage.setItem("user", JSON.stringify(updatedUser));
 
-      setStatusMsg({ text: "Profile Completed ✅ Redirecting...", type: "success" });
+      setStatusMsg({ text: "Profile Completed Redirecting...", type: "success" });
 
       setTimeout(() => {
-        window.location.href = "/";
+        navigate("/");
       }, 1500);
 
     } catch (err) {
       console.error(err);
-      setStatusMsg({ text: "Invalid OTP or Something went wrong ❌", type: "error" });
+      setStatusMsg({ text: "Invalid OTP or Something went wrong!", type: "error" });
     }
   };
 
@@ -135,7 +154,7 @@ export default function UserOnboarding() {
   };
 
   return (
-    <div className="min-h-screen bg-white flex flex-col justify-center items-center px-4 py-12 relative overflow-hidden">
+    <div className="min-h-screen bg-white flex flex-col justify-center items-center px-4 py-10 relative overflow-hidden">
       <div className="absolute inset-0 pointer-events-none">
         <div className="absolute top-[-10%] right-[-5%] w-[45%] h-[45%] bg-amber-50 rounded-full blur-[110px] opacity-50" />
         <div className="absolute bottom-[-10%] left-[-5%] w-[45%] h-[45%] bg-stone-50 rounded-full blur-[110px] opacity-50" />
@@ -147,7 +166,7 @@ export default function UserOnboarding() {
         transition={{ duration: 0.7 }}
         className="w-full max-w-2xl relative z-10"
       >
-        <div className="bg-white rounded-[2.5rem] shadow-2xl shadow-stone-200/40 p-8 md:p-12 border border-stone-50">
+        <div className="bg-white rounded-[2.5rem] shadow-2xl shadow-stone-200/40 p-8 md:p-10 border border-stone-50">
           <div className="text-center mb-8">
             <h1 className="text-3xl font-bold text-stone-900 tracking-tight mb-2">Complete Profile</h1>
             <p className="text-stone-400 text-[10px] font-black uppercase tracking-widest">Just a few more details to get started</p>

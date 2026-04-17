@@ -1,12 +1,14 @@
 import { useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { useParams, Link, useLocation } from "react-router-dom";
+import { useParams, Link, useLocation, useNavigate } from "react-router-dom";
 import { productsData, featuredProductsArray } from "./data";
 import { useStore } from "./StoreContext";
+import { FaCartPlus, FaCheck } from "react-icons/fa6";
 
 export default function ProductDetails() {
     const { id } = useParams();
     const location = useLocation();
+    const navigate = useNavigate();
     const from = location.state?.from;
     const product = productsData[id] || productsData["default"];
     const [selectedColorIndex, setSelectedColorIndex] = useState(0);
@@ -44,6 +46,11 @@ export default function ProductDetails() {
         addToCart(product, activeVariant);
         setAddedToCart(true);
         setTimeout(() => setAddedToCart(false), 2000);
+    };
+
+    const handleBuyNow = () => {
+        addToCart(product, activeVariant);
+        navigate("/order");
     };
 
     useEffect(() => {
@@ -164,24 +171,35 @@ export default function ProductDetails() {
 
                         <motion.div 
                             variants={{ hidden: { opacity: 0, y: 20 }, visible: { opacity: 1, y: 0 } }}
-                            className="flex flex-col sm:flex-row gap-4"
+                            className="flex items-stretch gap-3"
                         >
                             <motion.button 
                                 onClick={handleAddToCart}
-                                whileHover={{ scale: 1.02 }}
-                                whileTap={{ scale: 0.98 }}
-                                className={`${addedToCart ? 'bg-amber-500' : 'bg-amber-500'} text-white py-5 px-12 font-black text-xs uppercase tracking-[0.2em] hover:bg-amber-600 transition-all`}
+                                whileHover={{ scale: 1.01 }}
+                                whileTap={{ scale: 0.99 }}
+                                className={`w-16 flex items-center justify-center transition-all duration-300 border ${addedToCart ? 'bg-green-600 text-white border-green-600' : 'bg-stone-100 text-stone-900 border-stone-200 hover:bg-stone-200'}`}
+                                title={addedToCart ? "Added" : "Add to Bag"}
                             >
-                                {addedToCart ? 'Added to Bag' : 'Add to Shopping Bag'}
+                                {addedToCart ? <FaCheck size={18} /> : <FaCartPlus size={18} />}
+                            </motion.button>
+
+                            <motion.button 
+                                onClick={handleBuyNow}
+                                whileHover={{ scale: 1.01 }}
+                                whileTap={{ scale: 0.99 }}
+                                className="flex-1 bg-stone-900 text-amber-500 py-5 px-8 font-black text-[10px] uppercase tracking-[0.2em] hover:bg-stone-800 transition-all shadow-xl shadow-stone-900/10"
+                            >
+                                Buy Now
                             </motion.button>
                             
                             <motion.button
                                 onClick={() => toggleWishlist(product)}
-                                whileHover={{ scale: 1.02 }}
-                                whileTap={{ scale: 0.98 }}
-                                className={`p-5 flex items-center justify-center border transition-all duration-300 ${isWishlisted ? 'border-red-500 text-red-500 bg-red-50' : 'border-amber-200 text-amber-600 hover:border-amber-600 hover:bg-amber-50 bg-white'}`}
+                                whileHover={{ scale: 1.01 }}
+                                whileTap={{ scale: 0.99 }}
+                                className={`w-16 flex items-center justify-center border transition-all duration-300 ${isWishlisted ? 'border-red-500 text-red-500 bg-red-50' : 'border-stone-200 text-stone-400 hover:border-stone-900 hover:bg-stone-50 bg-white'}`}
+                                title="Wishlist"
                             >
-                                <svg xmlns="http://www.w3.org/2000/svg" className={`h-6 w-6 ${isWishlisted ? 'fill-current' : 'fill-none'}`} viewBox="0 0 24 24" stroke="currentColor">
+                                <svg xmlns="http://www.w3.org/2000/svg" className={`h-5 w-5 ${isWishlisted ? 'fill-current' : 'fill-none'}`} viewBox="0 0 24 24" stroke="currentColor">
                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
                                 </svg>
                             </motion.button>

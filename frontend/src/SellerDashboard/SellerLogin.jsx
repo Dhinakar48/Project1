@@ -102,7 +102,7 @@ export default function SellerLogin() {
               style={{ backgroundImage: 'radial-gradient(#f59e0b 0.5px, transparent 0.5px)', backgroundSize: '40px 40px' }} />
       </div>
 
-      <div className="flex-1 bg-white flex flex-col justify-center items-center px-6 py-10 relative overflow-hidden backdrop-blur-3xl">
+      <div className="flex-1 bg-white flex flex-col justify-center items-center px-6 py-10   relative overflow-hidden backdrop-blur-3xl">
         {/* Navigation Layer */}
         <div className="absolute top-8 left-8 md:left-12">
           <Link to="/" className="flex items-center gap-3 text-stone-400 text-[10px] font-black uppercase tracking-[0.2em] hover:text-stone-900 transition-all duration-300 group">
@@ -124,12 +124,12 @@ export default function SellerLogin() {
           className="w-full max-w-lg relative z-10"
         >
           <div className="bg-white/80 backdrop-blur-2xl rounded-[2.5rem] shadow-[0_32px_64px_-16px_rgba(0,0,0,0.08)] p-6 md:p-10 border border-white">
-            <div className="flex flex-col items-center mb-8">
+            <div className="flex flex-col items-center mb-5">
               <motion.div 
                 initial={{ rotate: -10, opacity: 0 }}
                 animate={{ rotate: 3, opacity: 1 }}
                 transition={{ delay: 0.2, duration: 0.6 }}
-                className="w-20 h-20 bg-stone-900 rounded-[2rem] flex items-center justify-center text-amber-500 shadow-2xl shadow-stone-950/20 mb-8"
+                className="w-19 h-19 bg-stone-900 rounded-[2rem] flex items-center justify-center text-amber-500 shadow-2xl shadow-stone-950/20 mb-6"
               >
                 <FaShopify size={40} />
               </motion.div>
@@ -145,7 +145,7 @@ export default function SellerLogin() {
               <motion.div 
                 initial={{ opacity: 0, x: -10 }}
                 animate={{ opacity: 1, x: 0 }}
-                className="bg-red-50 text-red-600 p-4 rounded-2xl text-xs font-black uppercase tracking-widest text-center mb-8 border border-red-100"
+                className="text-red-600 p-2 rounded-2xl text-xs font-black uppercase tracking-widest text-center mb-6"
               >
                 {error}
               </motion.div>
