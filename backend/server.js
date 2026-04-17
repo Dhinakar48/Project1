@@ -12,7 +12,7 @@ app.use(bodyParser.urlencoded({ limit: "50mb", extended: true }));
 const pool = new Pool({
   user: "postgres",
   host: "localhost",
-  database: "postgres",
+  database: "local_db",
   password: "3616",
   port: 5432,
 });
@@ -74,7 +74,7 @@ app.post("/login", async (req, res) => {
         id: user.id,
         email: user.email,
         name: user.name,
-        profilePicture: user.profile_picture,
+        profilePicture: user.profile_image,
         is_verified: user.is_verified,
       },
     });
@@ -133,7 +133,7 @@ app.post("/onboarding", async (req, res) => {
   try {
     const result = await pool.query(
       `UPDATE users 
-       SET name=$1, gender=$2, dob=$3, address=$4, phone=$5, profile_picture=$6, is_verified=true
+       SET name=$1, gender=$2, dob=$3, address=$4, phone=$5, profile_image=$6, is_verified=true
        WHERE email=$7`,
       [name, gender, dob, address, phone, profilePicture, email]
     );
@@ -153,7 +153,7 @@ app.post("/onboarding", async (req, res) => {
 app.get("/profile/:email", async (req, res) => {
   try {
     const result = await pool.query(
-      "SELECT id, email, name, phone, dob, address, gender, profile_picture, is_verified FROM users WHERE email=$1",
+      "SELECT id, email, name, phone, dob, address, gender, profile_image, is_verified FROM users WHERE email=$1",
       [req.params.email]
     );
     if (result.rows.length === 0) return res.status(404).json({ message: "User not found" });
@@ -171,4 +171,3 @@ app.get("/", (req, res) => {
 app.listen(5000, () => {
   console.log("Server running on http://localhost:5000");
 });
-

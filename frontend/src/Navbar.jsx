@@ -31,7 +31,7 @@ export default function Navbar() {
   useEffect(() => {
     if (activeUser.email) {
       axios.get(`http://127.0.0.1:5000/profile/${activeUser.email}`)
-        .then(res => setProfileImg(res.data.profile_picture))
+        .then(res => setProfileImg(res.data.profile_image))
         .catch(err => console.error("Error fetching profile pic:", err));
     }
   }, [activeUser.email]);

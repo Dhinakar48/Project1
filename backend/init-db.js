@@ -9,7 +9,7 @@ async function setup() {
     port: 5432,
     database: 'postgres'
   });
-  
+
   try {
     await client0.connect();
     const res = await client0.query("SELECT 1 FROM pg_database WHERE datname='local_db'");
@@ -19,7 +19,7 @@ async function setup() {
     } else {
       console.log("Database local_db already exists.");
     }
-  } catch(e) {
+  } catch (e) {
     console.error("Error creating database:", e.message);
   } finally {
     await client0.end();
@@ -33,10 +33,10 @@ async function setup() {
     port: 5432,
     database: 'local_db'
   });
-  
+
   try {
     await client1.connect();
-    
+
     await client1.query(`
       CREATE TABLE IF NOT EXISTS users (
         id SERIAL PRIMARY KEY,
@@ -47,6 +47,7 @@ async function setup() {
         dob DATE,
         address TEXT,
         phone TEXT,
+        profile_image TEXT,
         is_verified BOOLEAN DEFAULT false
       );
     `);
@@ -61,8 +62,8 @@ async function setup() {
       );
     `);
     console.log("Table 'otp_verifications' initialized successfully.");
-    
-  } catch(e) {
+
+  } catch (e) {
     console.error("Error creating tables:", e.message);
   } finally {
     await client1.end();

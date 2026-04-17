@@ -57,7 +57,7 @@ export default function MyAccount() {
             email: res.data.email,
             phone: res.data.phone || "",
             dob: res.data.dob ? res.data.dob.split('T')[0] : "2000-01-01",
-            image: res.data.profile_picture
+            image: res.data.profile_image
           });
         })
         .catch(err => console.error("Error loading profile:", err));

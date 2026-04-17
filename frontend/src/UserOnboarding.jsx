@@ -40,7 +40,7 @@ export default function UserOnboarding() {
 
   const handleGetOTP = async () => {
     let formattedPhone = formData.phone.trim();
-    
+
     // Auto-prepend +91 if user forgets
     if (!formattedPhone.startsWith('+')) {
       formattedPhone = '+91' + formattedPhone;
@@ -73,13 +73,14 @@ export default function UserOnboarding() {
 
     try {
       setStatusMsg({ text: "Verifying Profile...", type: "success" });
-      // 1️⃣ Verify OTP with Firebase
-      await confirmationResult.confirm(formData.otp);
 
-      // get logged in user email
+      // ✅ GET USER FROM LOCAL STORAGE (ADD THIS LINE)
       const loggedInUser = JSON.parse(localStorage.getItem("user") || "{}");
 
-      // 2️⃣ Save onboarding data to PostgreSQL Database
+      // 1️⃣ Verify OTP
+      await confirmationResult.confirm(formData.otp);
+
+      // 2️⃣ Save to backend
       await axios.post("http://127.0.0.1:5000/onboarding", {
         email: loggedInUser.email,
         phone: formData.phone,
@@ -90,11 +91,19 @@ export default function UserOnboarding() {
         profilePicture: formData.profilePicture,
       });
 
-      // ✅ Update localStorage with new info (Excluding large image string)
-      const updatedUser = { ...loggedInUser, phone: formData.phone, name: formData.name, is_verified: true };
+      // 3️⃣ Update localStorage
+      const updatedUser = {
+        ...loggedInUser,
+        phone: formData.phone,
+        name: formData.name,
+        profilePicture: formData.profilePicture,
+        is_verified: true,
+      };
+
       localStorage.setItem("user", JSON.stringify(updatedUser));
 
       setStatusMsg({ text: "Profile Completed ✅ Redirecting...", type: "success" });
+
       setTimeout(() => {
         window.location.href = "/";
       }, 1500);
