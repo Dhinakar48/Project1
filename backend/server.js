@@ -276,6 +276,7 @@ app.post("/seller-onboarding", async (req, res) => {
   try {
     await client.query('BEGIN');
 
+    console.log("Onboarding request for email:", email);
     // 1. Update seller table
     const sellerResult = await client.query(
       `UPDATE sellers 
@@ -285,8 +286,9 @@ app.post("/seller-onboarding", async (req, res) => {
     );
 
     if (sellerResult.rowCount === 0) {
+      console.log("Seller not found for email:", email);
       await client.query('ROLLBACK');
-      return res.status(400).json({ message: "Seller not found to update" });
+      return res.status(400).json({ message: `Seller account (${email}) not found. Please register again.` });
     }
 
     const sId = sellerResult.rows[0].sellerid;
