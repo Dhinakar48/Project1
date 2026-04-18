@@ -8,6 +8,7 @@ import {
 import { Link, useNavigate } from "react-router-dom";
 import { auth } from "../firebase";
 import { RecaptchaVerifier, signInWithPhoneNumber } from "firebase/auth";
+import axios from "axios";
 
 export default function SellerRegister() {
   const [formData, setFormData] = useState({
@@ -78,23 +79,21 @@ export default function SellerRegister() {
       setStatusMsg({ text: "Verifying credentials...", type: "success" });
       await confirmationResult.confirm(formData.otp);
       
-      console.log("Seller registration data verified:", formData);
-      
-      const savedSellers = JSON.parse(localStorage.getItem('registeredSellers') || '[]');
-      savedSellers.push({
+      // ✅ Save to backend
+      await axios.post("http://127.0.0.1:5000/seller-register", {
         email: formData.email,
         password: formData.password,
         name: formData.fullName,
-        mobile: formData.mobile
+        phone: formData.mobile
       });
-      localStorage.setItem('registeredSellers', JSON.stringify(savedSellers));
       
       setStatusMsg({ text: "Registration Successful! Redirecting...", type: "success" });
       setTimeout(() => navigate("/seller-login"), 1500);
       
     } catch (err) {
       console.error(err);
-      setStatusMsg({ text: "Verification failed. Check your OTP.", type: "error" });
+      const errMsg = err.response?.data?.message || "Verification failed. Check your OTP.";
+      setStatusMsg({ text: errMsg, type: "error" });
     }
   };
 

@@ -1,8 +1,9 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { FaCircleCheck, FaArrowLeftLong, FaUser, FaLocationDot, FaLock, FaEnvelope, FaPhone, FaCreditCard, FaCcVisa, FaCcMastercard, FaCcApplePay, FaMobileScreenButton, FaMoneyBills, FaBuildingColumns, FaWallet } from 'react-icons/fa6';
+import { FaCircleCheck, FaArrowLeftLong, FaUser, FaLocationDot, FaLock, FaShieldHalved, FaEnvelope, FaPhone, FaCreditCard, FaCcVisa, FaCcMastercard, FaCcApplePay, FaMobileScreenButton, FaMoneyBills, FaBuildingColumns, FaWallet } from 'react-icons/fa6';
 import emailjs from '@emailjs/browser';
+import axios from 'axios';
 import { useStore } from './StoreContext';
 
 const loadRazorpayScript = () => {
@@ -17,28 +18,69 @@ const loadRazorpayScript = () => {
 
 export default function OrderPage() {
   const navigate = useNavigate();
-  const { cart, clearCart, finalTotal, appliedDiscount, subtotal, discountAmount, applyDiscountCode, removeDiscount } = useStore();
+  const { 
+    cart, 
+    clearCart, 
+    finalTotal, 
+    appliedDiscount, 
+    rawSubtotal, 
+    productDiscountAmount, 
+    subtotal, 
+    couponDiscountAmount, 
+    applyDiscountCode, 
+    removeDiscount,
+    userProfile
+  } = useStore();
   const [isOrderPlaced, setIsOrderPlaced] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
+  const [isEditingAddress, setIsEditingAddress] = useState(false);
   const [promoCode, setPromoCode] = useState('');
   const [promoMessage, setPromoMessage] = useState('');
-  const [showPaymentOptions, setShowPaymentOptions] = useState(false);
+  const [showPaymentOptions, setShowPaymentOptions] = useState(true);
   
   const [formData, setFormData] = useState({
-    name: '', email: '', phone: '', address: '', city: '', state: '', zip: '', country: '', paymentMethod: 'card'
+    name: userProfile?.name || `${userProfile?.firstName || 'John'} ${userProfile?.lastName || 'Smith'}`, 
+    email: userProfile?.email || 'john.smith@email.com', 
+    phone: userProfile?.phone || '+91 98765 43210', 
+    addressLine1: userProfile?.addressLine1 || userProfile?.address || '123 Luxury Lane', 
+    city: userProfile?.city || 'Chennai', 
+    state: userProfile?.state || 'Tamil Nadu', 
+    zip: userProfile?.zip || '400001', 
+    country: userProfile?.country || 'India', 
+    paymentMethod: '' // No default selection
   });
+
+  useEffect(() => {
+    const fetchProfile = async () => {
+      const storedUser = JSON.parse(localStorage.getItem("user") || "{}");
+      const email = storedUser.email || userProfile?.email;
+      
+      if (email) {
+        try {
+          const res = await axios.get(`http://127.0.0.1:5000/profile/${email}`);
+          if (res.data) {
+            setFormData(prev => ({
+              ...prev,
+              name: res.data.name || prev.name,
+              email: res.data.email || prev.email,
+              phone: res.data.phone || prev.phone,
+              addressLine1: res.data.address || prev.addressLine1,
+              city: res.data.city || prev.city,
+              state: res.data.state || prev.state,
+              zip: res.data.zip || prev.zip,
+              country: res.data.country || prev.country
+            }));
+          }
+        } catch (err) {
+          console.error("Error fetching shipping details:", err);
+        }
+      }
+    };
+    fetchProfile();
+  }, [userProfile?.email]);
 
   const handleChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
-  };
-
-  const handleContinuePayment = () => {
-    const form = document.getElementById('checkout-form');
-    if (form && form.checkValidity()) {
-      setShowPaymentOptions(true);
-    } else {
-      form?.reportValidity();
-    }
   };
 
   const platformFee = 15;
@@ -55,7 +97,7 @@ export default function OrderPage() {
             total_amount: `₹${totalPayable.toLocaleString()}`,
             payment_method: formData.paymentMethod.toUpperCase(),
             payment_id: paymentId,
-            shipping_address: `${formData.address}, ${formData.city}, ${formData.state}, ${formData.zip}, ${formData.country}`
+            shipping_address: `${formData.addressLine1}, ${formData.city}, ${formData.state}, ${formData.zip}, ${formData.country}`
         };
 
         // Using hardcoded keys as fallbacks because the Vite server was not restarted
@@ -135,6 +177,11 @@ export default function OrderPage() {
           },
           theme: {
             color: '#d97706' // amber-600
+          },
+          modal: {
+            ondismiss: function() {
+              setIsProcessing(false);
+            }
           }
         };
 
@@ -196,89 +243,116 @@ export default function OrderPage() {
 
             <form id="checkout-form" onSubmit={handleCheckout} className="grid grid-cols-1 lg:grid-cols-5 gap-16">
               <div className="lg:col-span-3 space-y-12">
-                {/* Contact Info */}
+                {/* 📍 Shipping Address */}
                 <div className="space-y-6">
-                  <h3 className="text-lg font-bold uppercase tracking-widest text-stone-900 border-b border-stone-200 pb-3">1. Contact Information</h3>
-                  <div className="space-y-4">
-                    <div className="relative group">
-                      <div className="absolute left-5 top-1/2 -translate-y-1/2 text-stone-300 group-focus-within:text-amber-500 transition-colors"><FaUser size={14} /></div>
-                      <input type="text" name="name" value={formData.name} onChange={handleChange} required placeholder="Full Name" className="w-full bg-white text-sm font-semibold text-stone-900 rounded-2xl py-4 pl-12 pr-4 outline-none border border-stone-200 focus:border-amber-500 focus:ring-1 focus:ring-amber-500 transition-all shadow-sm" />
+                  <div className="flex justify-between items-center border-b border-stone-200 pb-3">
+                    <h3 className="text-lg font-bold uppercase tracking-widest text-stone-900">1. Shipping Address</h3>
+                    <button 
+                      type="button" 
+                      onClick={() => setIsEditingAddress(!isEditingAddress)}
+                      className="text-[10px] font-black text-amber-600 uppercase tracking-widest hover:text-amber-700 transition"
+                    >
+                      {isEditingAddress ? "Save & Close" : "Edit Address"}
+                    </button>
+                  </div>
+
+                   {!isEditingAddress ? (
+                    <div className="bg-stone-50 p-6 rounded-2xl border border-stone-100 space-y-2">
+                       <p className="text-sm font-bold text-stone-900">{formData.name}</p>
+                       <p className="text-xs font-semibold text-stone-500">{formData.email} | {formData.phone}</p>
+                       <p className="text-sm font-bold text-stone-900 mt-4">{formData.addressLine1}</p>
+                       <p className="text-xs font-semibold text-stone-500">{formData.city}, {formData.state} {formData.zip}</p>
+                       <p className="text-xs font-semibold text-stone-500">{formData.country}</p>
                     </div>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                      <div className="relative group">
-                        <div className="absolute left-5 top-1/2 -translate-y-1/2 text-stone-300 group-focus-within:text-amber-500 transition-colors"><FaEnvelope size={14} /></div>
-                        <input type="email" name="email" value={formData.email} onChange={handleChange} required placeholder="Email Address" className="w-full bg-white text-sm font-semibold text-stone-900 rounded-2xl py-4 pl-12 pr-4 outline-none border border-stone-200 focus:border-amber-500 focus:ring-1 focus:ring-amber-500 transition-all shadow-sm" />
+                  ) : (
+                    <div className="space-y-4">
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div className="relative group">
+                          <div className="absolute left-5 top-1/2 -translate-y-1/2 text-stone-300 group-focus-within:text-amber-500 transition-colors"><FaUser size={14} /></div>
+                          <input type="text" name="name" value={formData.name} onChange={handleChange} required placeholder="Full Name" className="w-full bg-white text-sm font-semibold text-stone-900 rounded-2xl py-4 pl-12 pr-4 outline-none border border-stone-200 focus:border-stone-400 transition-all" />
+                        </div>
+                        <div className="relative group">
+                          <div className="absolute left-5 top-1/2 -translate-y-1/2 text-stone-300 group-focus-within:text-amber-500 transition-colors"><FaEnvelope size={14} /></div>
+                          <input type="email" name="email" value={formData.email} onChange={handleChange} required placeholder="Email Address" className="w-full bg-white text-sm font-semibold text-stone-900 rounded-2xl py-4 pl-12 pr-4 outline-none border border-stone-200 focus:border-stone-400 transition-all" />
+                        </div>
                       </div>
                       <div className="relative group">
                         <div className="absolute left-5 top-1/2 -translate-y-1/2 text-stone-300 group-focus-within:text-amber-500 transition-colors"><FaPhone size={14} /></div>
-                        <input type="tel" name="phone" value={formData.phone} onChange={handleChange} required placeholder="Phone Number" className="w-full bg-white text-sm font-semibold text-stone-900 rounded-2xl py-4 pl-12 pr-4 outline-none border border-stone-200 focus:border-amber-500 focus:ring-1 focus:ring-amber-500 transition-all shadow-sm" />
+                        <input type="text" name="phone" value={formData.phone} onChange={handleChange} required placeholder="Phone Number" className="w-full bg-white text-sm font-semibold text-stone-900 rounded-2xl py-4 pl-12 pr-4 outline-none border border-stone-200 focus:border-stone-400 transition-all" />
+                      </div>
+                      <div className="relative group">
+                        <div className="absolute left-5 top-1/2 -translate-y-1/2 text-stone-300 group-focus-within:text-amber-500 transition-colors"><FaLocationDot size={14} /></div>
+                        <input type="text" name="addressLine1" value={formData.addressLine1} onChange={handleChange} required placeholder="Full Street Address (House No, Area, Landmark)" className="w-full bg-white text-sm font-semibold text-stone-900 rounded-2xl py-4 pl-12 pr-4 outline-none border border-stone-200 focus:border-stone-400 transition-all" />
+                      </div>
+                      <div className="grid grid-cols-2 gap-4">
+                        <input type="text" name="city" value={formData.city} onChange={handleChange} required placeholder="City" className="w-full bg-white text-sm font-semibold text-stone-900 rounded-2xl py-4 px-5 outline-none border border-stone-200 focus:border-stone-400 transition-all" />
+                        <input type="text" name="state" value={formData.state} onChange={handleChange} required placeholder="State" className="w-full bg-white text-sm font-semibold text-stone-900 rounded-2xl py-4 px-5 outline-none border border-stone-200 focus:border-stone-400 transition-all" />
+                      </div>
+                      <div className="grid grid-cols-2 gap-4">
+                        <input type="text" name="zip" value={formData.zip} onChange={handleChange} required placeholder="ZIP Code" className="w-full bg-white text-sm font-semibold text-stone-900 rounded-2xl py-4 px-5 outline-none border border-stone-200 focus:border-stone-400 transition-all" />
+                        <input type="text" name="country" value={formData.country} onChange={handleChange} required placeholder="Country" className="w-full bg-white text-sm font-semibold text-stone-900 rounded-2xl py-4 px-5 outline-none border border-stone-200 focus:border-stone-400 transition-all" />
                       </div>
                     </div>
-                  </div>
+                  )}
                 </div>
 
-                {/* Shipping Details */}
+                {/* 💳 Payment Method Section */}
                 <div className="space-y-6">
-                  <h3 className="text-lg font-bold uppercase tracking-widest text-stone-900 border-b border-stone-200 pb-3">2. Shipping Details</h3>
-                  <div className="space-y-4">
-                    <div className="relative group">
-                      <div className="absolute left-5 top-1/2 -translate-y-1/2 text-stone-300 group-focus-within:text-amber-500 transition-colors"><FaLocationDot size={14} /></div>
-                      <input type="text" name="address" value={formData.address} onChange={handleChange} required placeholder="Street Address" className="w-full bg-white text-sm font-semibold text-stone-900 rounded-2xl py-4 pl-12 pr-4 outline-none border border-stone-200 focus:border-amber-500 focus:ring-1 focus:ring-amber-500 transition-all shadow-sm" />
-                    </div>
-                    <div className="grid grid-cols-2 gap-4">
-                      <input type="text" name="city" value={formData.city} onChange={handleChange} required placeholder="City" className="w-full bg-white text-sm font-semibold text-stone-900 rounded-2xl py-4 px-5 outline-none border border-stone-200 focus:border-amber-500 focus:ring-1 focus:ring-amber-500 transition-all shadow-sm" />
-                      <input type="text" name="state" value={formData.state} onChange={handleChange} required placeholder="State" className="w-full bg-white text-sm font-semibold text-stone-900 rounded-2xl py-4 px-5 outline-none border border-stone-200 focus:border-amber-500 focus:ring-1 focus:ring-amber-500 transition-all shadow-sm" />
-                    </div>
-                    <div className="grid grid-cols-2 gap-4">
-                      <input type="text" name="zip" value={formData.zip} onChange={handleChange} required placeholder="ZIP Code" className="w-full bg-white text-sm font-semibold text-stone-900 rounded-2xl py-4 px-5 outline-none border border-stone-200 focus:border-amber-500 focus:ring-1 focus:ring-amber-500 transition-all shadow-sm" />
-                      <input type="text" name="country" value={formData.country} onChange={handleChange} required placeholder="Country" className="w-full bg-white text-sm font-semibold text-stone-900 rounded-2xl py-4 px-5 outline-none border border-stone-200 focus:border-amber-500 focus:ring-1 focus:ring-amber-500 transition-all shadow-sm" />
-                    </div>
+                  <h3 className="text-lg font-bold uppercase tracking-widest text-stone-900 border-b border-stone-200 pb-3">2. Select Payment Method</h3>
+                  <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
+                    <label className={`relative border p-3 rounded-2xl cursor-pointer transition-all flex flex-col justify-center items-center h-24 ${formData.paymentMethod === 'card' ? 'border-amber-600 bg-amber-50 shadow-md ring-1 ring-amber-600' : 'border-stone-200 hover:border-amber-300 hover:bg-stone-50'}`}>
+                      <input type="radio" name="paymentMethod" value="card" checked={formData.paymentMethod === 'card'} onChange={handleChange} className="sr-only" />
+                      <div className="flex flex-col gap-2 items-center text-center">
+                        <FaCreditCard size={20} className={formData.paymentMethod === 'card' ? 'text-amber-600' : 'text-stone-400'} />
+                        <span className={`text-[10px] uppercase tracking-widest font-bold ${formData.paymentMethod === 'card' ? 'text-amber-900' : 'text-stone-600'}`}>Card</span>
+                      </div>
+                    </label>
+                    <label className={`relative border p-3 rounded-2xl cursor-pointer transition-all flex flex-col justify-center items-center h-24 ${formData.paymentMethod === 'upi' ? 'border-amber-600 bg-amber-50 shadow-md ring-1 ring-amber-600' : 'border-stone-200 hover:border-amber-300 hover:bg-stone-50'}`}>
+                      <input type="radio" name="paymentMethod" value="upi" checked={formData.paymentMethod === 'upi'} onChange={handleChange} className="sr-only" />
+                      <div className="flex flex-col gap-2 items-center text-center">
+                        <FaMobileScreenButton size={20} className={formData.paymentMethod === 'upi' ? 'text-amber-600' : 'text-stone-400'} />
+                        <span className={`text-[10px] uppercase tracking-widest font-bold ${formData.paymentMethod === 'upi' ? 'text-amber-900' : 'text-stone-600'}`}>UPI</span>
+                      </div>
+                    </label>
+                    <label className={`relative border p-3 rounded-2xl cursor-pointer transition-all flex flex-col justify-center items-center h-24 ${formData.paymentMethod === 'netbanking' ? 'border-amber-600 bg-amber-50 shadow-md ring-1 ring-amber-600' : 'border-stone-200 hover:border-amber-300 hover:bg-stone-50'}`}>
+                      <input type="radio" name="paymentMethod" value="netbanking" checked={formData.paymentMethod === 'netbanking'} onChange={handleChange} className="sr-only" />
+                      <div className="flex flex-col gap-2 items-center text-center">
+                        <FaBuildingColumns size={20} className={formData.paymentMethod === 'netbanking' ? 'text-amber-600' : 'text-stone-400'} />
+                        <span className={`text-[10px] uppercase tracking-widest font-bold ${formData.paymentMethod === 'netbanking' ? 'text-amber-900' : 'text-stone-600'}`}>Net Banking</span>
+                      </div>
+                    </label>
+                    <label className={`relative border p-3 rounded-2xl cursor-pointer transition-all flex flex-col justify-center items-center h-24 ${formData.paymentMethod === 'wallet' ? 'border-amber-600 bg-amber-50 shadow-md ring-1 ring-amber-600' : 'border-stone-200 hover:border-amber-300 hover:bg-stone-50'}`}>
+                      <input type="radio" name="paymentMethod" value="wallet" checked={formData.paymentMethod === 'wallet'} onChange={handleChange} className="sr-only" />
+                      <div className="flex flex-col gap-2 items-center text-center">
+                        <FaWallet size={20} className={formData.paymentMethod === 'wallet' ? 'text-amber-600' : 'text-stone-400'} />
+                        <span className={`text-[10px] uppercase tracking-widest font-bold ${formData.paymentMethod === 'wallet' ? 'text-amber-900' : 'text-stone-600'}`}>Wallet</span>
+                      </div>
+                    </label>
+                    <label className={`relative border p-3 rounded-2xl cursor-pointer transition-all flex flex-col justify-center items-center h-24 ${formData.paymentMethod === 'cod' ? 'border-amber-600 bg-amber-50 shadow-md ring-1 ring-amber-600' : 'border-stone-200 hover:border-amber-300 hover:bg-stone-50'}`}>
+                      <input type="radio" name="paymentMethod" value="cod" checked={formData.paymentMethod === 'cod'} onChange={handleChange} className="sr-only" />
+                      <div className="flex flex-col gap-2 items-center text-center">
+                        <FaMoneyBills size={20} className={formData.paymentMethod === 'cod' ? 'text-amber-600' : 'text-stone-400'} />
+                        <span className={`text-[10px] uppercase tracking-widest font-bold ${formData.paymentMethod === 'cod' ? 'text-amber-900' : 'text-stone-600'}`}>COD</span>
+                      </div>
+                    </label>
                   </div>
                 </div>
 
-                {/* Payment Method Section */}
-                {showPaymentOptions && (
-                  <div className="space-y-6 pt-6 border-t border-stone-200">
-                    <h3 className="text-lg font-bold uppercase tracking-widest text-stone-900 pb-3">3. Payment Method</h3>
-                    <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
-                      <label className={`relative border p-3 rounded-2xl cursor-pointer transition-all flex flex-col justify-center items-center h-24 ${formData.paymentMethod === 'card' ? 'border-amber-600 bg-amber-50 shadow-md ring-1 ring-amber-600' : 'border-stone-200 hover:border-amber-300 hover:bg-stone-50'}`}>
-                        <input type="radio" name="paymentMethod" value="card" checked={formData.paymentMethod === 'card'} onChange={handleChange} className="sr-only" />
-                        <div className="flex flex-col gap-2 items-center text-center">
-                          <FaCreditCard size={20} className={formData.paymentMethod === 'card' ? 'text-amber-600' : 'text-stone-400'} />
-                          <span className={`text-[10px] uppercase tracking-widest font-bold ${formData.paymentMethod === 'card' ? 'text-amber-900' : 'text-stone-600'}`}>Card</span>
-                        </div>
-                      </label>
-                      <label className={`relative border p-3 rounded-2xl cursor-pointer transition-all flex flex-col justify-center items-center h-24 ${formData.paymentMethod === 'upi' ? 'border-amber-600 bg-amber-50 shadow-md ring-1 ring-amber-600' : 'border-stone-200 hover:border-amber-300 hover:bg-stone-50'}`}>
-                        <input type="radio" name="paymentMethod" value="upi" checked={formData.paymentMethod === 'upi'} onChange={handleChange} className="sr-only" />
-                        <div className="flex flex-col gap-2 items-center text-center">
-                          <FaMobileScreenButton size={20} className={formData.paymentMethod === 'upi' ? 'text-amber-600' : 'text-stone-400'} />
-                          <span className={`text-[10px] uppercase tracking-widest font-bold ${formData.paymentMethod === 'upi' ? 'text-amber-900' : 'text-stone-600'}`}>UPI</span>
-                        </div>
-                      </label>
-                      <label className={`relative border p-3 rounded-2xl cursor-pointer transition-all flex flex-col justify-center items-center h-24 ${formData.paymentMethod === 'netbanking' ? 'border-amber-600 bg-amber-50 shadow-md ring-1 ring-amber-600' : 'border-stone-200 hover:border-amber-300 hover:bg-stone-50'}`}>
-                        <input type="radio" name="paymentMethod" value="netbanking" checked={formData.paymentMethod === 'netbanking'} onChange={handleChange} className="sr-only" />
-                        <div className="flex flex-col gap-2 items-center text-center">
-                          <FaBuildingColumns size={20} className={formData.paymentMethod === 'netbanking' ? 'text-amber-600' : 'text-stone-400'} />
-                          <span className={`text-[10px] uppercase tracking-widest font-bold ${formData.paymentMethod === 'netbanking' ? 'text-amber-900' : 'text-stone-600'}`}>Net Banking</span>
-                        </div>
-                      </label>
-                      <label className={`relative border p-3 rounded-2xl cursor-pointer transition-all flex flex-col justify-center items-center h-24 ${formData.paymentMethod === 'wallet' ? 'border-amber-600 bg-amber-50 shadow-md ring-1 ring-amber-600' : 'border-stone-200 hover:border-amber-300 hover:bg-stone-50'}`}>
-                        <input type="radio" name="paymentMethod" value="wallet" checked={formData.paymentMethod === 'wallet'} onChange={handleChange} className="sr-only" />
-                        <div className="flex flex-col gap-2 items-center text-center">
-                          <FaWallet size={20} className={formData.paymentMethod === 'wallet' ? 'text-amber-600' : 'text-stone-400'} />
-                          <span className={`text-[10px] uppercase tracking-widest font-bold ${formData.paymentMethod === 'wallet' ? 'text-amber-900' : 'text-stone-600'}`}>Wallet</span>
-                        </div>
-                      </label>
-                      <label className={`relative border p-3 rounded-2xl cursor-pointer transition-all flex flex-col justify-center items-center h-24 ${formData.paymentMethod === 'cod' ? 'border-amber-600 bg-amber-50 shadow-md ring-1 ring-amber-600' : 'border-stone-200 hover:border-amber-300 hover:bg-stone-50'}`}>
-                        <input type="radio" name="paymentMethod" value="cod" checked={formData.paymentMethod === 'cod'} onChange={handleChange} className="sr-only" />
-                        <div className="flex flex-col gap-2 items-center text-center">
-                          <FaMoneyBills size={20} className={formData.paymentMethod === 'cod' ? 'text-amber-600' : 'text-stone-400'} />
-                          <span className={`text-[10px] uppercase tracking-widest font-bold ${formData.paymentMethod === 'cod' ? 'text-amber-900' : 'text-stone-600'}`}>COD</span>
-                        </div>
-                      </label>
-                    </div>
-                  </div>
-                )}
+                {/* 🔒 Trust Badges (Left Side) */}
+                <div className="pt-8 border-t border-stone-200 flex flex-col sm:flex-row items-center justify-between gap-6 opacity-60">
+                   <div className="flex items-center gap-3">
+                     <FaShieldHalved size={20} className="text-stone-400" />
+                     <div className="flex flex-col">
+                       <span className="text-[10px] font-black uppercase tracking-[0.2em] text-stone-900">100% Secure Transaction</span>
+                       <span className="text-[9px] font-bold text-stone-500 uppercase tracking-widest">Bank-grade 256-bit SSL encryption</span>
+                     </div>
+                   </div>
+                   <div className="flex items-center gap-6 text-stone-300 grayscale grayscale-[0.8]">
+                     <FaCcVisa size={28} />
+                     <FaCcMastercard size={28} />
+                     <FaCcApplePay size={28} />
+                   </div>
+                </div>
               </div>
 
               {/* Order Summary Section */}
@@ -287,16 +361,24 @@ export default function OrderPage() {
                   <h3 className="text-2xl font-bold border-b border-stone-500/20 pb-4 tracking-tight text-stone-900 mb-6">Order Summary</h3>
                   <div className="space-y-4 mb-4">
                     <div className="flex justify-between text-stone-800 text-sm font-semibold">
+                      <span>Bag Total</span>
+                      <span className="text-stone-400 line-through">₹{rawSubtotal.toLocaleString()}</span>
+                    </div>
+                    <div className="flex justify-between text-green-700 text-sm font-bold">
+                      <span>Discount</span>
+                      <span>−₹{productDiscountAmount.toLocaleString()}</span>
+                    </div>
+                    <div className="flex justify-between text-stone-900 text-sm font-bold pt-2 border-t border-stone-100">
                       <span>Subtotal</span>
                       <span>₹{subtotal.toLocaleString()}</span>
                     </div>
                     {appliedDiscount && (
                       <div className="flex justify-between text-green-900 text-sm font-bold">
                         <div className="flex items-center gap-2">
-                          <span>Discount ({appliedDiscount.code})</span>
+                          <span>Coupon ({appliedDiscount.code})</span>
                           <button type="button" onClick={removeDiscount} className="text-[9px] border border-green-900 px-1.5 py-0.5 rounded-md hover:bg-green-900 hover:text-white transition-colors">REMOVE</button>
                         </div>
-                        <span>- ₹{discountAmount.toLocaleString()}</span>
+                        <span>− ₹{couponDiscountAmount.toLocaleString()}</span>
                       </div>
                     )}
                     <div className="flex justify-between text-stone-800 text-sm font-semibold">
@@ -337,62 +419,30 @@ export default function OrderPage() {
                     </div>
                   )}
 
-                  <div className="border-t border-stone-500/20 pt-2">
-                    <div className="flex justify-between items-end mb-6">
-                      <span className="text-[10px] font-black uppercase tracking-widest text-stone-800 block">Total Amount</span>
-                      <span className="text-3xl font-black text-stone-900 block">₹{totalPayable.toLocaleString()}</span>
-                    </div>
-                    {!showPaymentOptions ? (
+                    <div className="border-t border-stone-500/20 pt-2">
+                      <div className="flex justify-between items-end mb-6">
+                        <span className="text-[10px] font-black uppercase tracking-widest text-stone-800 block">Total Amount</span>
+                        <span className="text-3xl font-black text-stone-900 block">₹{totalPayable.toLocaleString()}</span>
+                      </div>
                       <button 
-                        type="button" 
-                        onClick={handleContinuePayment}
-                        className="w-full bg-stone-900 text-amber-500 hover:text-white py-5 rounded-2xl font-black uppercase tracking-widest hover:bg-stone-800 transition-all shadow-xl active:scale-[0.98] flex justify-center items-center gap-3"
+                        type="submit" 
+                        disabled={isProcessing || !formData.paymentMethod}
+                        className={`w-full py-5 rounded-2xl font-black uppercase tracking-widest transition-all shadow-sm flex justify-center items-center gap-3 ${isProcessing || !formData.paymentMethod ? 'bg-stone-200 text-stone-400 cursor-not-allowed' : 'bg-black border border-stone-200 text-amber-500 active:scale-[0.98]'}`}
                       >
-                        Continue to Payment
+                        {isProcessing ? (
+                          <span className="w-5 h-5 border-2 border-stone-400 border-t-amber-500 rounded-full animate-spin"></span>
+                        ) : !formData.paymentMethod ? (
+                          "Select Payment Method"
+                        ) : (
+                          <><FaCircleCheck size={14} /> Confirm Order</>
+                        )}
                       </button>
-                    ) : (
-                      <>
-                        <button 
-                          type="submit" 
-                          disabled={isProcessing}
-                          className="w-full bg-black border border-stone-200 text-amber-500 py-5 rounded-2xl font-black uppercase tracking-widest transition-all shadow-sm active:scale-[0.98] flex justify-center items-center gap-3 disabled:opacity-70 disabled:cursor-not-allowed"
-                        >
-                          {isProcessing ? (
-                            <span className="flex items-center gap-2">
-                              <span className="w-4 h-4 border rounded-full animate-spin"></span>
-                              Processing...
-                            </span>
-                          ) : (
-                            <><FaCircleCheck size={14} /> Confirm Order</>
-                          )}
-                        </button>
-                        <p className="text-center text-[9px] uppercase font-bold text-amber-900 tracking-widest mt-4 opacity-70  py-1.5 rounded-lg w-max mx-auto px-3">
-                          {formData.paymentMethod === 'cod' ? 'Cash on Delivery Pending' : 'Secure Encrypted Payment'}
-                        </p>
-                      </>
-                    )}
-                  </div>
-
-                  {/* Trust Badges - Only visible when payment options are shown */}
-                  {showPaymentOptions && (
-                    <div className="mt-8 pt-8 border-t border-amber-500/30 flex flex-col gap-4">
-                      <div className="flex items-center gap-3 text-stone-900">
-                        <FaLock size={12} className="opacity-70" />
-                        <span className="text-[10px] font-black uppercase tracking-[0.2em]">100% Secure Transaction</span>
-                      </div>
-                      <p className="text-[9px] text-stone-800/80 font-bold uppercase tracking-widest leading-relaxed">
-                        Your personal and payment data is encrypted and secure.
+                      <p className="text-center text-[9px] uppercase font-bold text-amber-900 tracking-widest mt-4 opacity-70  py-1.5 rounded-lg w-max mx-auto px-3">
+                        {formData.paymentMethod === 'cod' ? 'Cash on Delivery Pending' : formData.paymentMethod ? 'Secure Encrypted Payment' : 'Selection Required'}
                       </p>
-                      <div className="flex gap-2 opacity-80">
-                        <div className="bg-white/40 px-2 py-1.5 rounded-lg shadow-sm text-stone-900 border border-white/20"><FaCcVisa size={18} /></div>
-                        <div className="bg-white/40 px-2 py-1.5 rounded-lg shadow-sm text-stone-900 border border-white/20"><FaCcMastercard size={18} /></div>
-                        <div className="bg-white/40 px-2 py-1.5 rounded-lg shadow-sm text-stone-900 border border-white/20"><FaCcApplePay size={18} /></div>
-                        <div className="bg-white/40 px-2 py-1.5 rounded-lg shadow-sm text-stone-900 border border-white/20"><FaCreditCard size={18} /></div>
-                      </div>
                     </div>
-                  )}
+                  </div>
                 </div>
-              </div>
             </form>
           </motion.div>
         ) : (

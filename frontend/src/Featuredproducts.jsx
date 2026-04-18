@@ -45,6 +45,7 @@ export default function Featured() {
                                 
 
 
+
                                 <div className="absolute bottom-0 left-0 right-0 p-6 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none">
                                     <button className="w-full bg-amber-600 text-white py-3 text-[10px] font-black uppercase tracking-[0.2em]">
                                         Quick Purchase

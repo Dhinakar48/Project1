@@ -16,6 +16,9 @@ export default function UserOnboarding() {
     phone: "",
     otp: "",
     address: "",
+    city: "",
+    state: "",
+    pincode: "",
     profilePicture: null
   });
 
@@ -108,6 +111,9 @@ export default function UserOnboarding() {
         gender: formData.gender,
         dob: formData.dob,
         address: formData.address,
+        city: formData.city,
+        state: formData.state,
+        pincode: formData.pincode,
         profilePicture: formData.profilePicture,
       });
 
@@ -259,7 +265,7 @@ export default function UserOnboarding() {
             </div>
 
             <div className="space-y-1">
-              <label className="text-[10px] font-black text-stone-900 uppercase tracking-widest ml-1">Full Address</label>
+              <label className="text-[10px] font-black text-stone-900 uppercase tracking-widest ml-1">Street Address</label>
               <div className="relative group">
                 <FaLocationDot className="absolute left-4 top-4 text-stone-300 group-focus-within:text-amber-600 transition-colors" />
                 <textarea
@@ -268,10 +274,49 @@ export default function UserOnboarding() {
                   onChange={handleChange}
                   rows="2"
                   className="w-full bg-stone-50 border-2 border-stone-50 rounded-xl py-3 pl-12 pr-4 outline-none focus:border-amber-600/10 focus:bg-white transition-all text-sm font-semibold resize-none"
-                  placeholder="Street, City, Zip Code"
+                  placeholder="Apartment, suite, unit, building, floor, etc."
                   required
                 />
               </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+               <div className="space-y-1 col-span-1">
+                 <label className="text-[10px] font-black text-stone-900 uppercase tracking-widest ml-1">City</label>
+                 <input
+                   type="text"
+                   name="city"
+                   value={formData.city}
+                   onChange={handleChange}
+                   className="w-full bg-stone-50 border-2 border-stone-50 rounded-xl py-3 px-4 outline-none focus:border-amber-600/10 focus:bg-white transition-all text-sm font-semibold"
+                   placeholder="Mumbai"
+                   required
+                 />
+               </div>
+               <div className="space-y-1 col-span-1">
+                 <label className="text-[10px] font-black text-stone-900 uppercase tracking-widest ml-1">State</label>
+                 <input
+                   type="text"
+                   name="state"
+                   value={formData.state}
+                   onChange={handleChange}
+                   className="w-full bg-stone-50 border-2 border-stone-50 rounded-xl py-3 px-4 outline-none focus:border-amber-600/10 focus:bg-white transition-all text-sm font-semibold"
+                   placeholder="Maharashtra"
+                   required
+                 />
+               </div>
+               <div className="space-y-1 col-span-1">
+                 <label className="text-[10px] font-black text-stone-900 uppercase tracking-widest ml-1">Zip Code</label>
+                 <input
+                   type="text"
+                   name="pincode"
+                   value={formData.pincode}
+                   onChange={handleChange}
+                   className="w-full bg-stone-50 border-2 border-stone-50 rounded-xl py-3 px-4 outline-none focus:border-amber-600/10 focus:bg-white transition-all text-sm font-semibold"
+                   placeholder="400001"
+                   required
+                 />
+               </div>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">

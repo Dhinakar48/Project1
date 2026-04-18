@@ -1,6 +1,6 @@
 import { motion, AnimatePresence } from "framer-motion";
 import { useStore } from "./StoreContext";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
 import {
   FaTrash, FaMinus, FaPlus, FaArrowLeft,
   FaCcVisa, FaCcMastercard, FaCcApplePay, FaCreditCard,
@@ -12,8 +12,10 @@ export default function Cart() {
     cart,
     removeFromCart,
     updateQuantity,
+    rawSubtotal,
+    productDiscountAmount,
     subtotal,
-    discountAmount,
+    couponDiscountAmount,
     finalTotal,
     appliedDiscount,
     removeDiscount,
@@ -72,11 +74,13 @@ export default function Cart() {
                   >
                     {/* Image */}
                     <div className="flex-shrink-0 w-30 h-35 bg-gradient-to-br from-stone-50 to-stone-100 rounded-xl flex items-center justify-center overflow-hidden">
-                      <img
-                        src={item.variant.img}
-                        alt={item.name}
-                        className="w-full h-full object-contain p-3 group-hover:scale-105 transition-transform duration-500"
-                      />
+                      <Link to={`/product/${item.id}`} className="block w-full h-full">
+                        <img
+                          src={item.variant.img}
+                          alt={item.name}
+                          className="w-full h-full object-contain p-3 group-hover:scale-105 transition-transform duration-500"
+                        />
+                      </Link>
                     </div>
 
                     {/* Body */}
@@ -84,9 +88,11 @@ export default function Cart() {
                       <p className="text-[10px] font-black uppercase tracking-[0.18em] text-amber-600 mb-1">
                         {item.title}
                       </p>
-                      <h2 className="text-lg font-bold text-stone-900 tracking-tight leading-snug mb-3">
-                        {item.name}
-                      </h2>
+                      <Link to={`/product/${item.id}`} className="hover:text-amber-600 transition-colors">
+                        <h2 className="text-lg font-bold text-stone-900 tracking-tight leading-snug mb-3">
+                          {item.name}
+                        </h2>
+                      </Link>
 
                       <div className="flex items-center flex-wrap gap-2 mb-4">
                         <span className="inline-flex items-center gap-1.5 bg-stone-100 border border-stone-200 rounded-full px-3 py-1 text-[10px] font-bold text-stone-600 uppercase tracking-wide">
@@ -123,9 +129,20 @@ export default function Cart() {
 
                         {/* Price */}
                         <div className="text-right">
-                          <p className="text-xl font-black text-stone-900 tracking-tight">
-                            {item.variant.price}
-                          </p>
+                          {item.discount ? (
+                            <>
+                              <p className="text-xl font-black text-stone-900 tracking-tight">
+                                ₹{(parseInt(item.variant.price.replace(/[^\d]/g, "")) * (1 - item.discount / 100)).toLocaleString()}
+                              </p>
+                              <p className="text-[12px] text-red-500 font-bold line-through opacity-70">
+                                {item.variant.price}
+                              </p>
+                            </>
+                          ) : (
+                            <p className="text-xl font-black text-stone-900 tracking-tight">
+                              {item.variant.price}
+                            </p>
+                          )}
                           <p className="text-[10px] text-stone-400 font-bold uppercase tracking-wider mt-0.5">
                             per unit
                           </p>
@@ -215,6 +232,16 @@ export default function Cart() {
 
                 {/* Line items */}
                 <div className="flex justify-between items-center mb-3.5">
+                  <span className="text-sm font-semibold text-stone-700">Bag Total</span>
+                  <span className="text-sm font-bold text-stone-400 line-through">₹{rawSubtotal.toLocaleString()}</span>
+                </div>
+
+                <div className="flex justify-between items-center mb-3.5 text-green-700">
+                  <span className="text-sm font-semibold">Discount</span>
+                  <span className="text-sm font-bold">−₹{productDiscountAmount.toLocaleString()}</span>
+                </div>
+
+                <div className="flex justify-between items-center mb-3.5 py-3 border-t border-stone-100">
                   <span className="text-sm font-semibold text-stone-700">Subtotal</span>
                   <span className="text-sm font-bold text-stone-900">₹{subtotal.toLocaleString()}</span>
                 </div>
@@ -223,7 +250,7 @@ export default function Cart() {
                   <div className="flex items-center justify-between bg-black/[0.07] border border-black/10 rounded-xl px-3 py-2 mb-3.5">
                     <div className="flex items-center gap-2 text-green-900 text-[11px] font-bold">
                       <FaTag size={10} />
-                      Discount ({appliedDiscount.code})
+                      Coupon ({appliedDiscount.code})
                       <button
                         className="text-[9px] border border-green-900 rounded-md px-1.5 py-0.5 font-black uppercase hover:bg-green-900 hover:text-white transition-colors cursor-pointer bg-transparent text-green-900"
                         onClick={removeDiscount}
@@ -232,7 +259,7 @@ export default function Cart() {
                       </button>
                     </div>
                     <span className="text-sm font-bold text-green-900">
-                      −₹{discountAmount.toLocaleString()}
+                      −₹{couponDiscountAmount.toLocaleString()}
                     </span>
                   </div>
                 )}

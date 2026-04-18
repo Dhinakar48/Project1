@@ -32,6 +32,11 @@ export default function SellerDashboard() {
     return localStorage.getItem('sellerActiveTab') || 'Overview';
   });
 
+  const [seller, setSeller] = useState(() => {
+    const saved = localStorage.getItem('sellerUser');
+    return saved ? JSON.parse(saved) : { name: 'Seller', email: 'merchant@electroshop.com' };
+  });
+
   useEffect(() => {
     if (localStorage.getItem('isSellerAuthenticated') !== 'true') {
       navigate('/seller-login', { replace: true });
@@ -150,7 +155,7 @@ export default function SellerDashboard() {
 
           <div className="w-1/3">
              <h2 className="text-xl font-semibold text-stone-900 tracking-tight hidden sm:block">
-               Seller <span className="text-amber-600">Dashboard</span>
+               {seller.storeName || 'Merchant'} <span className="text-amber-600">Dashboard</span>
              </h2>
           </div>
 
@@ -200,14 +205,15 @@ export default function SellerDashboard() {
                 onClick={() => setShowProfileMenu(!showProfileMenu)}
                 className="w-10 h-10 bg-amber-100 rounded-[1rem] flex items-center justify-center text-amber-700 font-semibold text-xs border border-amber-200 cursor-pointer hover:bg-white hover:border-amber-400 transition-all group active:scale-95"
               >
-                D
+                {seller.name?.charAt(0) || 'S'}
               </div>
 
               {showProfileMenu && (
                 <div className="absolute right-0 mt-4 w-56 bg-white rounded-[1.5rem] shadow-2xl border border-stone-100 overflow-hidden z-[60] animate-in fade-in slide-in-from-top-4 duration-300">
                   <div className="p-5 border-b border-stone-100 bg-stone-50/50">
                     <span className="text-[10px] font-semibold text-stone-400 block mb-1">Signed in as</span>
-                    <span className="text-xs font-semibold text-stone-900">electoshop@gmail.com</span>
+                    <span className="text-xs font-semibold text-stone-900">{seller.name}</span>
+                    <span className="text-[9px] font-bold text-stone-400 block mt-0.5">{seller.email}</span>
                   </div>
                   <div className="p-2">
                     <button 

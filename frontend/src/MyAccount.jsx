@@ -45,6 +45,10 @@ export default function MyAccount() {
     email: activeUser.email || "",
     phone: activeUser.phone || "",
     dob: activeUser.dob || "2000-01-01",
+    address: "",
+    city: "",
+    state: "",
+    zip: "",
     image: null
   });
 
@@ -57,6 +61,10 @@ export default function MyAccount() {
             email: res.data.email,
             phone: res.data.phone || "",
             dob: res.data.dob ? res.data.dob.split('T')[0] : "2000-01-01",
+            address: res.data.address || "",
+            city: res.data.city || "",
+            state: res.data.state || "",
+            zip: res.data.zip || "",
             image: res.data.profile_image
           });
         })
@@ -76,7 +84,6 @@ export default function MyAccount() {
       reader.readAsDataURL(file);
     }
   };
-
 
 
   const tabs = [
@@ -453,6 +460,40 @@ export default function MyAccount() {
                             ) : (
                               <div className="bg-stone-50 px-4 py-3 rounded-2xl font-semibold border border-stone-100 text-stone-900">{profileData.phone}</div>
                             )}
+                          </div>
+                          <div className="space-y-2 md:col-span-2">
+                             <label className="text-[10px] font-black uppercase tracking-widest text-stone-500">Street Address</label>
+                             {isEditingProfile ? (
+                               <input type="text" value={profileData.address} onChange={(e) => setProfileData({...profileData, address: e.target.value})} className="w-full bg-white px-4 py-3 rounded-2xl font-semibold border border-stone-200 outline-none focus:border-amber-500 focus:ring-1 focus:ring-amber-500 transition-all shadow-sm" />
+                             ) : (
+                               <div className="bg-stone-50 px-4 py-3 rounded-2xl font-semibold border border-stone-100 text-stone-900">{profileData.address}</div>
+                             )}
+                          </div>
+                          <div className="space-y-2">
+                             <label className="text-[10px] font-black uppercase tracking-widest text-stone-500">City</label>
+                             {isEditingProfile ? (
+                               <input type="text" value={profileData.city} onChange={(e) => setProfileData({...profileData, city: e.target.value})} className="w-full bg-white px-4 py-3 rounded-2xl font-semibold border border-stone-200 outline-none focus:border-amber-500 focus:ring-1 focus:ring-amber-500 transition-all shadow-sm" />
+                             ) : (
+                               <div className="bg-stone-50 px-4 py-3 rounded-2xl font-semibold border border-stone-100 text-stone-900">{profileData.city}</div>
+                             )}
+                          </div>
+                          <div className="grid grid-cols-2 gap-4">
+                            <div className="space-y-2">
+                               <label className="text-[10px] font-black uppercase tracking-widest text-stone-500">State</label>
+                               {isEditingProfile ? (
+                                 <input type="text" value={profileData.state} onChange={(e) => setProfileData({...profileData, state: e.target.value})} className="w-full bg-white px-4 py-3 rounded-2xl font-semibold border border-stone-200 outline-none focus:border-amber-500 focus:ring-1 focus:ring-amber-500 transition-all shadow-sm" />
+                               ) : (
+                                 <div className="bg-stone-50 px-4 py-3 rounded-2xl font-semibold border border-stone-100 text-stone-900">{profileData.state}</div>
+                               )}
+                            </div>
+                            <div className="space-y-2">
+                               <label className="text-[10px] font-black uppercase tracking-widest text-stone-500">Zip Code</label>
+                               {isEditingProfile ? (
+                                 <input type="text" value={profileData.zip} onChange={(e) => setProfileData({...profileData, zip: e.target.value})} className="w-full bg-white px-4 py-3 rounded-2xl font-semibold border border-stone-200 outline-none focus:border-amber-500 focus:ring-1 focus:ring-amber-500 transition-all shadow-sm" />
+                               ) : (
+                                 <div className="bg-stone-50 px-4 py-3 rounded-2xl font-semibold border border-stone-100 text-stone-900">{profileData.zip}</div>
+                               )}
+                            </div>
                           </div>
 
                         </div>

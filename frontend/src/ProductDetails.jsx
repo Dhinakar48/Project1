@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { useParams, Link, useLocation, useNavigate } from "react-router-dom";
 import { productsData, featuredProductsArray } from "./data";
 import { useStore } from "./StoreContext";
-import { FaCartPlus, FaCheck } from "react-icons/fa6";
+import { FaBagShopping, FaCheck } from "react-icons/fa6";
 
 export default function ProductDetails() {
     const { id } = useParams();
@@ -77,11 +77,11 @@ export default function ProductDetails() {
             </motion.div>
 
             {/* Main Product Card - Just Border */}
-            <div className="max-w-7xl mx-auto rounded-[40px] p-8 md:p-1 relative z-10 bg-amber-100/20">
-                <div className="flex flex-col md:flex-row items-center gap-12 md:gap-22">
+            <div className="max-w-6xl mx-auto md:py-12 px-4 relative z-10">
+                <div className="flex flex-col lg:flex-row items-center justify-center gap-16 lg:gap-24">
                     
                     <motion.div 
-                        className="md:flex-[1.4] w-full relative group aspect-square flex items-center justify-center rounded-[40px] overflow-hidden border border-amber-200"
+                        className="lg:flex-1 w-full max-w-[480px] relative group aspect-square flex items-center justify-center rounded-[40px] overflow-hidden border border-amber-200 bg-white shadow-inner"
                         initial={{ opacity: 0, x: -50 }}
                         animate={{ opacity: 1, x: 0 }}
                         transition={{ duration: 0.8 }}
@@ -115,10 +115,10 @@ export default function ProductDetails() {
                                 key={selectedColorIndex}
                                 src={activeVariant.img} 
                                 alt={product.name} 
-                                className="w-[90%] h-[90%] object-contain relative z-10"
+                                className="w-[65%] h-[65%] object-contain relative z-10"
                                 initial={{ opacity: 0.6 }}
-                                animate={{ opacity: 1, y: [0, -15, 0] }}
-                                transition={{ opacity: { duration: 0.4 }, y: { repeat: Infinity, duration: 6, ease: "easeInOut" } }}
+                                animate={{ opacity: 1, scale: [0.95, 1] }}
+                                transition={{ duration: 0.5 }}
                             />
                     </motion.div>
 
@@ -135,10 +135,10 @@ export default function ProductDetails() {
                         <motion.p variants={{ hidden: { opacity: 0, y: 20 }, visible: { opacity: 1, y: 0 } }} className="text-amber-600 text-xs md:text-sm font-black tracking-[0.3em] uppercase mb-4">
                             {product.title}
                         </motion.p>
-                        <motion.h1 variants={{ hidden: { opacity: 0, y: 20 }, visible: { opacity: 1, y: 0 } }} className="text-3xl md:text-5xl font-bold mb-6 tracking-tight leading-tight text-stone-900">
+                        <motion.h1 variants={{ hidden: { opacity: 0, y: 20 }, visible: { opacity: 1, y: 0 } }} className="text-3xl md:text-5xl font-bold mb-4 tracking-tight leading-tight text-stone-900">
                             {product.name}
                         </motion.h1>
-                        <motion.div variants={{ hidden: { opacity: 0, y: 20 }, visible: { opacity: 1, y: 0 } }} className="flex items-center gap-6 mb-8 border-b border-amber-100 pb-8 w-full">
+                        <motion.div variants={{ hidden: { opacity: 0, y: 20 }, visible: { opacity: 1, y: 0 } }} className="flex items-center gap-6 mb-6 border-b border-amber-100 pb-6 w-full">
                             <p className="text-3xl font-black text-amber-600">
                                 {activeVariant.price}
                             </p>
@@ -146,12 +146,12 @@ export default function ProductDetails() {
                                 In Stock
                             </span>
                         </motion.div>
-                        <motion.p variants={{ hidden: { opacity: 0, y: 20 }, visible: { opacity: 1, y: 0 } }} className="text-stone-500 mb-10 leading-relaxed max-w-lg text-lg font-medium">
+                        <motion.p variants={{ hidden: { opacity: 0, y: 20 }, visible: { opacity: 1, y: 0 } }} className="text-stone-500 mb-6 leading-relaxed max-w-lg text-lg font-medium">
                             {product.desc}
                         </motion.p>
 
-                        <motion.div variants={{ hidden: { opacity: 0, y: 20 }, visible: { opacity: 1, y: 0 } }} className="mb-12">
-                            <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-stone-400 mb-4">Select Finish: <span className="text-stone-900">{activeVariant.colorName}</span></h3>
+                        <motion.div variants={{ hidden: { opacity: 0, y: 20 }, visible: { opacity: 1, y: 0 } }} className="mb-8">
+                            <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-stone-400 mb-3">Select Finish: <span className="text-stone-900">{activeVariant.colorName}</span></h3>
                             <div className="flex gap-4">
                                 {product.variants.map((variant, index) => (
                                     <div 
@@ -180,14 +180,14 @@ export default function ProductDetails() {
                                 className={`w-16 flex items-center justify-center transition-all duration-300 border ${addedToCart ? 'bg-green-600 text-white border-green-600' : 'bg-stone-100 text-stone-900 border-stone-200 hover:bg-stone-200'}`}
                                 title={addedToCart ? "Added" : "Add to Bag"}
                             >
-                                {addedToCart ? <FaCheck size={18} /> : <FaCartPlus size={18} />}
+                                {addedToCart ? <FaCheck size={18} /> : <FaBagShopping size={18} />}
                             </motion.button>
 
                             <motion.button 
                                 onClick={handleBuyNow}
                                 whileHover={{ scale: 1.01 }}
                                 whileTap={{ scale: 0.99 }}
-                                className="flex-1 bg-stone-900 text-amber-500 py-5 px-8 font-black text-[10px] uppercase tracking-[0.2em] hover:bg-stone-800 transition-all shadow-xl shadow-stone-900/10"
+                                className="w-64 bg-stone-900 text-amber-500 py-5 font-black text-[10px] uppercase tracking-[0.2em] hover:bg-stone-800 transition-all shadow-xl shadow-stone-900/10"
                             >
                                 Buy Now
                             </motion.button>
@@ -208,33 +208,38 @@ export default function ProductDetails() {
                 </div>
             </div>
 
-            {/* Extra information section */}
+            {/* Technical Specifications Section */}
             <motion.div 
-                className="max-w-7xl mx-auto mt-24 border-t border-stone-200 pt-16 grid grid-cols-1 md:grid-cols-3 gap-12"
+                className="max-w-7xl mx-auto mt-16 border-t border-stone-200 pt-10"
                 initial={{ opacity: 0 }}
                 whileInView={{ opacity: 1 }}
                 viewport={{ once: true }}
             >
-                <div className="space-y-4">
-                    <h4 className="text-[10px] font-black uppercase tracking-[0.3em] text-stone-400">Engineering</h4>
-                    <p className="text-xl font-bold text-stone-800">Premium Materials</p>
-                    <p className="text-stone-500 text-sm leading-relaxed">Crafted with aircraft-grade aluminum and soft-touch composites for ultimate durability and comfort.</p>
-                </div>
-                <div className="space-y-4">
-                    <h4 className="text-[10px] font-black uppercase tracking-[0.3em] text-stone-400">Acoustics</h4>
-                    <p className="text-xl font-bold text-stone-800">Precision Sound</p>
-                    <p className="text-stone-500 text-sm leading-relaxed">Custom-tuned drivers deliver a soundscape that redefines your listening experience with deep clarity.</p>
-                </div>
-                <div className="space-y-4">
-                    <h4 className="text-[10px] font-black uppercase tracking-[0.3em] text-stone-400">Power</h4>
-                    <p className="text-xl font-bold text-stone-800">Infinite Endurance</p>
-                    <p className="text-stone-500 text-sm leading-relaxed">Up to 40 hours of continuous use on a single charge. Rapid charge technology gets you moving fast.</p>
+                <div className="flex flex-col lg:flex-row gap-12">
+                    <div className="lg:w-1/4">
+                        <h4 className="text-[10px] font-black uppercase tracking-[0.3em] text-amber-600 mb-2">Specifications</h4>
+                        <h3 className="text-3xl font-black text-stone-900 tracking-tight leading-none mb-4">Technical Details</h3>
+                        <p className="text-stone-500 text-xs leading-relaxed">
+                            Engineered for excellence and high performance.
+                        </p>
+                    </div>
+
+                    <div className="lg:w-3/4 grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-x-8 gap-y-6">
+                        {product.specs && Object.entries(product.specs).map(([key, value]) => (
+                            value !== "N/A" && (
+                                <div key={key} className="border-b border-stone-100 pb-3 group hover:border-amber-600 transition-colors duration-500">
+                                    <h5 className="text-[8px] font-black uppercase tracking-widest text-stone-400 mb-1 group-hover:text-amber-600 transition-colors capitalize">{key}</h5>
+                                    <p className="text-sm font-bold text-stone-800">{value}</p>
+                                </div>
+                            )
+                        ))}
+                    </div>
                 </div>
             </motion.div>
 
             {/* Reviews Section */}
-            <div className="max-w-7xl mx-auto mt-32 border-t border-stone-200 pt-20">
-                <div className="flex flex-col md:flex-row justify-between items-start md:items-end mb-16 gap-8 text-stone-900">
+            <div className="max-w-7xl mx-auto mt-20 border-t border-stone-200 pt-12">
+                <div className="flex flex-col md:flex-row justify-between items-start md:items-end mb-10 gap-6 text-stone-900">
                     <div>
                         <h4 className="text-[10px] font-black uppercase tracking-[0.3em] text-stone-400 mb-2">Social</h4>
                         <h3 className="text-4xl md:text-5xl font-black tracking-tighter">Voices of Electro</h3>

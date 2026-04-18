@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { FaArrowRight, FaLock, FaEnvelope, FaShopify, FaArrowLeftLong, FaLaptop, FaMobileScreen, FaHeadphones, FaCamera, FaStopwatch } from "react-icons/fa6";
 import { Link, useNavigate } from "react-router-dom";
+import axios from "axios";
 
 export default function SellerLogin() {
   const [email, setEmail] = useState("");
@@ -15,29 +16,39 @@ export default function SellerLogin() {
     }
   }, [navigate]);
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     setError("");
 
-    const savedSellers = JSON.parse(localStorage.getItem('registeredSellers') || '[]');
-    const registeredProvider = savedSellers.find(seller => seller.email === email && seller.password === password);
+    try {
+      const res = await axios.post("http://127.0.0.1:5000/seller-login", { email, password });
+      const { seller } = res.data;
 
-    if (email === "electroshop@gmail.com" && password === "3616") {
-      localStorage.setItem('sellerActiveTab', 'Overview');
-      localStorage.setItem('isSellerAuthenticated', 'true');
-      navigate("/seller-dashboard", { replace: true });
-    } else if (registeredProvider) {
-      if (registeredProvider.isOnboarded) {
-        localStorage.setItem('sellerActiveTab', 'Overview');
-        localStorage.setItem('isSellerAuthenticated', 'true');
-        navigate("/seller-dashboard", { replace: true });
-      } else {
-        // Needs onboarding
-        localStorage.setItem('onboardingSellerEmail', email);
-        navigate("/seller-onboarding");
+      // Check default admin as well just in case
+      if (email === "electroshop@gmail.com" && password === "3616") {
+         localStorage.setItem('sellerActiveTab', 'Overview');
+         localStorage.setItem('isSellerAuthenticated', 'true');
+         localStorage.setItem('user', JSON.stringify({ email, name: "Admin Seller" })); // for global tracking
+         navigate("/seller-dashboard", { replace: true });
+         return;
       }
-    } else {
-      setError("Invalid corporate credentials. Access denied.");
+
+      if (seller) {
+        localStorage.setItem('sellerUser', JSON.stringify(seller));
+        
+        if (seller.isVerified) {
+          localStorage.setItem('sellerActiveTab', 'Overview');
+          localStorage.setItem('isSellerAuthenticated', 'true');
+          navigate("/seller-dashboard", { replace: true });
+        } else {
+          // Needs onboarding
+          localStorage.setItem('onboardingSellerEmail', email);
+          navigate("/seller-onboarding");
+        }
+      }
+    } catch (err) {
+      console.error(err);
+      setError(err.response?.data?.message || "Invalid corporate credentials. Access denied.");
     }
   };
 

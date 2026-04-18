@@ -99,10 +99,21 @@ export function StoreProvider({ children }) {
 
   const removeDiscount = () => setAppliedDiscount(null);
 
-  const subtotal = cart.reduce((total, item) => {
+  const rawSubtotal = cart.reduce((total, item) => {
     const price = parseInt(item.variant.price.replace(/[^\d]/g, ""));
     return total + price * item.quantity;
   }, 0);
+
+  const productDiscountAmount = cart.reduce((total, item) => {
+    if (item.discount) {
+      const price = parseInt(item.variant.price.replace(/[^\d]/g, ""));
+      const discount = (price * item.discount) / 100;
+      return total + discount * item.quantity;
+    }
+    return total;
+  }, 0);
+
+  const subtotal = rawSubtotal - productDiscountAmount;
 
   const calculateDiscount = () => {
     if (!appliedDiscount) return 0;
@@ -111,8 +122,8 @@ export function StoreProvider({ children }) {
     return 0; // shipping handled separately if needed
   };
 
-  const discountAmount = calculateDiscount();
-  const finalTotal = subtotal - discountAmount;
+  const couponDiscountAmount = calculateDiscount();
+  const finalTotal = subtotal - couponDiscountAmount;
 
   return (
     <StoreContext.Provider
@@ -127,8 +138,10 @@ export function StoreProvider({ children }) {
         appliedDiscount,
         applyDiscountCode,
         removeDiscount,
+        rawSubtotal,
+        productDiscountAmount,
         subtotal,
-        discountAmount,
+        couponDiscountAmount,
         finalTotal,
         userProfile,
         setUserProfile
