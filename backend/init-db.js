@@ -39,8 +39,7 @@ async function setup() {
 
     await client1.query(`
   CREATE TABLE IF NOT EXISTS customers (
-    customer_id VARCHAR(20) UNIQUE,
-    id SERIAL PRIMARY KEY,
+    customer_id VARCHAR(20) PRIMARY KEY,
     name VARCHAR(100),
     email VARCHAR(150) UNIQUE NOT NULL,
     phone VARCHAR(20),

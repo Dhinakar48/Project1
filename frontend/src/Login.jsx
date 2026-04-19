@@ -4,7 +4,10 @@ import { FaArrowRight, FaLock, FaEnvelope, FaFacebookF, FaGoogle, FaArrowLeftLon
 import { Link, useNavigate } from "react-router-dom";
 import axios from "axios";
 
+import { useStore } from "./StoreContext";
+
 export default function Login() {
+  const { setUserProfile } = useStore();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
@@ -24,6 +27,13 @@ export default function Login() {
 
       const { profilePicture, ...safeUser } = user;
       localStorage.setItem("user", JSON.stringify(safeUser));
+      setUserProfile({
+        name: user.name,
+        email: user.email,
+        phone: user.phone,
+        is_verified: user.is_verified,
+        image: user.profilePicture
+      });
 
       // ✅ check onboarding
       if (user.is_verified) {

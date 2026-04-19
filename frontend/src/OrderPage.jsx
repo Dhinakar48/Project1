@@ -39,15 +39,15 @@ export default function OrderPage() {
   const [showPaymentOptions, setShowPaymentOptions] = useState(true);
   
   const [formData, setFormData] = useState({
-    name: userProfile?.name || `${userProfile?.firstName || 'John'} ${userProfile?.lastName || 'Smith'}`, 
-    email: userProfile?.email || 'john.smith@email.com', 
-    phone: userProfile?.phone || '+91 98765 43210', 
-    addressLine1: userProfile?.addressLine1 || userProfile?.address || '123 Luxury Lane', 
-    city: userProfile?.city || 'Chennai', 
-    state: userProfile?.state || 'Tamil Nadu', 
-    zip: userProfile?.zip || '400001', 
-    country: userProfile?.country || 'India', 
-    paymentMethod: '' // No default selection
+    name: userProfile?.name || "", 
+    email: userProfile?.email || "", 
+    phone: userProfile?.phone || "", 
+    addressLine1: userProfile?.addressLine1 || "", 
+    city: userProfile?.city || "", 
+    state: userProfile?.state || "", 
+    pincode: userProfile?.pincode || "", 
+    country: userProfile?.country || "India", 
+    paymentMethod: "" 
   });
 
   useEffect(() => {
@@ -57,17 +57,19 @@ export default function OrderPage() {
       
       if (email) {
         try {
-          const res = await axios.get(`http://127.0.0.1:5000/profile/${email}`);
+          // Use window.location.hostname to avoid issues with localhost vs 127.0.0.1
+          const host = window.location.hostname === "localhost" ? "localhost" : "127.0.0.1";
+          const res = await axios.get(`http://${host}:5000/profile/${email}`);
           if (res.data) {
             setFormData(prev => ({
               ...prev,
-              name: res.data.name || prev.name,
+              name: res.data.shipping_name || res.data.name || prev.name,
               email: res.data.email || prev.email,
-              phone: res.data.phone || prev.phone,
+              phone: res.data.shipping_phone || res.data.phone || prev.phone,
               addressLine1: res.data.address || prev.addressLine1,
               city: res.data.city || prev.city,
               state: res.data.state || prev.state,
-              zip: res.data.zip || prev.zip,
+              pincode: res.data.pincode || prev.pincode,
               country: res.data.country || prev.country
             }));
           }
@@ -97,7 +99,7 @@ export default function OrderPage() {
             total_amount: `₹${totalPayable.toLocaleString()}`,
             payment_method: formData.paymentMethod.toUpperCase(),
             payment_id: paymentId,
-            shipping_address: `${formData.addressLine1}, ${formData.city}, ${formData.state}, ${formData.zip}, ${formData.country}`
+            shipping_address: `${formData.addressLine1}, ${formData.city}, ${formData.state}, ${formData.pincode}, ${formData.country}`
         };
 
         // Using hardcoded keys as fallbacks because the Vite server was not restarted
@@ -209,6 +211,25 @@ export default function OrderPage() {
     setTimeout(() => setPromoMessage(''), 3000);
   };
 
+  const handleSaveAddress = async () => {
+    try {
+      const host = window.location.hostname === "localhost" ? "localhost" : "127.0.0.1";
+      await axios.post(`http://${host}:5000/update-address`, {
+        email: formData.email,
+        name: formData.name,
+        phone: formData.phone,
+        address: formData.addressLine1,
+        city: formData.city,
+        state: formData.state,
+        pincode: formData.pincode
+      });
+      setIsEditingAddress(false);
+    } catch (err) {
+      console.error("Error saving address:", err);
+      alert("Failed to save address changes.");
+    }
+  };
+
   return (
     <div className={`min-h-screen bg-white text-stone-900 overflow-hidden ${!isOrderPlaced ? 'py-12 px-6 md:px-16 lg:px-24' : 'flex items-center justify-center p-6 relative'}`}>
       
@@ -219,7 +240,7 @@ export default function OrderPage() {
           <div className="absolute bottom-[-10%] left-[-5%] w-[60%] h-[60%] bg-amber-500/5 rounded-full blur-[100px] pointer-events-none" />
         </>
       )}
-
+ 
       <AnimatePresence mode="wait">
         {!isOrderPlaced ? (
           <motion.div
@@ -238,9 +259,9 @@ export default function OrderPage() {
               <FaArrowLeftLong className="group-hover:-translate-x-1 transition" />
               <span className="font-medium tracking-wide">Back to Cart</span>
             </button>
-
+ 
             <h1 className="text-3xl md:text-5xl font-bold mb-12 tracking-tight text-stone-900">Order Details</h1>
-
+ 
             <form id="checkout-form" onSubmit={handleCheckout} className="grid grid-cols-1 lg:grid-cols-5 gap-16">
               <div className="lg:col-span-3 space-y-12">
                 {/* 📍 Shipping Address */}
@@ -249,7 +270,7 @@ export default function OrderPage() {
                     <h3 className="text-lg font-bold uppercase tracking-widest text-stone-900">1. Shipping Address</h3>
                     <button 
                       type="button" 
-                      onClick={() => setIsEditingAddress(!isEditingAddress)}
+                      onClick={() => isEditingAddress ? handleSaveAddress() : setIsEditingAddress(true)}
                       className="text-[10px] font-black text-amber-600 uppercase tracking-widest hover:text-amber-700 transition"
                     >
                       {isEditingAddress ? "Save & Close" : "Edit Address"}
@@ -261,7 +282,7 @@ export default function OrderPage() {
                        <p className="text-sm font-bold text-stone-900">{formData.name}</p>
                        <p className="text-xs font-semibold text-stone-500">{formData.email} | {formData.phone}</p>
                        <p className="text-sm font-bold text-stone-900 mt-4">{formData.addressLine1}</p>
-                       <p className="text-xs font-semibold text-stone-500">{formData.city}, {formData.state} {formData.zip}</p>
+                       <p className="text-xs font-semibold text-stone-500">{formData.city}, {formData.state} {formData.pincode}</p>
                        <p className="text-xs font-semibold text-stone-500">{formData.country}</p>
                     </div>
                   ) : (
@@ -289,7 +310,7 @@ export default function OrderPage() {
                         <input type="text" name="state" value={formData.state} onChange={handleChange} required placeholder="State" className="w-full bg-white text-sm font-semibold text-stone-900 rounded-2xl py-4 px-5 outline-none border border-stone-200 focus:border-stone-400 transition-all" />
                       </div>
                       <div className="grid grid-cols-2 gap-4">
-                        <input type="text" name="zip" value={formData.zip} onChange={handleChange} required placeholder="ZIP Code" className="w-full bg-white text-sm font-semibold text-stone-900 rounded-2xl py-4 px-5 outline-none border border-stone-200 focus:border-stone-400 transition-all" />
+                        <input type="text" name="pincode" value={formData.pincode} onChange={handleChange} required placeholder="pincode" className="w-full bg-white text-sm font-semibold text-stone-900 rounded-2xl py-4 px-5 outline-none border border-stone-200 focus:border-stone-400 transition-all" />
                         <input type="text" name="country" value={formData.country} onChange={handleChange} required placeholder="Country" className="w-full bg-white text-sm font-semibold text-stone-900 rounded-2xl py-4 px-5 outline-none border border-stone-200 focus:border-stone-400 transition-all" />
                       </div>
                     </div>

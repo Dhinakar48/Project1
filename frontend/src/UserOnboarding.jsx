@@ -5,10 +5,12 @@ import {
   FaArrowRight, FaUser, FaPhone, FaLocationDot, FaCalendar, FaVenusMars, FaStopwatch, FaImage
 } from "react-icons/fa6";
 import { useNavigate } from "react-router-dom";
+import { useStore } from "./StoreContext";
 import { auth } from "./firebase";
 import { RecaptchaVerifier, signInWithPhoneNumber } from "firebase/auth";
 
 export default function UserOnboarding() {
+  const { setUserProfile } = useStore();
   const [formData, setFormData] = useState({
     name: "",
     gender: "",
@@ -126,6 +128,13 @@ export default function UserOnboarding() {
       };
 
       localStorage.setItem("user", JSON.stringify(updatedUser));
+      setUserProfile({
+        name: formData.name,
+        email: loggedInUser.email,
+        phone: formattedPhone,
+        is_verified: true,
+        image: formData.profilePicture
+      });
 
       setStatusMsg({ text: "Profile Completed Redirecting...", type: "success" });
 

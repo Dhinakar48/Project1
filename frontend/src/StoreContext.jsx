@@ -16,15 +16,22 @@ export function StoreProvider({ children }) {
   const [appliedDiscount, setAppliedDiscount] = useState(null);
 
   const [userProfile, setUserProfile] = useState(() => {
-    const saved = localStorage.getItem("userProfile");
-    return saved ? JSON.parse(saved) : {
-      firstName: "John",
-      lastName: "Smith",
-      email: "john.smith@email.com",
-      phone: "+91 98765 43210",
-      dob: "1990-04-15",
-      image: null
-    };
+    const savedProfile = localStorage.getItem("userProfile");
+    if (savedProfile) return JSON.parse(savedProfile);
+    
+    const savedUser = localStorage.getItem("user");
+    if (savedUser) {
+      const user = JSON.parse(savedUser);
+      return {
+        name: user.name || "",
+        email: user.email || "",
+        phone: user.phone || "",
+        is_verified: user.is_verified || false,
+        image: user.profile_image || null
+      };
+    }
+
+    return null;
   });
 
   useEffect(() => {

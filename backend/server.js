@@ -79,7 +79,6 @@ app.post("/login", async (req, res) => {
 
     res.json({
       user: {
-        id: user.id,
         customerId: user.customer_id,
         email: user.email,
         name: user.name,
@@ -186,11 +185,102 @@ app.post("/onboarding", async (req, res) => {
   }
 });
 
+app.post("/update-address", async (req, res) => {
+  const { email, name, phone, address, city, state, pincode } = req.body;
+  const client = await pool.connect();
+
+  try {
+    await client.query('BEGIN');
+
+    // 1. Get customer_id
+    const customer = await client.query("SELECT customer_id FROM customers WHERE email=$1", [email]);
+    if (customer.rowCount === 0) {
+      await client.query('ROLLBACK');
+      return res.status(404).json({ message: "Customer not found" });
+    }
+    const cId = customer.rows[0].customer_id;
+
+    // 2. Insert/Update address
+    await client.query(
+      `INSERT INTO addresses (customer_id, full_name, phone, address_line1, city, state, pincode, is_default)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+       ON CONFLICT (customer_id) 
+       DO UPDATE SET 
+          full_name = EXCLUDED.full_name,
+          phone = EXCLUDED.phone,
+          address_line1 = EXCLUDED.address_line1,
+          city = EXCLUDED.city,
+          state = EXCLUDED.state,
+          pincode = EXCLUDED.pincode,
+          updated_at = CURRENT_TIMESTAMP`,
+      [cId, name, phone, address, city, state, pincode, true]
+    );
+
+    await client.query('COMMIT');
+    res.json({ message: "Address updated successfully" });
+  } catch (err) {
+    if (client) await client.query('ROLLBACK');
+    console.error(err);
+    res.status(500).json({ message: "Error updating address" });
+  } finally {
+    client.release();
+  }
+});
+
+app.post("/update-profile", async (req, res) => {
+  const { email, name, phone, dob, address, city, state, pincode, image } = req.body;
+  const client = await pool.connect();
+
+  try {
+    await client.query('BEGIN');
+
+    // 1. Update customers table
+    const customerResult = await client.query(
+      `UPDATE customers 
+       SET name=$1, phone=$2, dob=$3, profile_image=$4
+       WHERE email=$5 RETURNING customer_id`,
+      [name, phone, dob, image, email]
+    );
+
+    if (customerResult.rowCount === 0) {
+      await client.query('ROLLBACK');
+      return res.status(404).json({ message: "Customer not found" });
+    }
+    const cId = customerResult.rows[0].customer_id;
+
+    // 2. Update/Insert addresses table
+    await client.query(
+      `INSERT INTO addresses (customer_id, full_name, phone, address_line1, city, state, pincode, is_default)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+       ON CONFLICT (customer_id) 
+       DO UPDATE SET 
+          full_name = EXCLUDED.full_name,
+          phone = EXCLUDED.phone,
+          address_line1 = EXCLUDED.address_line1,
+          city = EXCLUDED.city,
+          state = EXCLUDED.state,
+          pincode = EXCLUDED.pincode,
+          updated_at = CURRENT_TIMESTAMP`,
+      [cId, name, phone, address, city, state, pincode, true]
+    );
+
+    await client.query('COMMIT');
+    res.json({ message: "Profile updated successfully" });
+  } catch (err) {
+    if (client) await client.query('ROLLBACK');
+    console.error(err);
+    res.status(500).json({ message: "Error updating profile" });
+  } finally {
+    client.release();
+  }
+});
+
 app.get("/profile/:email", async (req, res) => {
   try {
     const result = await pool.query(
-      `SELECT u.id, u.customer_id, u.email, u.name, u.phone, u.dob, u.gender, u.profile_image, u.is_verified,
-              a.address_line1 as address, a.city, a.state, a.pincode as zip, a.country
+      `SELECT u.customer_id, u.email, u.name, u.phone, u.dob, u.gender, u.profile_image, u.is_verified,
+              a.full_name as shipping_name, a.phone as shipping_phone,
+              a.address_line1 as address, a.city, a.state, a.pincode, a.country
        FROM customers u
        LEFT JOIN addresses a ON u.customer_id = a.customer_id
        WHERE u.email=$1`,

@@ -48,7 +48,7 @@ export default function MyAccount() {
     address: "",
     city: "",
     state: "",
-    zip: "",
+    pincode: "",
     image: null
   });
 
@@ -64,7 +64,7 @@ export default function MyAccount() {
             address: res.data.address || "",
             city: res.data.city || "",
             state: res.data.state || "",
-            zip: res.data.zip || "",
+            pincode: res.data.pincode || "",
             image: res.data.profile_image
           });
         })
@@ -82,6 +82,37 @@ export default function MyAccount() {
         setProfileData({ ...profileData, image: reader.result });
       };
       reader.readAsDataURL(file);
+    }
+  };
+
+  const handleSaveProfile = async () => {
+    try {
+      await axios.post('http://127.0.0.1:5000/update-profile', {
+        email: profileData.email,
+        name: profileData.firstName,
+        phone: profileData.phone,
+        dob: profileData.dob,
+        address: profileData.address,
+        city: profileData.city,
+        state: profileData.state,
+        pincode: profileData.pincode,
+        image: profileData.image
+      });
+      setIsEditingProfile(false);
+      
+      // Update local storage to reflect changes across app
+      const updatedUser = {
+        ...activeUser,
+        name: profileData.firstName,
+        phone: profileData.phone,
+        profile_image: profileData.image
+      };
+      localStorage.setItem("user", JSON.stringify(updatedUser));
+      
+      alert("Profile updated successfully!");
+    } catch (err) {
+      console.error("Error updating profile:", err);
+      alert("Failed to update profile.");
     }
   };
 
@@ -160,25 +191,40 @@ export default function MyAccount() {
     phone: ""
   });
 
-  const handleAddAddress = (e) => {
+  const handleAddAddress = async (e) => {
     e.preventDefault();
     
-    // Concat city & pincode for display purposes
-    const displayCity = newAddress.pincode ? `${newAddress.city} - ${newAddress.pincode}` : newAddress.city;
-    
-    if (editingAddressId) {
-      setAddresses(addresses.map(a => 
-        a.id === editingAddressId ? { ...newAddress, city: displayCity, id: editingAddressId, isDefault: a.isDefault } : a
-      ));
-    } else {
-      const id = Date.now();
-      const newAdd = { ...newAddress, city: displayCity, id, isDefault: addresses.length === 0 };
-      setAddresses([...addresses, newAdd]);
+    try {
+      await axios.post('http://127.0.0.1:5000/update-address', {
+        email: activeUser.email,
+        name: newAddress.name,
+        phone: newAddress.phone,
+        address: newAddress.street,
+        city: newAddress.city,
+        state: "Not Specified", // Placeholder since form doesn't have it
+        pincode: newAddress.pincode
+      });
+
+      const displayCity = newAddress.pincode ? `${newAddress.city} - ${newAddress.pincode}` : newAddress.city;
+      
+      if (editingAddressId) {
+        setAddresses(addresses.map(a => 
+          a.id === editingAddressId ? { ...newAddress, city: displayCity, id: editingAddressId, isDefault: a.isDefault } : a
+        ));
+      } else {
+        const id = Date.now();
+        const newAdd = { ...newAddress, city: displayCity, id, isDefault: addresses.length === 0 };
+        setAddresses([...addresses, newAdd]);
+      }
+      
+      setIsAddingAddress(false);
+      setEditingAddressId(null);
+      setNewAddress({ type: "Home", name: "", street: "", city: "", pincode: "", phone: "" });
+      alert("Address saved to database!");
+    } catch (err) {
+      console.error("Error saving address:", err);
+      alert("Failed to save address to database.");
     }
-    
-    setIsAddingAddress(false);
-    setEditingAddressId(null);
-    setNewAddress({ type: "Home", name: "", street: "", city: "", pincode: "", phone: "" });
   };
 
   const handleEditAddress = (address) => {
@@ -387,7 +433,7 @@ export default function MyAccount() {
                             <button onClick={() => setIsEditingProfile(false)} className="text-[10px] font-black uppercase tracking-widest text-stone-500 hover:bg-stone-100 px-4 py-2 rounded-xl transition-colors">
                               Cancel
                             </button>
-                            <button onClick={() => setIsEditingProfile(false)} className="text-[10px] font-black uppercase tracking-widest text-stone-900 bg-amber-400 hover:bg-amber-500 px-4 py-2 rounded-xl shadow-sm transition-colors">
+                            <button onClick={handleSaveProfile} className="text-[10px] font-black uppercase tracking-widest text-stone-900 bg-amber-400 hover:bg-amber-500 px-4 py-2 rounded-xl shadow-sm transition-colors">
                               Save
                             </button>
                           </div>
@@ -477,24 +523,24 @@ export default function MyAccount() {
                                <div className="bg-stone-50 px-4 py-3 rounded-2xl font-semibold border border-stone-100 text-stone-900">{profileData.city}</div>
                              )}
                           </div>
-                          <div className="grid grid-cols-2 gap-4">
-                            <div className="space-y-2">
-                               <label className="text-[10px] font-black uppercase tracking-widest text-stone-500">State</label>
-                               {isEditingProfile ? (
-                                 <input type="text" value={profileData.state} onChange={(e) => setProfileData({...profileData, state: e.target.value})} className="w-full bg-white px-4 py-3 rounded-2xl font-semibold border border-stone-200 outline-none focus:border-amber-500 focus:ring-1 focus:ring-amber-500 transition-all shadow-sm" />
-                               ) : (
-                                 <div className="bg-stone-50 px-4 py-3 rounded-2xl font-semibold border border-stone-100 text-stone-900">{profileData.state}</div>
-                               )}
+                            <div className="grid grid-cols-2 gap-4">
+                              <div className="space-y-2">
+                                 <label className="text-[10px] font-black uppercase tracking-widest text-stone-500">State</label>
+                                 {isEditingProfile ? (
+                                   <input type="text" value={profileData.state} onChange={(e) => setProfileData({...profileData, state: e.target.value})} className="w-full bg-white px-4 py-3 rounded-2xl font-semibold border border-stone-200 outline-none focus:border-amber-500 focus:ring-1 focus:ring-amber-500 transition-all shadow-sm" />
+                                 ) : (
+                                   <div className="bg-stone-50 px-4 py-3 rounded-2xl font-semibold border border-stone-100 text-stone-900">{profileData.state}</div>
+                                 )}
+                              </div>
+                              <div className="space-y-2">
+                                 <label className="text-[10px] font-black uppercase tracking-widest text-stone-500">Pincode</label>
+                                 {isEditingProfile ? (
+                                   <input type="text" value={profileData.pincode} onChange={(e) => setProfileData({...profileData, pincode: e.target.value})} className="w-full bg-white px-4 py-3 rounded-2xl font-semibold border border-stone-200 outline-none focus:border-amber-500 focus:ring-1 focus:ring-amber-500 transition-all shadow-sm" />
+                                 ) : (
+                                   <div className="bg-stone-50 px-4 py-3 rounded-2xl font-semibold border border-stone-100 text-stone-900">{profileData.pincode}</div>
+                                 )}
+                              </div>
                             </div>
-                            <div className="space-y-2">
-                               <label className="text-[10px] font-black uppercase tracking-widest text-stone-500">Zip Code</label>
-                               {isEditingProfile ? (
-                                 <input type="text" value={profileData.zip} onChange={(e) => setProfileData({...profileData, zip: e.target.value})} className="w-full bg-white px-4 py-3 rounded-2xl font-semibold border border-stone-200 outline-none focus:border-amber-500 focus:ring-1 focus:ring-amber-500 transition-all shadow-sm" />
-                               ) : (
-                                 <div className="bg-stone-50 px-4 py-3 rounded-2xl font-semibold border border-stone-100 text-stone-900">{profileData.zip}</div>
-                               )}
-                            </div>
-                          </div>
 
                         </div>
                       </div>
