@@ -46,6 +46,7 @@ export default function MyAccount() {
     phone: activeUser.phone || "",
     dob: activeUser.dob || "2000-01-01",
     address: "",
+    address2: "",
     city: "",
     state: "",
     pincode: "",
@@ -62,6 +63,7 @@ export default function MyAccount() {
             phone: res.data.phone || "",
             dob: res.data.dob ? res.data.dob.split('T')[0] : "2000-01-01",
             address: res.data.address || "",
+            address2: res.data.address2 || "",
             city: res.data.city || "",
             state: res.data.state || "",
             pincode: res.data.pincode || "",
@@ -93,6 +95,7 @@ export default function MyAccount() {
         phone: profileData.phone,
         dob: profileData.dob,
         address: profileData.address,
+        address2: profileData.address2,
         city: profileData.city,
         state: profileData.state,
         pincode: profileData.pincode,
@@ -186,6 +189,7 @@ export default function MyAccount() {
     type: "Home",
     name: "",
     street: "",
+    address2: "",
     city: "",
     pincode: "",
     phone: ""
@@ -200,6 +204,7 @@ export default function MyAccount() {
         name: newAddress.name,
         phone: newAddress.phone,
         address: newAddress.street,
+        address2: newAddress.address2,
         city: newAddress.city,
         state: "Not Specified", // Placeholder since form doesn't have it
         pincode: newAddress.pincode
@@ -236,6 +241,7 @@ export default function MyAccount() {
       type: address.type,
       name: address.name,
       street: address.street,
+      address2: address.address2 || "",
       city: city,
       pincode: pincode,
       phone: address.phone
@@ -508,11 +514,19 @@ export default function MyAccount() {
                             )}
                           </div>
                           <div className="space-y-2 md:col-span-2">
-                             <label className="text-[10px] font-black uppercase tracking-widest text-stone-500">Street Address</label>
+                             <label className="text-[10px] font-black uppercase tracking-widest text-stone-500">Street Address Line 1</label>
                              {isEditingProfile ? (
                                <input type="text" value={profileData.address} onChange={(e) => setProfileData({...profileData, address: e.target.value})} className="w-full bg-white px-4 py-3 rounded-2xl font-semibold border border-stone-200 outline-none focus:border-amber-500 focus:ring-1 focus:ring-amber-500 transition-all shadow-sm" />
                              ) : (
                                <div className="bg-stone-50 px-4 py-3 rounded-2xl font-semibold border border-stone-100 text-stone-900">{profileData.address}</div>
+                             )}
+                          </div>
+                          <div className="space-y-2 md:col-span-2">
+                             <label className="text-[10px] font-black uppercase tracking-widest text-stone-500">Street Address Line 2 (Optional)</label>
+                             {isEditingProfile ? (
+                               <input type="text" value={profileData.address2} onChange={(e) => setProfileData({...profileData, address2: e.target.value})} className="w-full bg-white px-4 py-3 rounded-2xl font-semibold border border-stone-200 outline-none focus:border-amber-500 focus:ring-1 focus:ring-amber-500 transition-all shadow-sm" />
+                             ) : (
+                               <div className="bg-stone-50 px-4 py-3 rounded-2xl font-semibold border border-stone-100 text-stone-900">{profileData.address2 || "-"}</div>
                              )}
                           </div>
                           <div className="space-y-2">
@@ -775,8 +789,12 @@ export default function MyAccount() {
                             <input required type="text" value={newAddress.name} onChange={e => setNewAddress({...newAddress, name: e.target.value})} className="w-full bg-white px-4 py-3 rounded-xl font-semibold border border-stone-200 outline-none focus:border-amber-500 shadow-sm" />
                           </div>
                           <div className="space-y-1">
-                            <label className="text-[10px] font-black uppercase tracking-widest text-stone-500">Street Address</label>
+                            <label className="text-[10px] font-black uppercase tracking-widest text-stone-500">Street Address Line 1</label>
                             <input required type="text" value={newAddress.street} onChange={e => setNewAddress({...newAddress, street: e.target.value})} className="w-full bg-white px-4 py-3 rounded-xl font-semibold border border-stone-200 outline-none focus:border-amber-500 shadow-sm" />
+                          </div>
+                          <div className="space-y-1">
+                            <label className="text-[10px] font-black uppercase tracking-widest text-stone-500">Street Address Line 2 (Optional)</label>
+                            <input type="text" value={newAddress.address2} onChange={e => setNewAddress({...newAddress, address2: e.target.value})} className="w-full bg-white px-4 py-3 rounded-xl font-semibold border border-stone-200 outline-none focus:border-amber-500 shadow-sm" />
                           </div>
                           <div className="space-y-1">
                             <label className="text-[10px] font-black uppercase tracking-widest text-stone-500">Mobile</label>

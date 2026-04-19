@@ -43,6 +43,7 @@ export default function OrderPage() {
     email: userProfile?.email || "", 
     phone: userProfile?.phone || "", 
     addressLine1: userProfile?.addressLine1 || "", 
+    addressLine2: userProfile?.addressLine2 || "", 
     city: userProfile?.city || "", 
     state: userProfile?.state || "", 
     pincode: userProfile?.pincode || "", 
@@ -67,6 +68,7 @@ export default function OrderPage() {
               email: res.data.email || prev.email,
               phone: res.data.shipping_phone || res.data.phone || prev.phone,
               addressLine1: res.data.address || prev.addressLine1,
+              addressLine2: res.data.address2 || prev.addressLine2,
               city: res.data.city || prev.city,
               state: res.data.state || prev.state,
               pincode: res.data.pincode || prev.pincode,
@@ -99,7 +101,7 @@ export default function OrderPage() {
             total_amount: `₹${totalPayable.toLocaleString()}`,
             payment_method: formData.paymentMethod.toUpperCase(),
             payment_id: paymentId,
-            shipping_address: `${formData.addressLine1}, ${formData.city}, ${formData.state}, ${formData.pincode}, ${formData.country}`
+            shipping_address: `${formData.addressLine1}${formData.addressLine2 ? ', ' + formData.addressLine2 : ''}, ${formData.city}, ${formData.state}, ${formData.pincode}, ${formData.country}`
         };
 
         // Using hardcoded keys as fallbacks because the Vite server was not restarted
@@ -219,6 +221,7 @@ export default function OrderPage() {
         name: formData.name,
         phone: formData.phone,
         address: formData.addressLine1,
+        address2: formData.addressLine2,
         city: formData.city,
         state: formData.state,
         pincode: formData.pincode
@@ -282,6 +285,7 @@ export default function OrderPage() {
                        <p className="text-sm font-bold text-stone-900">{formData.name}</p>
                        <p className="text-xs font-semibold text-stone-500">{formData.email} | {formData.phone}</p>
                        <p className="text-sm font-bold text-stone-900 mt-4">{formData.addressLine1}</p>
+                       {formData.addressLine2 && <p className="text-sm font-bold text-stone-900">{formData.addressLine2}</p>}
                        <p className="text-xs font-semibold text-stone-500">{formData.city}, {formData.state} {formData.pincode}</p>
                        <p className="text-xs font-semibold text-stone-500">{formData.country}</p>
                     </div>
@@ -304,6 +308,10 @@ export default function OrderPage() {
                       <div className="relative group">
                         <div className="absolute left-5 top-1/2 -translate-y-1/2 text-stone-300 group-focus-within:text-amber-500 transition-colors"><FaLocationDot size={14} /></div>
                         <input type="text" name="addressLine1" value={formData.addressLine1} onChange={handleChange} required placeholder="Full Street Address (House No, Area, Landmark)" className="w-full bg-white text-sm font-semibold text-stone-900 rounded-2xl py-4 pl-12 pr-4 outline-none border border-stone-200 focus:border-stone-400 transition-all" />
+                      </div>
+                      <div className="relative group">
+                        <div className="absolute left-5 top-1/2 -translate-y-1/2 text-stone-300 group-focus-within:text-amber-500 transition-colors"><FaLocationDot size={14} /></div>
+                        <input type="text" name="addressLine2" value={formData.addressLine2} onChange={handleChange} placeholder="Apartment, suite, unit, etc. (Optional)" className="w-full bg-white text-sm font-semibold text-stone-900 rounded-2xl py-4 pl-12 pr-4 outline-none border border-stone-200 focus:border-stone-400 transition-all" />
                       </div>
                       <div className="grid grid-cols-2 gap-4">
                         <input type="text" name="city" value={formData.city} onChange={handleChange} required placeholder="City" className="w-full bg-white text-sm font-semibold text-stone-900 rounded-2xl py-4 px-5 outline-none border border-stone-200 focus:border-stone-400 transition-all" />

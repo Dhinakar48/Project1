@@ -18,6 +18,7 @@ export default function UserOnboarding() {
     phone: "",
     otp: "",
     address: "",
+    address2: "",
     city: "",
     state: "",
     pincode: "",
@@ -113,6 +114,7 @@ export default function UserOnboarding() {
         gender: formData.gender,
         dob: formData.dob,
         address: formData.address,
+        address2: formData.address2,
         city: formData.city,
         state: formData.state,
         pincode: formData.pincode,
@@ -274,7 +276,7 @@ export default function UserOnboarding() {
             </div>
 
             <div className="space-y-1">
-              <label className="text-[10px] font-black text-stone-900 uppercase tracking-widest ml-1">Street Address</label>
+              <label className="text-[10px] font-black text-stone-900 uppercase tracking-widest ml-1">Street Address Line 1</label>
               <div className="relative group">
                 <FaLocationDot className="absolute left-4 top-4 text-stone-300 group-focus-within:text-amber-600 transition-colors" />
                 <textarea
@@ -283,8 +285,23 @@ export default function UserOnboarding() {
                   onChange={handleChange}
                   rows="2"
                   className="w-full bg-stone-50 border-2 border-stone-50 rounded-xl py-3 pl-12 pr-4 outline-none focus:border-amber-600/10 focus:bg-white transition-all text-sm font-semibold resize-none"
-                  placeholder="Apartment, suite, unit, building, floor, etc."
+                  placeholder="Street, house no / apartment name"
                   required
+                />
+              </div>
+            </div>
+
+            <div className="space-y-1">
+              <label className="text-[10px] font-black text-stone-900 uppercase tracking-widest ml-1">Street Address Line 2</label>
+              <div className="relative group">
+                <FaLocationDot className="absolute left-4 top-4 text-stone-300 group-focus-within:text-amber-600 transition-colors" />
+                <textarea
+                  name="address2"
+                  value={formData.address2}
+                  onChange={handleChange}
+                  rows="2"
+                  className="w-full bg-stone-50 border-2 border-stone-50 rounded-xl py-3 pl-12 pr-4 outline-none focus:border-amber-600/10 focus:bg-white transition-all text-sm font-semibold resize-none"
+                  placeholder="Apartment, suite, unit, building, floor, etc. (Optional)"
                 />
               </div>
             </div>
@@ -298,7 +315,7 @@ export default function UserOnboarding() {
                    value={formData.city}
                    onChange={handleChange}
                    className="w-full bg-stone-50 border-2 border-stone-50 rounded-xl py-3 px-4 outline-none focus:border-amber-600/10 focus:bg-white transition-all text-sm font-semibold"
-                   placeholder="Mumbai"
+                   placeholder="Chennai"
                    required
                  />
                </div>
@@ -310,7 +327,7 @@ export default function UserOnboarding() {
                    value={formData.state}
                    onChange={handleChange}
                    className="w-full bg-stone-50 border-2 border-stone-50 rounded-xl py-3 px-4 outline-none focus:border-amber-600/10 focus:bg-white transition-all text-sm font-semibold"
-                   placeholder="Maharashtra"
+                   placeholder="Tamil Nadu"
                    required
                  />
                </div>
@@ -322,7 +339,7 @@ export default function UserOnboarding() {
                    value={formData.pincode}
                    onChange={handleChange}
                    className="w-full bg-stone-50 border-2 border-stone-50 rounded-xl py-3 px-4 outline-none focus:border-amber-600/10 focus:bg-white transition-all text-sm font-semibold"
-                   placeholder="400001"
+                   placeholder="600001"
                    required
                  />
                </div>

@@ -19,6 +19,7 @@ export default function SellerOnboarding() {
     businessName: '',
     businessType: 'Proprietorship',
     address: '',
+    address2: '',
     city: '',
     state: 'Tamil Nadu',
     country: 'India',
@@ -87,6 +88,7 @@ export default function SellerOnboarding() {
             },
             addressDetails: {
               address1: onboardingData.address,
+              address2: onboardingData.address2,
               city: onboardingData.city,
               state: onboardingData.state,
               pincode: onboardingData.pincode,
@@ -145,8 +147,12 @@ export default function SellerOnboarding() {
               </div>
             </div>
             <div>
-              <label className="text-[10px] font-black uppercase tracking-widest text-stone-500">Business Address</label>
-              <textarea name="address" value={onboardingData.address} onChange={handleChange} rows="2" className="w-full bg-white shadow-sm border border-stone-200/60 focus:bg-white focus:ring-4 focus:ring-amber-500/10 hover:border-stone-300 rounded-xl py-3 px-4 outline-none focus:border-amber-400 mt-1 transition-colors text-xs font-semibold text-stone-800" placeholder="Full registered address" required />
+              <label className="text-[10px] font-black uppercase tracking-widest text-stone-500">Business Address Line 1</label>
+              <textarea name="address" value={onboardingData.address} onChange={handleChange} rows="2" className="w-full bg-white shadow-sm border border-stone-200/60 focus:bg-white focus:ring-4 focus:ring-amber-500/10 hover:border-stone-300 rounded-xl py-3 px-4 outline-none focus:border-amber-400 mt-1 transition-colors text-xs font-semibold text-stone-800" placeholder="Street, building etc." required />
+            </div>
+            <div>
+              <label className="text-[10px] font-black uppercase tracking-widest text-stone-500">Business Address Line 2 (Optional)</label>
+              <textarea name="address2" value={onboardingData.address2} onChange={handleChange} rows="2" className="w-full bg-white shadow-sm border border-stone-200/60 focus:bg-white focus:ring-4 focus:ring-amber-500/10 hover:border-stone-300 rounded-xl py-3 px-4 outline-none focus:border-amber-400 mt-1 transition-colors text-xs font-semibold text-stone-800" placeholder="Floor, unit, etc." />
             </div>
             <div className="grid grid-cols-2 md:grid-cols-2 gap-4">
               <div>
