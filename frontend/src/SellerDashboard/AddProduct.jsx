@@ -27,7 +27,7 @@ export default function AddProduct({ onBack, onAddProduct, initialData, sellerId
     featured: false,
   });
 
-  const [images, setImages] = useState(initialData && initialData.img ? [initialData.img] : []);
+  const [images, setImages] = useState(initialData && initialData.images ? initialData.images : []);
   const [specifications, setSpecifications] = useState(initialData && initialData.specifications ? initialData.specifications : [{ key: "", value: "" }]);
 
   useEffect(() => {
@@ -105,6 +105,7 @@ export default function AddProduct({ onBack, onAddProduct, initialData, sellerId
 
     try {
       if (initialData) {
+        console.log("Updating product:", initialData.product_id, productPayload);
         await axios.put(`http://localhost:5000/seller-update-product/${initialData.product_id}`, productPayload);
         alert("Product updated successfully!");
       } else {

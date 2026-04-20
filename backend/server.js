@@ -558,25 +558,23 @@ app.post("/seller-add-product", async (req, res) => {
       final_category_id = catResult.rows[0].category_id;
     }
 
+    // Generate semantic product_id safely
+    const maxIdResult = await client.query("SELECT product_id FROM products WHERE product_id LIKE 'PRD%' ORDER BY product_id DESC LIMIT 1");
+    let nextNum = 1;
+    if (maxIdResult.rows.length > 0) {
+      const lastId = maxIdResult.rows[0].product_id;
+      const lastNum = parseInt(lastId.replace('PRD', ''));
+      nextNum = lastNum + 1;
+    }
+    const pId = `PRD${nextNum.toString().padStart(3, '0')}`;
+
     // 1. Insert into products
     const productResult = await client.query(
-      `INSERT INTO products (seller_id, category_id, name, description, price, stock_quantity, images)
-       VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING product_id`,
-      [seller_id, final_category_id, name, description, price, stock, images]
+      `INSERT INTO products (product_id, seller_id, category_id, name, description, price, stock_quantity, images)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING product_id`,
+      [pId, seller_id, final_category_id, name, description, price, stock, images]
     );
 
-    const pId = productResult.rows[0].product_id;
-
-    // 2. Insert into product_images table for detailed gallery
-    if (images && images.length > 0) {
-      for (let i = 0; i < images.length; i++) {
-        await client.query(
-          `INSERT INTO product_images (product_id, image_url, is_primary, sort_order)
-           VALUES ($1, $2, $3, $4)`,
-          [pId, images[i], i === 0, i]
-        );
-      }
-    }
 
     await client.query('COMMIT');
     res.json({ message: "Product added successfully", product_id: pId });
@@ -610,34 +608,29 @@ app.put("/seller-update-product/:product_id", async (req, res) => {
     }
 
     // 1. Update product
-    await client.query(
+    console.log("Updating product ID:", product_id, "with data:", { name, price, stock });
+    const updateResult = await client.query(
       `UPDATE products SET 
        category_id = $1, name = $2, description = $3, price = $4, stock_quantity = $5, images = $6, updated_at = CURRENT_TIMESTAMP
        WHERE product_id = $7`,
       [final_category_id, name, description, price, stock, images, product_id]
     );
+    console.log("Update result rows affected:", updateResult.rowCount);
 
-    // 2. Update images table
-    if (images && images.length > 0) {
-      await client.query("DELETE FROM product_images WHERE product_id = $1", [product_id]);
-      for (let i = 0; i < images.length; i++) {
-        await client.query(
-          `INSERT INTO product_images (product_id, image_url, is_primary, sort_order)
-           VALUES ($1, $2, $3, $4)`,
-          [product_id, images[i], i === 0, i]
-        );
-      }
+
+    if (updateResult.rowCount === 0) {
+      throw new Error(`Product with ID ${product_id} not found`);
     }
 
     await client.query('COMMIT');
     res.json({ message: "Product updated successfully" });
 
   } catch (err) {
-    await client.query('ROLLBACK');
-    console.error(err);
+    if (client) await client.query('ROLLBACK');
+    console.error("Update error:", err.message);
     res.status(500).json({ message: "Error updating product: " + err.message });
   } finally {
-    client.release();
+    if (client) client.release();
   }
 });
 
@@ -656,7 +649,7 @@ app.get("/seller-products/:seller_id", async (req, res) => {
   try {
     const result = await pool.query(
       `SELECT p.*, c.name as category_name, 
-       (SELECT image_url FROM product_images WHERE product_id = p.product_id AND is_primary = true LIMIT 1) as main_image
+       p.images[1] as main_image
        FROM products p
        LEFT JOIN categories c ON p.category_id = c.category_id
        WHERE p.seller_id = $1
@@ -667,6 +660,74 @@ app.get("/seller-products/:seller_id", async (req, res) => {
   } catch (err) {
     console.error(err);
     res.status(500).json({ message: "Error fetching products" });
+  }
+});
+
+app.get("/products", async (req, res) => {
+  try {
+    const result = await pool.query(
+      `SELECT p.*, c.name as category_name, 
+       p.images[1] as main_image
+       FROM products p
+       LEFT JOIN categories c ON p.category_id = c.category_id
+       ORDER BY p.created_at DESC`
+    );
+    res.json(result.rows);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: "Error fetching all products" });
+  }
+});
+
+app.get("/products/category/:categoryName", async (req, res) => {
+  const { categoryName } = req.params;
+  try {
+    const result = await pool.query(
+      `SELECT p.*, c.name as category_name, 
+       p.images[1] as main_image
+       FROM products p
+       JOIN categories c ON p.category_id = c.category_id
+       WHERE LOWER(c.name) = LOWER($1) OR LOWER(c.slug) = LOWER($1)
+       ORDER BY p.created_at DESC`,
+      [categoryName]
+    );
+    res.json(result.rows);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: "Error fetching products by category" });
+  }
+});
+
+app.get("/product/:id", async (req, res) => {
+  const { id } = req.params;
+  try {
+    const productResult = await pool.query(
+      `SELECT p.*, c.name as category_name, s.store_name
+       FROM products p
+       LEFT JOIN categories c ON p.category_id = c.category_id
+       LEFT JOIN sellers s ON p.seller_id = s.seller_id
+       WHERE p.product_id = $1`,
+      [id]
+    );
+
+    if (productResult.rows.length === 0) {
+      return res.status(404).json({ message: "Product not found" });
+    }
+
+    const imagesResult = await pool.query(
+      "SELECT * FROM product_images WHERE product_id = $1 ORDER BY sort_order ASC",
+      [id]
+    );
+
+    const product = {
+      ...productResult.rows[0],
+      gallery: imagesResult.rows
+    };
+
+    res.json(product);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: "Error fetching product details" });
   }
 });
 

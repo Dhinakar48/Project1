@@ -1,17 +1,55 @@
 import { useParams, useNavigate, Link } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
-import { featuredProductsArray } from "./data";
-
-const categories = ["Audio", "Wearables", "Computing", "Accessories"];
+import { useEffect, useState } from "react";
+import axios from "axios";
 
 export default function CategoryPage() {
     const { categoryName } = useParams();
     const navigate = useNavigate();
+    const [products, setProducts] = useState([]);
+    const [categories, setCategories] = useState([]);
+    const [loading, setLoading] = useState(true);
 
-    // Filter products based on category name from URL
-    const filteredProducts = featuredProductsArray.filter(
-        product => product.category && product.category.toLowerCase() === categoryName.toLowerCase()
-    );
+    useEffect(() => {
+        fetchProducts();
+        fetchCategories();
+    }, [categoryName]);
+
+    const fetchProducts = async () => {
+        setLoading(true);
+        try {
+            const res = await axios.get(`http://localhost:5000/products/category/${categoryName}`);
+            setProducts(res.data);
+        } catch (err) {
+            console.error("Error fetching products:", err);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const fetchCategories = async () => {
+        try {
+            const res = await axios.get("http://localhost:5000/categories");
+            const allowedNames = ["Audio", "Wearables", "Computing", "Accessories"];
+            
+            // Map the allowed names and find their corresponding data from the API
+            const filtered = allowedNames.map(name => {
+                const found = res.data.find(cat => cat.name.toLowerCase() === name.toLowerCase());
+                return found || { name, category_id: name }; // Fallback if not in DB yet
+            });
+            
+            setCategories(filtered);
+        } catch (err) {
+            console.error("Error fetching categories:", err);
+            // Fallback to static if API fails
+            setCategories([
+                { name: "Audio", category_id: "audio" },
+                { name: "Wearables", category_id: "wearables" },
+                { name: "Computing", category_id: "computing" },
+                { name: "Accessories", category_id: "accessories" }
+            ]);
+        }
+    };
 
     return (
         <div className="min-h-screen bg-stone-50 py-10 md:py-16 px-6 md:px-16 lg:px-24">
@@ -26,18 +64,18 @@ export default function CategoryPage() {
                         <nav className="flex md:flex-col overflow-x-auto md:overflow-visible gap-3 md:gap-5 pb-4 md:pb-0 scrollbar-hide">
                             {categories.map((cat) => (
                                 <Link 
-                                    key={cat}
-                                    to={`/category/${cat}`}
+                                    key={cat.category_id}
+                                    to={`/category/${cat.name}`}
                                     className={`text-[10px] md:text-sm font-bold uppercase tracking-widest transition-all duration-300 flex items-center gap-3 whitespace-nowrap md:whitespace-normal px-4 md:px-0 py-2 md:py-0 border md:border-none rounded-full md:rounded-none ${
-                                        categoryName.toLowerCase() === cat.toLowerCase()
+                                        categoryName.toLowerCase() === cat.name.toLowerCase()
                                             ? "text-stone-900 bg-stone-100 md:bg-transparent md:translate-x-2 border-stone-900"
                                             : "text-stone-400 border-stone-200 hover:text-stone-600"
                                     }`}
                                 >
                                     <span className={`hidden md:block w-1.5 h-1.5 rounded-full bg-amber-600 transition-opacity duration-300 ${
-                                        categoryName.toLowerCase() === cat.toLowerCase() ? "opacity-100" : "opacity-0"
+                                        categoryName.toLowerCase() === cat.name.toLowerCase() ? "opacity-100" : "opacity-0"
                                     }`} />
-                                    {cat}
+                                    {cat.name}
                                 </Link>
                             ))}
                         </nav>
@@ -57,25 +95,29 @@ export default function CategoryPage() {
                             {categoryName}
                         </h1>
                         <p className="text-stone-400 text-sm font-medium">
-                            {filteredProducts.length} Premium engineering pieces found.
+                            {products.length} Premium engineering pieces found.
                         </p>
                     </div>
 
                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3 gap-x-8 gap-y-16">
                         <AnimatePresence mode="wait">
-                            {filteredProducts.length > 0 ? (
-                                filteredProducts.map((product) => (
+                            {loading ? (
+                                <div className="col-span-full py-20 text-center">
+                                    <p className="text-stone-400 font-medium animate-pulse">Scanning vault...</p>
+                                </div>
+                            ) : products.length > 0 ? (
+                                products.map((product) => (
                                     <motion.div
-                                        key={product.id}
+                                        key={product.product_id}
                                         initial={{ opacity: 0, y: 20 }}
                                         animate={{ opacity: 1, y: 0 }}
                                         transition={{ duration: 0.4 }}
                                         className="group cursor-pointer"
-                                        onClick={() => navigate(`/product/${product.id}`)}
+                                        onClick={() => navigate(`/product/${product.product_id}`)}
                                     >
                                         <div className="aspect-[1/1] overflow-hidden bg-white mb-6 border border-stone-100 rounded-3xl shadow-sm group-hover:shadow-xl group-hover:shadow-stone-200/50 transition-all duration-500">
                                             <img
-                                                src={product.variants[0].img}
+                                                src={product.main_image || (product.images && product.images[0]) || '/placeholder.png'}
                                                 alt={product.name}
                                                 className="w-full h-full object-contain p-10 group-hover:scale-110 transition duration-700"
                                             />
@@ -85,7 +127,7 @@ export default function CategoryPage() {
                                                 {product.name}
                                             </h3>
                                             <p className="text-xs font-black text-amber-600 mt-2 uppercase tracking-widest">
-                                                {product.variants[0].price}
+                                                ₹{parseFloat(product.price).toLocaleString()}
                                             </p>
                                         </div>
                                     </motion.div>

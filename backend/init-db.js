@@ -170,6 +170,8 @@ async function setup() {
         alt_text VARCHAR(255),
         is_primary BOOLEAN DEFAULT FALSE,
         sort_order INT DEFAULT 0,
+        color_name VARCHAR(50),
+        color_code VARCHAR(20),
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       );
     `);

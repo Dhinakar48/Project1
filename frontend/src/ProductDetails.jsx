@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useParams, Link, useLocation, useNavigate } from "react-router-dom";
-import { productsData, featuredProductsArray } from "./data";
+import axios from "axios";
 import { useStore } from "./StoreContext";
 import { FaBagShopping, FaCheck } from "react-icons/fa6";
 
@@ -10,14 +10,13 @@ export default function ProductDetails() {
     const location = useLocation();
     const navigate = useNavigate();
     const from = location.state?.from;
-    const product = productsData[id] || productsData["default"];
-    const [selectedColorIndex, setSelectedColorIndex] = useState(0);
-    const activeVariant = product.variants[selectedColorIndex] || product.variants[0];
-
-    const relatedProducts = featuredProductsArray.filter(p => p.id !== product.id).slice(0, 3);
+    const [product, setProduct] = useState(null);
+    const [loading, setLoading] = useState(true);
+    const [selectedImageIndex, setSelectedImageIndex] = useState(0);
+    const [relatedProducts, setRelatedProducts] = useState([]);
 
     const { addToCart, toggleWishlist, wishlist } = useStore();
-    const isWishlisted = wishlist.some(item => item.id === product.id);
+    const isWishlisted = product && wishlist.some(item => item.id === product.product_id);
 
     const [addedToCart, setAddedToCart] = useState(false);
 
@@ -42,21 +41,76 @@ export default function ProductDetails() {
         }
     };
 
+    const fetchProduct = async () => {
+        setLoading(true);
+        try {
+            const res = await axios.get(`http://localhost:5000/product/${id}`);
+            const data = res.data;
+            setProduct(data);
+            
+            // Fetch related products (same category)
+            if (data.category_name) {
+                const relatedRes = await axios.get(`http://localhost:5000/products/category/${data.category_name}`);
+                setRelatedProducts(relatedRes.data.filter(p => p.product_id !== data.product_id).slice(0, 4));
+            }
+        } catch (err) {
+            console.error("Error fetching product:", err);
+        } finally {
+            setLoading(false);
+        }
+    };
+
     const handleAddToCart = () => {
-        addToCart(product, activeVariant);
+        if (!product) return;
+        // Adapt db product to store logic
+        const storeProduct = {
+            id: product.product_id,
+            name: product.name,
+            price: product.price,
+            img: product.gallery && product.gallery.length > 0 ? product.gallery[0].image_url : '/placeholder.png'
+        };
+        const variant = {
+            id: `v${product.product_id}`,
+            img: storeProduct.img,
+            price: `₹${parseFloat(product.price).toLocaleString()}`
+        };
+        addToCart(storeProduct, variant);
         setAddedToCart(true);
         setTimeout(() => setAddedToCart(false), 2000);
     };
 
     const handleBuyNow = () => {
-        addToCart(product, activeVariant);
+        handleAddToCart();
         navigate("/order");
     };
 
     useEffect(() => {
         window.scrollTo(0, 0);
-        setSelectedColorIndex(0);
+        fetchProduct();
+        setSelectedImageIndex(0);
     }, [id]);
+
+    if (loading) return (
+        <div className="min-h-screen bg-stone-50 flex items-center justify-center">
+            <div className="text-center">
+                <div className="w-12 h-12 border-4 border-amber-600 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+                <p className="text-stone-400 font-bold uppercase tracking-widest text-xs">Accessing Vault...</p>
+            </div>
+        </div>
+    );
+
+    if (!product) return (
+        <div className="min-h-screen bg-stone-50 flex items-center justify-center">
+            <div className="text-center">
+                <h2 className="text-2xl font-bold text-stone-900 mb-2">Item Not Found</h2>
+                <Link to="/" className="text-amber-600 font-bold uppercase tracking-widest text-xs border-b border-amber-600 pb-1">Return to Laboratory</Link>
+            </div>
+        </div>
+    );
+
+    const priceString = `₹${parseFloat(product.price).toLocaleString()}`;
+    const gallery = product.images && product.images.length > 0 ? product.images : ['/placeholder.png'];
+    const activeImage = gallery[selectedImageIndex] || '/placeholder.png';
 
     return (
         <div className="min-h-screen bg-stone-50 text-stone-900 pt-12 pb-4 px-6 md:px-16 overflow-hidden relative font-sans">
@@ -68,11 +122,11 @@ export default function ProductDetails() {
                 animate={{ opacity: 1, x: 0 }}
                 transition={{ duration: 0.5 }}
             >
-                <Link to={from === 'home' ? '/' : (product.category ? `/category/${product.category}` : "/")} className="inline-flex items-center gap-2 text-stone-600 hover:text-stone-900 transition duration-300 group">
+                <Link to={product?.category_name ? `/category/${product.category_name}` : "/"} className="inline-flex items-center gap-2 text-stone-600 hover:text-stone-900 transition duration-300 group">
                     <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 group-hover:-translate-x-1 transition" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
                     </svg>
-                    <span className="text-sm font-bold tracking-widest uppercase text-stone-900">{from === 'home' ? 'Back to Home' : 'Back to Collection'}</span>
+                    <span className="text-sm font-bold tracking-widest uppercase text-stone-900">Back to Collection</span>
                 </Link>
             </motion.div>
 
@@ -89,33 +143,37 @@ export default function ProductDetails() {
                         <div className="absolute inset-0 blur-3xl opacity-10 rounded-full"></div>
                         
                         {/* Navigation Arrows */}
-                        <div className="absolute inset-y-0 left-0 z-20 flex items-center">
-                            <button 
-                                onClick={() => setSelectedColorIndex((prev) => (prev - 1 + product.variants.length) % product.variants.length)}
-                                className="p-3 ml-6 bg-white/70 backdrop-blur-md rounded-full opacity-0 group-hover:opacity-100 transition-all hover:bg-white text-stone-900 border border-amber-100"
-                            >
-                                <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-                                </svg>
-                            </button>
-                        </div>
+                        {gallery.length > 1 && (
+                            <>
+                                <div className="absolute inset-y-0 left-0 z-20 flex items-center">
+                                    <button 
+                                        onClick={() => setSelectedImageIndex((prev) => (prev - 1 + gallery.length) % gallery.length)}
+                                        className="p-3 ml-6 bg-white/70 backdrop-blur-md rounded-full opacity-0 group-hover:opacity-100 transition-all hover:bg-white text-stone-900 border border-amber-100"
+                                    >
+                                        <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                                        </svg>
+                                    </button>
+                                </div>
 
-                        <div className="absolute inset-y-0 right-0 z-20 flex items-center">
-                            <button 
-                                onClick={() => setSelectedColorIndex((prev) => (prev + 1) % product.variants.length)}
-                                className="p-3 mr-6 bg-white/70 backdrop-blur-md rounded-full opacity-0 group-hover:opacity-100 transition-all hover:bg-white text-stone-900 border border-amber-100"
-                            >
-                                <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                                </svg>
-                            </button>
-                        </div>
+                                <div className="absolute inset-y-0 right-0 z-20 flex items-center">
+                                    <button 
+                                        onClick={() => setSelectedImageIndex((prev) => (prev + 1) % gallery.length)}
+                                        className="p-3 mr-6 bg-white/70 backdrop-blur-md rounded-full opacity-0 group-hover:opacity-100 transition-all hover:bg-white text-stone-900 border border-amber-100"
+                                    >
+                                        <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                                        </svg>
+                                    </button>
+                                </div>
+                            </>
+                        )}
 
                             <motion.img 
-                                key={selectedColorIndex}
-                                src={activeVariant.img} 
+                                key={selectedImageIndex}
+                                src={activeImage} 
                                 alt={product.name} 
-                                className="w-[65%] h-[65%] object-contain relative z-10"
+                                className="w-[85%] h-[85%] object-contain relative z-10"
                                 initial={{ opacity: 0.6 }}
                                 animate={{ opacity: 1, scale: [0.95, 1] }}
                                 transition={{ duration: 0.5 }}
@@ -133,41 +191,39 @@ export default function ProductDetails() {
                         }}
                     >
                         <motion.p variants={{ hidden: { opacity: 0, y: 20 }, visible: { opacity: 1, y: 0 } }} className="text-amber-600 text-xs md:text-sm font-black tracking-[0.3em] uppercase mb-4">
-                            {product.title}
+                            {product.category_name}
                         </motion.p>
-                        <motion.h1 variants={{ hidden: { opacity: 0, y: 20 }, visible: { opacity: 1, y: 0 } }} className="text-3xl md:text-5xl font-bold mb-4 tracking-tight leading-tight text-stone-900">
+                        <motion.h1 variants={{ hidden: { opacity: 0, y: 20 }, visible: { opacity: 1, y: 0 } }} className="text-3xl md:text-5xl font-bold mb-4 tracking-tight leading-tight text-stone-900 uppercase">
                             {product.name}
                         </motion.h1>
                         <motion.div variants={{ hidden: { opacity: 0, y: 20 }, visible: { opacity: 1, y: 0 } }} className="flex items-center gap-6 mb-6 border-b border-amber-100 pb-6 w-full">
                             <p className="text-3xl font-black text-amber-600">
-                                {activeVariant.price}
+                                {priceString}
                             </p>
                             <span className="px-3 py-1 bg-amber-600 text-white text-[10px] font-black uppercase tracking-widest rounded-full">
-                                In Stock
+                                {product.stock_quantity > 0 ? 'In Stock' : 'Out of Stock'}
                             </span>
                         </motion.div>
                         <motion.p variants={{ hidden: { opacity: 0, y: 20 }, visible: { opacity: 1, y: 0 } }} className="text-stone-500 mb-6 leading-relaxed max-w-lg text-lg font-medium">
-                            {product.desc}
+                            {product.description}
                         </motion.p>
 
-                        <motion.div variants={{ hidden: { opacity: 0, y: 20 }, visible: { opacity: 1, y: 0 } }} className="mb-8">
-                            <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-stone-400 mb-3">Select Finish: <span className="text-stone-900">{activeVariant.colorName}</span></h3>
-                            <div className="flex gap-4">
-                                {product.variants.map((variant, index) => (
-                                    <div 
-                                        key={index}
-                                        onClick={() => setSelectedColorIndex(index)}
-                                        className={`w-10 h-10 rounded-full cursor-pointer transition-all duration-300 border overflow-hidden ${selectedColorIndex === index ? `ring-2 ring-offset-2 ring-offset-white ring-amber-600 scale-110` : 'hover:scale-110 opacity-60 hover:opacity-100 border-stone-200'}`}
-                                    >
-                                        {variant.colorBg ? (
-                                            <div className={`w-full h-full ${variant.colorBg}`}></div>
-                                        ) : (
-                                            <img src={variant.img} className="w-full h-full object-cover" alt="Finish" />
-                                        )}
-                                    </div>
-                                ))}
-                            </div>
-                        </motion.div>
+                        {gallery.length > 1 && (
+                            <motion.div variants={{ hidden: { opacity: 0, y: 20 }, visible: { opacity: 1, y: 0 } }} className="mb-8">
+                                <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-stone-400 mb-3">Gallery</h3>
+                                <div className="flex gap-4">
+                                    {gallery.map((img, index) => (
+                                        <div 
+                                            key={index}
+                                            onClick={() => setSelectedImageIndex(index)}
+                                            className={`w-12 h-12 rounded-xl cursor-pointer transition-all duration-300 border overflow-hidden ${selectedImageIndex === index ? `ring-2 ring-offset-2 ring-offset-white ring-amber-600 scale-110` : 'hover:scale-110 opacity-60 hover:opacity-100 border-stone-200'}`}
+                                        >
+                                            <img src={img} className="w-full h-full object-cover" alt="Gallery" />
+                                        </div>
+                                    ))}
+                                </div>
+                            </motion.div>
+                        )}
 
                         <motion.div 
                             variants={{ hidden: { opacity: 0, y: 20 }, visible: { opacity: 1, y: 0 } }}
@@ -192,8 +248,8 @@ export default function ProductDetails() {
                                 Buy Now
                             </motion.button>
                             
-                            <motion.button
-                                onClick={() => toggleWishlist(product)}
+                             <motion.button
+                                onClick={() => toggleWishlist({ id: product.product_id, ...product })}
                                 whileHover={{ scale: 1.01 }}
                                 whileTap={{ scale: 0.99 }}
                                 className={`w-16 flex items-center justify-center border transition-all duration-300 ${isWishlisted ? 'border-red-500 text-red-500 bg-red-50' : 'border-stone-200 text-stone-400 hover:border-stone-900 hover:bg-stone-50 bg-white'}`}
@@ -225,6 +281,10 @@ export default function ProductDetails() {
                     </div>
 
                     <div className="lg:w-3/4 grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-x-8 gap-y-6">
+                        <div className="border-b border-stone-100 pb-3 group hover:border-amber-600 transition-colors duration-500">
+                            <h5 className="text-[8px] font-black uppercase tracking-widest text-stone-400 mb-1 group-hover:text-amber-600 transition-colors">Category</h5>
+                            <p className="text-sm font-bold text-stone-800">{product.category_name}</p>
+                        </div>
                         {product.specs && Object.entries(product.specs).map(([key, value]) => (
                             value !== "N/A" && (
                                 <div key={key} className="border-b border-stone-100 pb-3 group hover:border-amber-600 transition-colors duration-500">
@@ -358,27 +418,27 @@ export default function ProductDetails() {
                 </div>
             </div>
 
-            {/* Related Products */}
+             {/* Related Products */}
             <div className="max-w-7xl mx-auto mt-32 mb-16 border-t border-stone-200 pt-20">
                  <h4 className="text-[10px] font-black uppercase tracking-[0.3em] text-stone-400 mb-2">Discovery</h4>
                  <h3 className="text-4xl font-black tracking-tighter text-stone-900 mb-12">Related Creations</h3>
                  <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-8">
                     {relatedProducts.map((item) => (
-                        <Link to={`/product/${item.id}`} key={item.id} className="group cursor-pointer">
-                            <div className="overflow-hidden bg-stone-50 border border-stone-200 p-6 mb-4 transition-all duration-700">
+                        <Link to={`/product/${item.product_id}`} key={item.product_id} className="group cursor-pointer">
+                            <div className="overflow-hidden bg-stone-50 border border-stone-200 p-6 mb-4 transition-all duration-700 aspect-square flex items-center justify-center">
                                 <img
-                                    src={item.variants[0].img}
+                                    src={item.main_image || (item.images && item.images[0]) || '/placeholder.png'}
                                     alt={item.name}
-                                    className="w-full h-48 object-contain group-hover:scale-110 transition duration-700"
+                                    className="w-full h-full object-contain group-hover:scale-110 transition duration-700"
                                 />
                             </div>
                             <div className="px-1 space-y-2">
-                                <p className="text-stone-400 text-[10px] font-black uppercase tracking-widest">{item.title}</p>
-                                <h2 className="text-sm font-bold group-hover:text-stone-600 transition text-stone-900 leading-tight">
+                                <p className="text-stone-400 text-[10px] font-black uppercase tracking-widest">{item.category_name}</p>
+                                <h2 className="text-sm font-bold group-hover:text-stone-600 transition text-stone-900 leading-tight uppercase font-black">
                                     {item.name}
                                 </h2>
-                                <p className="text-stone-900 font-black text-sm">
-                                    {item.variants[0].price}
+                                <p className="text-amber-600 font-black text-sm">
+                                    ₹{parseFloat(item.price).toLocaleString()}
                                 </p>
                             </div>
                         </Link>
