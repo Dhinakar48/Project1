@@ -18,12 +18,14 @@ const pool = new Pool({
   port: 5432,
 });
 
-pool.connect((err, client, release) => {
+// ✅ PostgreSQL connection check
+pool.query('SELECT NOW()', (err, res) => {
   if (err) {
-    return console.error('Error acquiring client', err.stack)
+    console.error('❌ Error connecting to PostgreSQL:', err.stack);
+  } else {
+    console.log('✅ Successfully connected to PostgreSQL Database');
   }
-  console.log('Successfully connected to PostgreSQL Database ✅')
-})
+});
 
 app.post("/register", async (req, res) => {
   const { email, password } = req.body;
@@ -163,14 +165,14 @@ app.post("/onboarding", async (req, res) => {
     if (checkAddress.rows.length > 0) {
       await client.query(
         `UPDATE addresses SET 
-            full_name = $1, phone = $2, address_line1 = $3, address_line2 = $4,
+            full_name = $1, phone = $2, address1 = $3, address2 = $4,
             city = $5, state = $6, pincode = $7, updated_at = CURRENT_TIMESTAMP
          WHERE customer_id = $8`,
         [name, phone, address, address2, city, state, pincode, cId]
       );
     } else {
       await client.query(
-        `INSERT INTO addresses (customer_id, full_name, phone, address_line1, address_line2, city, state, pincode, is_default)
+        `INSERT INTO addresses (customer_id, full_name, phone, address1, address2, city, state, pincode, is_default)
          VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
         [cId, name, phone, address, address2, city, state, pincode, true]
       );
@@ -204,21 +206,36 @@ app.post("/update-address", async (req, res) => {
     const cId = customer.rows[0].customer_id;
 
     // 2. Insert/Update address
-    const checkAddress = await client.query("SELECT * FROM addresses WHERE customer_id=$1", [cId]);
-    
-    if (checkAddress.rows.length > 0) {
+    const { address_id, address_type } = req.body;
+    console.log(`Updating address for ${email} (${cId}). AddressID: ${address_id || 'New'}`);
+
+    if (address_id) {
       await client.query(
         `UPDATE addresses SET 
-            full_name = $1, phone = $2, address_line1 = $3, address_line2 = $4,
-            city = $5, state = $6, pincode = $7, updated_at = CURRENT_TIMESTAMP
-         WHERE customer_id = $8`,
-        [name, phone, address, address2, city, state, pincode, cId]
+            full_name = $1, phone = $2, address1 = $3, address2 = $4,
+            city = $5, state = $6, pincode = $7, country = $8, updated_at = CURRENT_TIMESTAMP
+         WHERE address_id = $9 AND customer_id = $10`,
+        [name, phone, address, address2, city, state, pincode, req.body.country || 'India', address_id, cId]
       );
     } else {
+      // Check if this is the first address for the user
+      const checkFirst = await client.query("SELECT COUNT(*) FROM addresses WHERE customer_id=$1", [cId]);
+      const isDefault = parseInt(checkFirst.rows[0].count) === 0;
+
       await client.query(
-        `INSERT INTO addresses (customer_id, full_name, phone, address_line1, address_line2, city, state, pincode, is_default)
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
-        [cId, name, phone, address, address2, city, state, pincode, true]
+        `INSERT INTO addresses (customer_id, full_name, phone, address1, address2, city, state, pincode, country, is_default)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+         ON CONFLICT (customer_id) DO UPDATE SET
+            full_name = EXCLUDED.full_name,
+            phone = EXCLUDED.phone,
+            address1 = EXCLUDED.address1,
+            address2 = EXCLUDED.address2,
+            city = EXCLUDED.city,
+            state = EXCLUDED.state,
+            pincode = EXCLUDED.pincode,
+            country = EXCLUDED.country,
+            updated_at = CURRENT_TIMESTAMP`,
+        [cId, name, phone, address, address2, city, state, pincode, req.body.country || 'India', isDefault]
       );
     }
 
@@ -260,14 +277,14 @@ app.post("/update-profile", async (req, res) => {
     if (checkAddress.rows.length > 0) {
       await client.query(
         `UPDATE addresses SET 
-            full_name = $1, phone = $2, address_line1 = $3, address_line2 = $4,
+            full_name = $1, phone = $2, address1 = $3, address2 = $4,
             city = $5, state = $6, pincode = $7, updated_at = CURRENT_TIMESTAMP
          WHERE customer_id = $8`,
         [name, phone, address, address2, city, state, pincode, cId]
       );
     } else {
       await client.query(
-        `INSERT INTO addresses (customer_id, full_name, phone, address_line1, address_line2, city, state, pincode, is_default)
+        `INSERT INTO addresses (customer_id, full_name, phone, address1, address2, city, state, pincode, is_default)
          VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
         [cId, name, phone, address, address2, city, state, pincode, true]
       );
@@ -287,19 +304,48 @@ app.post("/update-profile", async (req, res) => {
 app.get("/profile/:email", async (req, res) => {
   try {
     const result = await pool.query(
-      `SELECT u.customer_id, u.email, u.name, u.phone, u.dob, u.gender, u.profile_image, u.is_verified,
-              a.full_name as shipping_name, a.phone as shipping_phone,
-              a.address_line1 as address, a.address_line2 as address2, a.city, a.state, a.pincode, a.country
-       FROM customers u
-       LEFT JOIN addresses a ON u.customer_id = a.customer_id
-       WHERE u.email=$1`,
+      `SELECT customer_id, email, name, phone, dob, gender, profile_image, is_verified 
+       FROM customers 
+       WHERE email=$1`,
       [req.params.email]
     );
     if (result.rows.length === 0) return res.status(404).json({ message: "User not found" });
-    res.json(result.rows[0]);
+    
+    // Fetch default address or first address to maintain backward compatibility
+    const addrResult = await pool.query(
+      `SELECT full_name as shipping_name, phone as shipping_phone,
+              address1 as address, address2 as address2, city, state, pincode, country
+       FROM addresses 
+       WHERE customer_id=$1 ORDER BY is_default DESC, created_at DESC LIMIT 1`,
+      [result.rows[0].customer_id]
+    );
+    
+    const profile = { ...result.rows[0], ...addrResult.rows[0] };
+    res.json(profile);
   } catch (err) {
     console.error(err);
     res.status(500).json({ message: "Server error" });
+  }
+});
+
+app.get("/addresses/:email", async (req, res) => {
+  try {
+    console.log(`Fetching addresses for email: ${req.params.email}`);
+    const customer = await pool.query("SELECT customer_id FROM customers WHERE email=$1", [req.params.email]);
+    if (customer.rowCount === 0) {
+      console.log(`Customer not found for ${req.params.email}`);
+      return res.status(404).json({ message: "Customer not found" });
+    }
+    
+    const addresses = await pool.query(
+      "SELECT * FROM addresses WHERE customer_id=$1 ORDER BY is_default DESC, created_at DESC", 
+      [customer.rows[0].customer_id]
+    );
+    console.log(`Found ${addresses.rowCount} addresses for ${req.params.email}`);
+    res.json(addresses.rows);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: "Error fetching addresses" });
   }
 });
 
@@ -331,7 +377,7 @@ app.post("/seller-register", async (req, res) => {
     const checkAddress = await pool.query("SELECT * FROM addresses WHERE sellerid=$1", [sellerid]);
     if (checkAddress.rows.length === 0) {
       await pool.query(
-        `INSERT INTO addresses (sellerid, full_name, phone, address_line1, city, state, pincode, is_default)
+        `INSERT INTO addresses (sellerid, full_name, phone, address1, city, state, pincode, is_default)
          VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
         [sellerid, name, phone, 'Address Pending', 'City Pending', 'State Pending', '000000', true]
       );
@@ -429,14 +475,14 @@ app.post("/seller-onboarding", async (req, res) => {
       if (checkAddr.rows.length > 0) {
         await client.query(
           `UPDATE addresses SET 
-              full_name = $1, phone = $2, address_line1 = $3, address_line2 = $4,
+              full_name = $1, phone = $2, address1 = $3, address2 = $4,
               city = $5, state = $6, pincode = $7, country = $8, updated_at = CURRENT_TIMESTAMP
            WHERE sellerid = $9`,
           [addressDetails.fullName, sellerPhone, addressDetails.address1, addressDetails.address2, addressDetails.city, addressDetails.state, addressDetails.pincode, addressDetails.country, sId]
         );
       } else {
         await client.query(
-          `INSERT INTO addresses (sellerid, full_name, phone, address_line1, address_line2, city, state, pincode, country, is_default)
+          `INSERT INTO addresses (sellerid, full_name, phone, address1, address2, city, state, pincode, country, is_default)
            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)`,
           [sId, addressDetails.fullName, sellerPhone, addressDetails.address1, addressDetails.address2, addressDetails.city, addressDetails.state, addressDetails.pincode, addressDetails.country, true]
         );

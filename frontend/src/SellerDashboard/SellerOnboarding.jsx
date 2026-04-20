@@ -100,7 +100,7 @@ export default function SellerOnboarding() {
           localStorage.removeItem('onboardingSellerEmail');
           localStorage.setItem('sellerActiveTab', 'Overview');
           localStorage.setItem('isSellerAuthenticated', 'true');
-          
+
           alert("Verification successful! Welcome to your dashboard.");
           navigate('/seller-dashboard');
         } catch (err) {
@@ -140,12 +140,7 @@ export default function SellerOnboarding() {
                 <input type="text" name="gstin" value={onboardingData.gstin} onChange={handleChange} className="w-full bg-white shadow-sm border border-stone-200/60 focus:bg-white focus:ring-4 focus:ring-amber-500/10 hover:border-stone-300 rounded-xl py-3 px-4 outline-none focus:border-amber-400 mt-1 transition-colors text-xs font-semibold text-stone-800" placeholder="15-digit GST Number" required />
               </div>
             </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <label className="text-[10px] font-black uppercase tracking-widest text-stone-500">City</label>
-                <input type="text" name="city" value={onboardingData.city} onChange={handleChange} className="w-full bg-white shadow-sm border border-stone-200/60 focus:bg-white focus:ring-4 focus:ring-amber-500/10 hover:border-stone-300 rounded-xl py-3 px-4 outline-none focus:border-amber-400 mt-1 transition-colors text-xs font-semibold text-stone-800" placeholder="City" required />
-              </div>
-            </div>
+
             <div>
               <label className="text-[10px] font-black uppercase tracking-widest text-stone-500">Business Address Line 1</label>
               <textarea name="address" value={onboardingData.address} onChange={handleChange} rows="2" className="w-full bg-white shadow-sm border border-stone-200/60 focus:bg-white focus:ring-4 focus:ring-amber-500/10 hover:border-stone-300 rounded-xl py-3 px-4 outline-none focus:border-amber-400 mt-1 transition-colors text-xs font-semibold text-stone-800" placeholder="Street, building etc." required />
@@ -153,6 +148,16 @@ export default function SellerOnboarding() {
             <div>
               <label className="text-[10px] font-black uppercase tracking-widest text-stone-500">Business Address Line 2 (Optional)</label>
               <textarea name="address2" value={onboardingData.address2} onChange={handleChange} rows="2" className="w-full bg-white shadow-sm border border-stone-200/60 focus:bg-white focus:ring-4 focus:ring-amber-500/10 hover:border-stone-300 rounded-xl py-3 px-4 outline-none focus:border-amber-400 mt-1 transition-colors text-xs font-semibold text-stone-800" placeholder="Floor, unit, etc." />
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="text-[10px] font-black uppercase tracking-widest text-stone-500">City</label>
+                <input type="text" name="city" value={onboardingData.city} onChange={handleChange} className="w-full bg-white shadow-sm border border-stone-200/60 focus:bg-white focus:ring-4 focus:ring-amber-500/10 hover:border-stone-300 rounded-xl py-3 px-4 outline-none focus:border-amber-400 mt-1 transition-colors text-xs font-semibold text-stone-800" placeholder="City" required />
+              </div>
+              <div>
+                <label className="text-[10px] font-black uppercase tracking-widest text-stone-500">Zip Code / Pincode</label>
+                <input type="text" name="pincode" value={onboardingData.pincode} onChange={handleChange} className="w-full bg-white shadow-sm border border-stone-200/60 focus:bg-white focus:ring-4 focus:ring-amber-500/10 hover:border-stone-300 rounded-xl py-3 px-4 outline-none focus:border-amber-400 mt-1 transition-colors text-xs font-semibold text-stone-800" placeholder="6-digit ZIP" required />
+              </div>
             </div>
             <div className="grid grid-cols-2 md:grid-cols-2 gap-4">
               <div>
@@ -163,11 +168,7 @@ export default function SellerOnboarding() {
                   <option>Kerala</option>
                   <option>Andhra Pradesh</option>
                   <option>Telangana</option>
-                </select>             
-              </div>
-              <div>
-                <label className="text-[10px] font-black uppercase tracking-widest text-stone-500">Zip Code / Pincode</label>
-                <input type="text" name="pincode" value={onboardingData.pincode} onChange={handleChange} className="w-full bg-white shadow-sm border border-stone-200/60 focus:bg-white focus:ring-4 focus:ring-amber-500/10 hover:border-stone-300 rounded-xl py-3 px-4 outline-none focus:border-amber-400 mt-1 transition-colors text-xs font-semibold text-stone-800" placeholder="6-digit ZIP" required />
+                </select>
               </div>
               <div>
                 <label className="text-[10px] font-black uppercase tracking-widest text-stone-500">Country</label>
@@ -226,29 +227,28 @@ export default function SellerOnboarding() {
           <div className="space-y-5">
             <div>
               <label className="text-[10px] font-black uppercase tracking-widest text-stone-500">Account Holder Name</label>
-              <input type="text" name="accHolder" value={onboardingData.accHolder} onChange={handleChange} className="w-full bg-white shadow-sm border border-stone-200/60 focus:bg-white focus:ring-4 focus:ring-amber-500/10 hover:border-stone-300 rounded-xl py-3 px-4 outline-none focus:border-amber-400 mt-1 transition-colors text-xs font-semibold text-stone-800" required />
+              <input type="text" name="accHolder" onChange={handleChange} className="w-full bg-white shadow-sm border border-stone-200/60 focus:bg-white focus:ring-4 focus:ring-amber-500/10 hover:border-stone-300 rounded-xl py-3 px-4 outline-none focus:border-amber-400 mt-1 transition-colors text-xs font-semibold text-stone-800" required />
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <label className="text-[10px] font-black uppercase tracking-widest text-stone-500">Bank Account Number</label>
-                <input 
-                  type="password" 
+                <input
+                  type="password"
                   name="accNumber"
-                  value={onboardingData.accNumber}
                   onChange={handleChange}
-                  placeholder="••••••••••••" 
-                  className="w-full bg-white shadow-sm border border-stone-200/60 focus:bg-white focus:ring-4 focus:ring-amber-500/10 hover:border-stone-300 rounded-xl py-3 px-4 outline-none focus:border-amber-400 mt-1 transition-colors text-xs font-semibold text-stone-800" 
-                  required 
+                  placeholder="••••••••••••"
+                  className="w-full bg-white shadow-sm border border-stone-200/60 focus:bg-white focus:ring-4 focus:ring-amber-500/10 hover:border-stone-300 rounded-xl py-3 px-4 outline-none focus:border-amber-400 mt-1 transition-colors text-xs font-semibold text-stone-800"
+                  required
                 />
               </div>
               <div>
                 <label className="text-[10px] font-black uppercase tracking-widest text-stone-500">Confirm Account Number</label>
-                <input 
-                  type="text" 
+                <input
+                  type="text"
                   id="confirmAccount"
-                  placeholder="Re-enter to confirm" 
-                  className="w-full bg-white shadow-sm border border-stone-200/60 focus:bg-white focus:ring-4 focus:ring-amber-500/10 hover:border-stone-300 rounded-xl py-3 px-4 outline-none focus:border-amber-400 mt-1 transition-colors text-xs font-semibold text-stone-800" 
-                  required 
+                  placeholder="Re-enter to confirm"
+                  className="w-full bg-white shadow-sm border border-stone-200/60 focus:bg-white focus:ring-4 focus:ring-amber-500/10 hover:border-stone-300 rounded-xl py-3 px-4 outline-none focus:border-amber-400 mt-1 transition-colors text-xs font-semibold text-stone-800"
+                  required
                   onChange={(e) => {
                     if (onboardingData.accNumber !== e.target.value) {
                       e.target.setCustomValidity("Account numbers do not match.");
@@ -383,7 +383,7 @@ export default function SellerOnboarding() {
           <div className="absolute top-[-10%] right-[-10%] w-[50%] h-[50%] bg-amber-200/20 rounded-full blur-[120px]" />
           <div className="absolute bottom-[-10%] left-[-10%] w-[40%] h-[40%] bg-stone-300/20 rounded-full blur-[100px]" />
         </div>
-        
+
         <div className="w-full max-w-2xl mx-auto flex flex-col justify-center h-full py-10 relative z-10">
 
           <div className="flex-1 flex flex-col justify-center">
