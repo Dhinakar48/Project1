@@ -1,22 +1,24 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
+import axios from "axios";
 import { motion } from "framer-motion";
 import { FaArrowLeft, FaPlus, FaTimes, FaImage, FaTrash } from "react-icons/fa";
 
-export default function AddProduct({ onBack, onAddProduct, initialData }) {
+export default function AddProduct({ onBack, onAddProduct, initialData, sellerId }) {
+  const [categories, setCategories] = useState([]);
   const [formData, setFormData] = useState(initialData ? {
     name: initialData.name || "",
     description: initialData.description || "",
-    type: initialData.type || initialData.category || "",
+    category_id: initialData.category_id || "",
     price: initialData.price || "",
     discountPrice: initialData.discountPrice || "",
-    stock: initialData.stock || "",
+    stock: initialData.stock_quantity || initialData.stock || "",
     sku: initialData.sku || "",
     status: initialData.status || "Active",
     featured: initialData.featured || false,
   } : {
     name: "",
     description: "",
-    type: "",
+    category_id: "",
     price: "",
     discountPrice: "",
     stock: "",
@@ -27,6 +29,19 @@ export default function AddProduct({ onBack, onAddProduct, initialData }) {
 
   const [images, setImages] = useState(initialData && initialData.img ? [initialData.img] : []);
   const [specifications, setSpecifications] = useState(initialData && initialData.specifications ? initialData.specifications : [{ key: "", value: "" }]);
+
+  useEffect(() => {
+    fetchCategories();
+  }, []);
+
+  const fetchCategories = async () => {
+    try {
+      const res = await axios.get("http://localhost:5000/categories");
+      setCategories(res.rows || res.data);
+    } catch (err) {
+      console.error("Error fetching categories:", err);
+    }
+  };
 
   const handleInputChange = (e) => {
     const { name, value, type, checked } = e.target;
@@ -69,19 +84,40 @@ export default function AddProduct({ onBack, onAddProduct, initialData }) {
     setSpecifications(specifications.filter((_, i) => i !== index));
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    const finalProductData = {
-      ...formData,
-      images,
-      specifications: specifications.filter(spec => spec.key.trim() !== "" || spec.value.trim() !== ""),
+    
+    if (!formData.category_id) {
+      alert("Please select a category");
+      return;
+    }
+
+    const productPayload = {
+      seller_id: sellerId,
+      category_id: formData.category_id === "new" ? null : formData.category_id,
+      new_category_name: formData.category_id === "new" ? formData.new_category_name : null,
+      name: formData.name,
+      description: formData.description,
+      price: parseFloat(formData.price) || 0,
+      stock: parseInt(formData.stock) || 0,
+      images: images,
     };
-    
-    console.log("=== NEW PRODUCT SUBMITTED ===");
-    console.log(finalProductData);
-    
-    if(onAddProduct) {
-      onAddProduct(finalProductData);
+
+    try {
+      if (initialData) {
+        await axios.put(`http://localhost:5000/seller-update-product/${initialData.product_id}`, productPayload);
+        alert("Product updated successfully!");
+      } else {
+        await axios.post("http://localhost:5000/seller-add-product", productPayload);
+        alert("Product published successfully!");
+      }
+
+      if(onAddProduct) {
+        onAddProduct();
+      }
+    } catch (err) {
+      console.error(err);
+      alert("Failed to save product: " + (err.response?.data?.message || err.message));
     }
   };
 
@@ -133,14 +169,38 @@ export default function AddProduct({ onBack, onAddProduct, initialData }) {
                 />
               </div>
 
-              <div className="space-y-2">
-                <label className="text-sm font-semibold text-stone-600 block">Product Type *</label>
-                <input 
-                  type="text" name="type" 
-                  value={formData.type} onChange={handleInputChange} required
-                  placeholder="e.g. Camera, Laptop, Accessory"
-                  className="w-full p-4 bg-stone-50 border border-stone-200 rounded-2xl focus:border-amber-500 focus:ring-1 focus:ring-amber-500 outline-none transition-all"
-                />
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <label className="text-sm font-semibold text-stone-600 block">Product Category *</label>
+                  <select 
+                    name="category_id" 
+                    value={formData.category_id} onChange={handleInputChange} required
+                    className="w-full p-4 bg-stone-50 border border-stone-200 rounded-2xl focus:border-amber-500 focus:ring-1 focus:ring-amber-500 outline-none transition-all"
+                  >
+                    <option value="" disabled>Select a Category</option>
+                    {categories.map(cat => (
+                      <option key={cat.category_id} value={cat.category_id}>{cat.name}</option>
+                    ))}
+                    <option value="new">+ Add New Category...</option>
+                  </select>
+                </div>
+
+                {formData.category_id === "new" && (
+                  <motion.div 
+                    initial={{ opacity: 0, height: 0 }} 
+                    animate={{ opacity: 1, height: "auto" }}
+                    className="space-y-2"
+                  >
+                    <label className="text-sm font-semibold text-amber-600 block">New Category Name *</label>
+                    <input 
+                      type="text" name="new_category_name" 
+                      value={formData.new_category_name || ""} 
+                      onChange={handleInputChange} required
+                      placeholder="e.g. Smart Watches"
+                      className="w-full p-4 bg-amber-50/30 border border-amber-200 rounded-2xl focus:border-amber-500 focus:ring-1 focus:ring-amber-500 outline-none transition-all placeholder:text-stone-300"
+                    />
+                  </motion.div>
+                )}
               </div>
 
               <div className="space-y-2">

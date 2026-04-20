@@ -8,6 +8,7 @@ import {
 } from "react-icons/fa6";
 import { FaSearch, FaTimes, FaArrowRight, FaGlobe, FaUser } from "react-icons/fa";
 import { Link, useNavigate } from "react-router-dom";
+import axios from "axios";
 import sellerData from "./sellerData.js";
 
 // Modular Components
@@ -70,7 +71,22 @@ export default function SellerDashboard() {
   const [showNotifications, setShowNotifications] = useState(false);
   const [showProfileMenu, setShowProfileMenu] = useState(false);
   const [viewedCustomer, setViewedCustomer] = useState(null);
-  const [inventoryProducts, setInventoryProducts] = useState(sellerData.inventoryProducts);
+  const [inventoryProducts, setInventoryProducts] = useState([]);
+
+  useEffect(() => {
+    if (seller?.seller_id) {
+      fetchProducts();
+    }
+  }, [seller]);
+
+  const fetchProducts = async () => {
+    try {
+      const res = await axios.get(`http://localhost:5000/seller-products/${seller.seller_id}`);
+      setInventoryProducts(res.data);
+    } catch (err) {
+      console.error("Error fetching products:", err);
+    }
+  };
 
 
 
@@ -301,8 +317,9 @@ export default function SellerDashboard() {
 
           {activeTab === 'Products' && (
             <Products 
+              sellerId={seller.seller_id}
               inventoryProducts={inventoryProducts}
-              setInventoryProducts={setInventoryProducts}
+              setInventoryProducts={fetchProducts}
               selectedCategory={selectedCategory}
               setSelectedCategory={setSelectedCategory}
               globalSearch={globalSearch}

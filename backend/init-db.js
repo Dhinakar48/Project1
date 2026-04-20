@@ -66,7 +66,7 @@ async function setup() {
 
     await client1.query(`
       CREATE TABLE IF NOT EXISTS sellers (
-        sellerid VARCHAR(20) PRIMARY KEY,
+        seller_id VARCHAR(20) PRIMARY KEY,
         full_name VARCHAR(100) NOT NULL,
         email VARCHAR(150) UNIQUE NOT NULL,
         phone VARCHAR(15),
@@ -110,11 +110,11 @@ async function setup() {
   CREATE TABLE IF NOT EXISTS addresses (
     address_id SERIAL PRIMARY KEY,
     customer_id VARCHAR(20) REFERENCES customers(customer_id) ON DELETE CASCADE,
-    sellerid VARCHAR(20) REFERENCES sellers(sellerid) ON DELETE CASCADE,
+    seller_id VARCHAR(20) REFERENCES sellers(seller_id) ON DELETE CASCADE,
     full_name VARCHAR(100) NOT NULL,
     phone VARCHAR(15),
-    address_line1 TEXT NOT NULL,
-    address_line2 TEXT,
+    address1 TEXT NOT NULL,
+    address2 TEXT,
     city VARCHAR(50),
     state VARCHAR(50),
     pincode VARCHAR(10),
@@ -124,10 +124,140 @@ async function setup() {
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     deleted_at TIMESTAMP,
     CONSTRAINT unique_customer_address UNIQUE (customer_id),
-    CONSTRAINT unique_seller_address UNIQUE (sellerid)
+    CONSTRAINT unique_seller_address UNIQUE (seller_id)
 );
     `);
     console.log("Table 'addresses' initialized successfully.");
+
+    await client1.query(`
+      CREATE TABLE IF NOT EXISTS products (
+        product_id SERIAL PRIMARY KEY,
+        seller_id VARCHAR(20) REFERENCES sellers(seller_id) ON DELETE CASCADE,
+        category_id INT REFERENCES categories(category_id) ON DELETE SET NULL,
+        name VARCHAR(200) NOT NULL,
+        description TEXT,
+        price DECIMAL(10, 2) NOT NULL,
+        stock_quantity INT DEFAULT 0,
+        images TEXT[],
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      );
+    `);
+    console.log("Table 'products' initialized successfully.");
+
+    await client1.query(`
+      CREATE TABLE IF NOT EXISTS product_variants (
+        variant_id SERIAL PRIMARY KEY,
+        product_id INT REFERENCES products(product_id) ON DELETE CASCADE,
+        sku VARCHAR(100) UNIQUE,
+        variant_name VARCHAR(100),
+        variant_value VARCHAR(100),
+        price DECIMAL(10, 2) NOT NULL,
+        stock_quantity INT DEFAULT 0,
+        weight DECIMAL(10, 2),
+        is_active BOOLEAN DEFAULT TRUE,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      );
+    `);
+    console.log("Table 'product_variants' initialized successfully.");
+
+    await client1.query(`
+      CREATE TABLE IF NOT EXISTS product_images (
+        image_id SERIAL PRIMARY KEY,
+        product_id INT REFERENCES products(product_id) ON DELETE CASCADE,
+        image_url TEXT NOT NULL,
+        alt_text VARCHAR(255),
+        is_primary BOOLEAN DEFAULT FALSE,
+        sort_order INT DEFAULT 0,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      );
+    `);
+    console.log("Table 'product_images' initialized successfully.");
+
+    await client1.query(`
+      CREATE TABLE IF NOT EXISTS orders (
+        order_id SERIAL PRIMARY KEY,
+        customer_id VARCHAR(20) REFERENCES customers(customer_id) ON DELETE SET NULL,
+        address_id INT REFERENCES addresses(address_id) ON DELETE SET NULL,
+        coupon_id VARCHAR(50),
+        subtotal DECIMAL(10, 2) NOT NULL,
+        discount_amount DECIMAL(10, 2) DEFAULT 0,
+        tax_amount DECIMAL(10, 2) DEFAULT 0,
+        shipping_charge DECIMAL(10, 2) DEFAULT 0,
+        total_amount DECIMAL(10, 2) NOT NULL,
+        order_status VARCHAR(50) DEFAULT 'Pending',
+        payment_status VARCHAR(50) DEFAULT 'Pending',
+        cancellation_reason TEXT,
+        is_deleted BOOLEAN DEFAULT FALSE,
+        placed_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      );
+    `);
+    console.log("Table 'orders' initialized successfully.");
+
+    await client1.query(`
+      CREATE TABLE IF NOT EXISTS carts (
+        cart_id SERIAL PRIMARY KEY,
+        customer_id VARCHAR(20) REFERENCES customers(customer_id) ON DELETE CASCADE,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        CONSTRAINT unique_customer_cart UNIQUE (customer_id)
+      );
+    `);
+    console.log("Table 'carts' initialized successfully.");
+
+    await client1.query(`
+      CREATE TABLE IF NOT EXISTS wishlists (
+        wishlist_id SERIAL PRIMARY KEY,
+        customer_id VARCHAR(20) REFERENCES customers(customer_id) ON DELETE CASCADE,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        CONSTRAINT unique_customer_wishlist UNIQUE (customer_id)
+      );
+    `);
+    console.log("Table 'wishlists' initialized successfully.");
+
+    await client1.query(`
+      CREATE TABLE IF NOT EXISTS wishlist_items (
+        wishlist_item_id SERIAL PRIMARY KEY,
+        wishlist_id INT REFERENCES wishlists(wishlist_id) ON DELETE CASCADE,
+        product_id INT REFERENCES products(product_id) ON DELETE CASCADE,
+        added_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        UNIQUE (wishlist_id, product_id)
+      );
+    `);
+    console.log("Table 'wishlist_items' initialized successfully.");
+
+    await client1.query(`
+      CREATE TABLE IF NOT EXISTS payments (
+        payment_id SERIAL PRIMARY KEY,
+        seller_id VARCHAR(20) REFERENCES sellers(seller_id) ON DELETE SET NULL,
+        customer_id VARCHAR(20) REFERENCES customers(customer_id) ON DELETE SET NULL,
+        order_id INT REFERENCES orders(order_id) ON DELETE CASCADE,
+        payment_method VARCHAR(50) NOT NULL,
+        amount DECIMAL(10, 2) NOT NULL,
+        transaction_id VARCHAR(100) UNIQUE,
+        payment_status VARCHAR(50) DEFAULT 'Pending',
+        paid_at TIMESTAMP,
+        gateway_name VARCHAR(100),
+        gateway_response_code VARCHAR(50),
+        failure_reason_code VARCHAR(50),
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      );
+    `);
+    console.log("Table 'payments' initialized successfully.");
+
+    await client1.query(`
+      CREATE TABLE IF NOT EXISTS order_sellers (
+        order_seller_id SERIAL PRIMARY KEY,
+        order_id INT REFERENCES orders(order_id) ON DELETE CASCADE,
+        seller_id VARCHAR(20) REFERENCES sellers(seller_id) ON DELETE CASCADE,
+        seller_subtotal DECIMAL(10, 2) NOT NULL,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      );
+    `);
+    console.log("Table 'order_sellers' initialized successfully.");
 
   } catch (e) {
     console.error("Error creating tables:", e.message);
