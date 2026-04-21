@@ -139,6 +139,7 @@ async function setup() {
         brand VARCHAR(100),
         sku VARCHAR(100) UNIQUE,
         price DECIMAL(10, 2) NOT NULL,
+        discount INT DEFAULT 0,
         mrp DECIMAL(10, 2),
         stock_quantity INT DEFAULT 0,
         images TEXT[],
@@ -186,7 +187,7 @@ async function setup() {
 
     await client1.query(`
       CREATE TABLE IF NOT EXISTS orders (
-        order_id SERIAL PRIMARY KEY,
+        order_id VARCHAR(20) PRIMARY KEY,
         customer_id VARCHAR(20) REFERENCES customers(customer_id) ON DELETE SET NULL,
         address_id INT REFERENCES addresses(address_id) ON DELETE SET NULL,
         coupon_id VARCHAR(50),
@@ -208,10 +209,10 @@ async function setup() {
     await client1.query(`
       CREATE TABLE IF NOT EXISTS order_items (
         order_item_id VARCHAR(30) PRIMARY KEY,
-        order_id INT REFERENCES orders(order_id) ON DELETE CASCADE,
-        product_id VARCHAR(20) REFERENCES products(product_id) ON DELETE SET NULL,
+        order_id VARCHAR(20) REFERENCES orders(order_id) ON DELETE CASCADE,
+        product_id VARCHAR(50),
         seller_id VARCHAR(20) REFERENCES sellers(seller_id) ON DELETE SET NULL,
-        variant_id VARCHAR(20) REFERENCES product_variants(variant_id) ON DELETE SET NULL,
+        variant_id VARCHAR(50),
         quantity INT NOT NULL,
         unit_price DECIMAL(10, 2) NOT NULL,
         total_price DECIMAL(10, 2) NOT NULL,

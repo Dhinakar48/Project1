@@ -162,6 +162,27 @@ export default function OrderPage() {
       console.error('FAILED TO SEND EMAIL:', err);
     }
 
+    // Save to Database
+    const savedUser = JSON.parse(localStorage.getItem("user") || "{}");
+    const customerId = savedUser.customerId;
+    
+    if (customerId) {
+        try {
+            const host = window.location.hostname === "localhost" ? "localhost" : "127.0.0.1";
+            await axios.post(`http://${host}:5000/order/place`, {
+                customerId,
+                addressId: editingAddressId || (savedAddresses.length > 0 ? savedAddresses[0].address_id : null),
+                cartItems: cart,
+                subtotal: subtotal,
+                discountAmount: couponDiscountAmount,
+                totalAmount: totalPayable,
+                couponId: appliedDiscount?.code
+            });
+        } catch (err) {
+            console.error("Failed to save order to database:", err);
+        }
+    }
+
     clearCart();
     setIsProcessing(false);
     setIsOrderPlaced(true);

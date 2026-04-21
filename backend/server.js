@@ -105,6 +105,8 @@ app.post("/login", async (req, res) => {
   }
 });
 
+
+
 app.post("/send-otp", async (req, res) => {
   const { phone } = req.body;
 
@@ -1062,11 +1064,79 @@ app.post("/cart/remove", async (req, res) => {
   }
 });
 
+app.post("/order/place", async (req, res) => {
+  console.log("--- ORDER PLACE REQUEST RECEIVED ---", req.body);
+  const { customerId, addressId, cartItems, subtotal, discountAmount, totalAmount, couponId } = req.body;
+  const client = await pool.connect();
+  try {
+    await client.query("BEGIN");
+    
+    // Generate Order ID
+    const maxOrderRes = await client.query("SELECT order_id FROM orders ORDER BY order_id DESC LIMIT 1");
+    let nextNum = 1;
+    if (maxOrderRes.rows.length > 0) {
+      const lastId = maxOrderRes.rows[0].order_id;
+      const match = lastId.match(/\d+/);
+      nextNum = (match ? parseInt(match[0]) : 0) + 1;
+    }
+    const orderId = `ORD-${nextNum.toString().padStart(3, '0')}`;
+
+    // Insert Order
+    await client.query(
+      `INSERT INTO orders (order_id, customer_id, address_id, coupon_id, subtotal, discount_amount, total_amount, order_status, payment_status)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
+      [orderId, customerId, addressId || null, couponId || null, subtotal, discountAmount || 0, totalAmount, 'Confirmed', 'Paid']
+    );
+
+    // Insert Items
+    for (const item of cartItems) {
+       const uPrice = parseFloat(String(item.variant?.price || item.price || 0).replace(/[^\d.]/g, ''));
+       const tPrice = uPrice * item.quantity;
+       
+       // Get seller_id for this product
+       const prodRes = await client.query("SELECT seller_id FROM products WHERE product_id = $1", [item.product_id]);
+       const sellerId = prodRes.rows.length > 0 ? prodRes.rows[0].seller_id : null;
+
+       const maxItemRes = await client.query("SELECT order_item_id FROM order_items ORDER BY order_item_id DESC LIMIT 1");
+       let nextItemNum = 1;
+       if (maxItemRes.rows.length > 0) {
+         const lastItemId = maxItemRes.rows[0].order_item_id;
+         const matchItem = lastItemId.match(/\d+/);
+         nextItemNum = (matchItem ? parseInt(matchItem[0]) : 0) + 1;
+       }
+       const orderItemId = `ORD-IT-${nextItemNum.toString().padStart(4, '0')}`;
+
+       await client.query(
+         `INSERT INTO order_items (order_item_id, order_id, product_id, seller_id, variant_id, quantity, unit_price, total_price)
+          VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
+         [orderItemId, orderId, item.product_id, sellerId, item.variantId || null, item.quantity, uPrice, tPrice]
+       );
+    }
+
+    // Clear Cart
+    await client.query(`
+      DELETE FROM cart_items ci
+      USING carts c
+      WHERE ci.cart_id = c.cart_id AND c.customer_id = $1
+    `, [customerId]);
+
+    await client.query("COMMIT");
+    console.log("Order placed successfully:", orderId);
+    res.json({ success: true, orderId });
+  } catch (err) {
+    await client.query("ROLLBACK");
+    console.error("Order placement crash:", err);
+    res.status(500).json({ message: "Order placement error" });
+  } finally {
+    client.release();
+  }
+});
+
 app.get("/cart/:customerId", async (req, res) => {
   const { customerId } = req.params;
   try {
     const result = await pool.query(`
-      SELECT ci.*, p.name, p.price as base_price, p.images, p.brand, pv.price as variant_price, pv.variant_name, pv.variant_value
+      SELECT ci.*, p.name, p.price as base_price, p.images, p.brand, p.discount, pv.price as variant_price, pv.variant_name, pv.variant_value
       FROM cart_items ci
       JOIN carts c ON ci.cart_id = c.cart_id
       JOIN products p ON ci.product_id = p.product_id
@@ -1078,6 +1148,74 @@ app.get("/cart/:customerId", async (req, res) => {
   } catch (err) {
     console.error(err);
     res.status(500).json({ message: "Fetch cart error" });
+  }
+});
+ 
+app.get("/product/:id", async (req, res) => {
+  const { id } = req.params;
+  try {
+    const result = await pool.query("SELECT * FROM products WHERE product_id = $1", [id]);
+    if (result.rows.length === 0) return res.status(404).json({ message: "Product not found" });
+    
+    const product = result.rows[0];
+    const variantsRes = await pool.query("SELECT * FROM product_variants WHERE product_id = $1", [id]);
+    product.variants = variantsRes.rows;
+    
+    res.json(product);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: "Error fetching product" });
+  }
+});
+
+app.get("/products/category/:categoryName", async (req, res) => {
+  const { categoryName } = req.params;
+  try {
+    const result = await pool.query(`
+      SELECT p.* 
+      FROM products p
+      LEFT JOIN categories c ON p.category_id = c.category_id
+      WHERE LOWER(c.name) = LOWER($1) OR LOWER(p.category) = LOWER($1)
+    `, [categoryName]);
+    res.json(result.rows);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: "Error fetching products by category" });
+  }
+});
+
+app.get("/products", async (req, res) => {
+  try {
+    const result = await pool.query("SELECT * FROM products ORDER BY created_at DESC");
+    res.json(result.rows);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: "Error fetching products" });
+  }
+});
+ 
+app.get("/seller-orders/:sellerId", async (req, res) => {
+  const { sellerId } = req.params;
+  try {
+    const result = await pool.query(`
+      SELECT 
+        oi.*, 
+        o.placed_at, o.order_status, o.payment_status,
+        p.name as product_name, p.images as product_images,
+        c.name as customer_name, c.email as customer_email,
+        a.full_name as shipping_name, a.address1, a.address2, a.city, a.state, a.pincode, a.phone as shipping_phone
+      FROM order_items oi
+      JOIN orders o ON oi.order_id = o.order_id
+      JOIN products p ON oi.product_id = p.product_id
+      LEFT JOIN customers c ON o.customer_id = c.customer_id
+      LEFT JOIN addresses a ON o.address_id = a.address_id
+      WHERE oi.seller_id = $1
+      ORDER BY o.placed_at DESC
+    `, [sellerId]);
+    res.json(result.rows);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: "Fetch seller orders error" });
   }
 });
 

@@ -22,7 +22,8 @@ const stripProduct = (product) => {
     name: product.name,
     price: product.price,
     brand: product.brand,
-    images: [primaryImg] 
+    images: [primaryImg],
+    discount: product.discount || 0
   };
 };
 
@@ -118,6 +119,7 @@ export function StoreProvider({ children }) {
                     brand: item.brand,
                     images: item.images || [primaryImg],
                     quantity: item.quantity,
+                    discount: item.discount || 0,
                     variant: {
                         id: item.variant_id,
                         name: item.variant_name,
@@ -179,7 +181,8 @@ export function StoreProvider({ children }) {
             : item
         );
       }
-      return [...prev, { ...lightProduct, variant: { ...variant, img: null }, variantId: variant.id, quantity: 1 }];
+      const variantImg = variant.img || lightProduct.images[0];
+      return [...prev, { ...lightProduct, variant: { ...variant, img: variantImg }, variantId: variant.id, quantity: 1 }];
     });
 
     const savedUser = localStorage.getItem("user");
@@ -295,13 +298,15 @@ export function StoreProvider({ children }) {
   const removeDiscount = () => setAppliedDiscount(null);
 
   const rawSubtotal = cart.reduce((total, item) => {
-    const price = parseInt(item.variant.price.replace(/[^\d]/g, ""));
+    const priceStr = String(item.variant?.price || 0).replace(/[^\d.]/g, "");
+    const price = parseFloat(priceStr) || 0;
     return total + price * item.quantity;
   }, 0);
 
   const productDiscountAmount = cart.reduce((total, item) => {
     if (item.discount) {
-      const price = parseInt(item.variant.price.replace(/[^\d]/g, ""));
+      const priceStr = String(item.variant?.price || 0).replace(/[^\d.]/g, "");
+      const price = parseFloat(priceStr) || 0;
       const discount = (price * item.discount) / 100;
       return total + discount * item.quantity;
     }

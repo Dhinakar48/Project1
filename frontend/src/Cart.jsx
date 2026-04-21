@@ -135,12 +135,12 @@ export default function Cart() {
                                 ₹{(parseFloat(String(item.variant?.price || 0).replace(/[^\d.]/g, "")) * (1 - item.discount / 100)).toLocaleString()}
                               </p>
                               <p className="text-[12px] text-red-500 font-bold line-through opacity-70">
-                                ₹{parseFloat(String(item.variant?.price || 0)).toLocaleString()}
+                                ₹{parseFloat(String(item.variant?.price || 0).replace(/[^\d.]/g, "")).toLocaleString()}
                               </p>
                             </>
                           ) : (
                             <p className="text-xl font-black text-stone-900 tracking-tight">
-                              ₹{parseFloat(String(item.variant?.price || 0)).toLocaleString()}
+                              ₹{parseFloat(String(item.variant?.price || 0).replace(/[^\d.]/g, "")).toLocaleString()}
                             </p>
                           )}
                           <p className="text-[10px] text-stone-400 font-bold uppercase tracking-wider mt-0.5">

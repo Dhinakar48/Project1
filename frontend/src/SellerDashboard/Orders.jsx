@@ -1,18 +1,55 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { FaBoxOpen, FaEllipsisV } from "react-icons/fa";
+import axios from "axios";
 
 export default function Orders({ globalSearch }) {
   const [filter, setFilter] = useState("All");
   const [activeActionMenu, setActiveActionMenu] = useState(null);
+  const [orders, setOrders] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
 
-  const orders = [
-    { id: '#ORD-94AZ', date: 'Oct 24, 2026', time: '14:32', name: 'Alexandar Graham', email: 'alex@graham.co', item: 'Vertex Laptop 16', image: '/laptop.jpg', qty: 1, amount: '₹1,89,999', status: 'Shipped', statusColor: 'bg-blue-100 text-blue-600 border-blue-200' },
-    { id: '#ORD-88BZ', date: 'Oct 24, 2026', time: '12:15', name: 'Sophia Loren', email: 'sophia@studio.it', item: 'Pulse Watch X', image: '/featured/watch1.avif', qty: 2, amount: '₹34,000', status: 'Processing', statusColor: 'bg-amber-100 text-amber-600 border-amber-200' },
-    { id: '#ORD-72CX', date: 'Oct 23, 2026', time: '09:45', name: 'Marcus Aurelius', email: 'marc@rome.co', item: 'Sonic Buds Pro', image: '/featured/buds1.avif', qty: 1, amount: '₹18,499', status: 'Delivered', statusColor: 'bg-green-100 text-green-600 border-green-200' },
-    { id: '#ORD-61DY', date: 'Oct 22, 2026', time: '18:20', name: 'Elena Gilbert', email: 'elena@mystic.net', item: 'Aura Headphones', image: '/featured/headphone3.jpg', qty: 1, amount: '₹34,999', status: 'Pending', statusColor: 'bg-stone-100 text-stone-600 border-stone-200' },
-    { id: '#ORD-55EW', date: 'Oct 21, 2026', time: '11:05', name: 'David Wallace', email: 'david@dm.com', item: 'Quantum Keyboard', image: '/featured/watch3.jpg', qty: 3, amount: '₹45,000', status: 'Shipped', statusColor: 'bg-blue-100 text-blue-600 border-blue-200' },
-  ];
+  const getStatusColor = (status) => {
+    switch (status) {
+      case 'Shipped': return 'bg-blue-100 text-blue-600 border-blue-200';
+      case 'Processing': return 'bg-amber-100 text-amber-600 border-amber-200';
+      case 'Delivered': return 'bg-green-100 text-green-600 border-green-200';
+      case 'Pending': return 'bg-stone-100 text-stone-600 border-stone-200';
+      default: return 'bg-stone-100 text-stone-600 border-stone-200';
+    }
+  };
+
+  useEffect(() => {
+    const fetchOrders = async () => {
+      const sellerData = JSON.parse(localStorage.getItem("sellerUser") || "{}");
+      const sellerId = sellerData.seller_id || sellerData.id;
+      if (sellerId) {
+        try {
+          const res = await axios.get(`http://localhost:5000/seller-orders/${sellerId}`);
+          setOrders(res.data.map(o => ({
+             id: o.order_id,
+             date: new Date(o.placed_at).toLocaleDateString('en-IN', { month: 'short', day: 'numeric', year: 'numeric' }),
+             time: new Date(o.placed_at).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' }),
+             name: o.shipping_name || o.customer_name,
+             email: o.customer_email,
+             item: o.product_name,
+             image: o.product_images && o.product_images.length > 0 ? o.product_images[0] : "/placeholder-product.png",
+             qty: o.quantity,
+             amount: `₹${parseFloat(o.total_price).toLocaleString()}`,
+             status: o.item_status || o.order_status,
+             statusColor: getStatusColor(o.item_status || o.order_status)
+          })));
+        } catch (err) {
+          console.error("Error fetching seller orders:", err);
+        } finally {
+          setIsLoading(false);
+        }
+      } else {
+        setIsLoading(false);
+      }
+    };
+    fetchOrders();
+  }, []);
 
   const filteredOrders = orders
     .filter(o => filter === "All" ? true : o.status === filter)
