@@ -21,6 +21,7 @@ const stripProduct = (product) => {
     id: pId, // For compatibility
     name: product.name,
     price: product.price,
+    mrp: product.mrp || product.price,
     brand: product.brand,
     images: [primaryImg],
     discount: product.discount || 0
@@ -116,6 +117,7 @@ export function StoreProvider({ children }) {
                     id: item.product_id, // Compatibility
                     name: item.name,
                     price: item.variant_price || item.base_price,
+                    mrp: item.variant_mrp || item.base_mrp || item.variant_price || item.base_price,
                     brand: item.brand,
                     images: item.images || [primaryImg],
                     quantity: item.quantity,
@@ -125,6 +127,7 @@ export function StoreProvider({ children }) {
                         name: item.variant_name,
                         value: item.variant_value,
                         price: item.variant_price || item.base_price,
+                        mrp: item.variant_mrp || item.base_mrp || item.variant_price || item.base_price,
                         img: primaryImg // Set the image for the variant
                     },
                     variantId: item.variant_id
@@ -297,23 +300,22 @@ export function StoreProvider({ children }) {
 
   const removeDiscount = () => setAppliedDiscount(null);
 
+  // New Requirement:
+  // Bag Total = Sum of MRPs
+  // Subtotal = Sum of Selling Prices
+  // Discount = Bag Total - Subtotal
+  
   const rawSubtotal = cart.reduce((total, item) => {
-    const priceStr = String(item.variant?.price || 0).replace(/[^\d.]/g, "");
-    const price = parseFloat(priceStr) || 0;
-    return total + price * item.quantity;
+    const mrp = parseFloat(String(item.variant?.mrp || item.mrp || item.variant?.price || item.price || 0).replace(/[^\d.]/g, ''));
+    return total + mrp * item.quantity;
   }, 0);
 
-  const productDiscountAmount = cart.reduce((total, item) => {
-    if (item.discount) {
-      const priceStr = String(item.variant?.price || 0).replace(/[^\d.]/g, "");
-      const price = parseFloat(priceStr) || 0;
-      const discount = (price * item.discount) / 100;
-      return total + discount * item.quantity;
-    }
-    return total;
+  const subtotal = cart.reduce((total, item) => {
+    const p = parseFloat(String(item.variant?.price || item.price || 0).replace(/[^\d.]/g, ''));
+    return total + p * item.quantity;
   }, 0);
 
-  const subtotal = rawSubtotal - productDiscountAmount;
+  const productDiscountAmount = rawSubtotal - subtotal;
 
   const calculateDiscount = () => {
     if (!appliedDiscount) return 0;

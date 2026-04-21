@@ -36,6 +36,7 @@ export default function Orders({ globalSearch }) {
              image: o.product_images && o.product_images.length > 0 ? o.product_images[0] : "/placeholder-product.png",
              qty: o.quantity,
              amount: `₹${parseFloat(o.total_price).toLocaleString()}`,
+             unitPrice: `₹${parseFloat(o.unit_price).toLocaleString()}`,
              status: o.item_status || o.order_status,
              statusColor: getStatusColor(o.item_status || o.order_status)
           })));
@@ -141,7 +142,8 @@ export default function Orders({ globalSearch }) {
                          </div>
                       </td>
                       <td className="px-8 py-6">
-                        <span className="font-semibold text-stone-900 text-sm">{order.amount}</span>
+                        <span className="font-bold text-stone-900 text-sm block">{order.amount}</span>
+                        {order.qty > 1 && <span className="text-[10px] text-stone-400 font-medium">{order.unitPrice} / unit</span>}
                       </td>
                       <td className="px-8 py-6">
                          <div className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-xl border ${order.statusColor}`}>

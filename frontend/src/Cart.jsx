@@ -127,23 +127,29 @@ export default function Cart() {
                           </button>
                         </div>
 
-                        {/* Price */}
+                        {/* Price - Style matched to Product Details */}
                         <div className="text-right">
-                          {item.discount ? (
-                            <>
-                              <p className="text-xl font-black text-stone-900 tracking-tight">
-                                ₹{(parseFloat(String(item.variant?.price || 0).replace(/[^\d.]/g, "")) * (1 - item.discount / 100)).toLocaleString()}
-                              </p>
-                              <p className="text-[12px] text-red-500 font-bold line-through opacity-70">
-                                ₹{parseFloat(String(item.variant?.price || 0).replace(/[^\d.]/g, "")).toLocaleString()}
-                              </p>
-                            </>
-                          ) : (
-                            <p className="text-xl font-black text-stone-900 tracking-tight">
-                              ₹{parseFloat(String(item.variant?.price || 0).replace(/[^\d.]/g, "")).toLocaleString()}
-                            </p>
-                          )}
-                          <p className="text-[10px] text-stone-400 font-bold uppercase tracking-wider mt-0.5">
+                          <div className="flex items-baseline justify-end gap-3 mb-1">
+                            {(() => {
+                              const sellPrice = parseFloat(String(item.variant?.price || item.price || 0));
+                              const mrpPrice = parseFloat(String(item.variant?.mrp || item.mrp || 0));
+                              const hasDiscount = mrpPrice > sellPrice;
+
+                              return (
+                                <>
+                                  <p className="text-2xl font-black text-stone-900 tracking-tighter">
+                                    ₹{sellPrice.toLocaleString()}
+                                  </p>
+                                  {hasDiscount && (
+                                    <span className="text-stone-400 line-through text-md font-medium italic">
+                                      ₹{mrpPrice.toLocaleString()}
+                                    </span>
+                                  )}
+                                </>
+                              );
+                            })()}
+                          </div>
+                          <p className="text-[10px] text-stone-400 font-bold uppercase tracking-wider">
                             per unit
                           </p>
                         </div>
@@ -233,7 +239,7 @@ export default function Cart() {
                 {/* Line items */}
                 <div className="flex justify-between items-center mb-3.5">
                   <span className="text-sm font-semibold text-stone-700">Bag Total</span>
-                  <span className="text-sm font-bold text-stone-400 line-through">₹{rawSubtotal.toLocaleString()}</span>
+                  <span className="text-sm font-bold text-stone-900">₹{rawSubtotal.toLocaleString()}</span>
                 </div>
 
                 <div className="flex justify-between items-center mb-3.5 text-green-700">

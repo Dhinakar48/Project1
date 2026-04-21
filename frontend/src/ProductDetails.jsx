@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { useParams, Link, useLocation, useNavigate } from "react-router-dom";
 import axios from "axios";
 import { useStore } from "./StoreContext";
-import { FaBagShopping, FaCheck } from "react-icons/fa6";
+import { FaBagShopping, FaCheck, FaHeart } from "react-icons/fa6";
 
 export default function ProductDetails() {
     const { id } = useParams();
@@ -12,10 +12,47 @@ export default function ProductDetails() {
     const from = location.state?.from;
     const [product, setProduct] = useState(null);
     const [loading, setLoading] = useState(true);
+    const [selectedColorId, setSelectedColorId] = useState(null);
+    const [selectedMemoryId, setSelectedMemoryId] = useState(null);
+    const [lastSelectedType, setLastSelectedType] = useState('memory');
     const [selectedImageIndex, setSelectedImageIndex] = useState(0);
     const [relatedProducts, setRelatedProducts] = useState([]);
 
     const { addToCart, toggleWishlist, wishlist } = useStore();
+    
+    // Move logic here
+    const specs = product?.specifications || [];
+    const colorVariants = specs.filter(s => s.key?.toLowerCase().includes('color'));
+    const ramSpecs = specs.filter(s => s.key?.toLowerCase() === 'ram');
+    const romSpecs = specs.filter(s => s.key?.toLowerCase() === 'rom' || s.key?.toLowerCase() === 'storage' || s.key?.toLowerCase() === 'memory');
+    const preCombined = specs.filter(s => 
+        (s.value?.includes('+') && (s.value?.toLowerCase().includes('gb') || s.value?.toLowerCase().includes('ram'))) ||
+        s.key?.toLowerCase() === 'configuration'
+    );
+
+    let memoryVariants = [];
+    if (preCombined.length > 0) {
+        memoryVariants = preCombined;
+    } else if (ramSpecs.length > 0 || romSpecs.length > 0) {
+        const count = Math.max(ramSpecs.length, romSpecs.length);
+        for (let i = 0; i < count; i++) {
+            const ram = ramSpecs[i];
+            const rom = romSpecs[i];
+            const primary = rom || ram;
+            if (!primary) continue;
+            memoryVariants.push({
+                variant_id: primary.variant_id,
+                key: 'Variant',
+                value: rom && ram ? `${rom.value} + ${ram.value}` : (rom?.value || ram?.value),
+                price: primary.price,
+                mrp: primary.mrp || product.mrp,
+                stock: primary.stock
+            });
+        }
+    }
+
+    const gallery = product?.images && product.images.length > 0 ? product.images : ['/placeholder.png'];
+
     const isWishlisted = product && wishlist.some(item => item.product_id === product.product_id);
 
     const [addedToCart, setAddedToCart] = useState(false);
@@ -65,18 +102,20 @@ export default function ProductDetails() {
 
     const handleAddToCart = () => {
         if (!product) return;
-        // Adapt db product to store logic
         const storeProduct = {
             id: product.product_id,
             name: product.name,
-            price: product.price,
-            img: product.gallery && product.gallery.length > 0 ? product.gallery[0].image_url : '/placeholder.png'
+            price: activePrice,
+            mrp: activeMRP,
+            img: gallery[0] || '/placeholder.png'
         };
         const variant = {
-            id: `v${product.product_id}-${activeColor || 'default'}`,
-            name: activeColor || 'Standard',
-            img: activeImage,
-            price: `₹${parseFloat(activePrice).toLocaleString()}`
+            id: selectedVarId || `default-${product.product_id}`,
+            name: activeVariant?.key || 'Standard',
+            value: activeValue || 'Default',
+            price: activePrice,
+            mrp: activeMRP,
+            img: activeImage
         };
         addToCart(storeProduct, variant);
         setAddedToCart(true);
@@ -93,6 +132,36 @@ export default function ProductDetails() {
         fetchProduct();
         setSelectedImageIndex(0);
     }, [id]);
+
+    useEffect(() => {
+        // This is moved here to be before early returns
+        const specs = product?.specifications || [];
+        const ramSpecs = specs.filter(s => s.key?.toLowerCase() === 'ram');
+        const romSpecs = specs.filter(s => s.key?.toLowerCase() === 'rom' || s.key?.toLowerCase() === 'storage' || s.key?.toLowerCase() === 'memory');
+        const colors = specs.filter(s => s.key?.toLowerCase().includes('color'));
+        const preCombined = specs.filter(s => 
+            (s.value?.includes('+') && (s.value?.toLowerCase().includes('gb') || s.value?.toLowerCase().includes('ram'))) ||
+            s.key?.toLowerCase() === 'configuration'
+        );
+
+        if (colors.length > 0) setSelectedColorId(colors[0].variant_id);
+        
+        if (preCombined.length > 0) {
+            setSelectedMemoryId(preCombined[0].variant_id);
+        } else if (romSpecs.length > 0) {
+            setSelectedMemoryId(romSpecs[0].variant_id);
+        } else if (ramSpecs.length > 0) {
+            setSelectedMemoryId(ramSpecs[0].variant_id);
+        }
+    }, [product]);
+
+    useEffect(() => {
+        // Find if the current image suggests a specific color
+        if (colorVariants.length > 0 && selectedImageIndex < colorVariants.length) {
+            setSelectedColorId(colorVariants[selectedImageIndex].variant_id);
+            setLastSelectedType('color');
+        }
+    }, [selectedImageIndex]);
 
     if (loading) return (
         <div className="min-h-screen bg-stone-50 flex items-center justify-center">
@@ -112,26 +181,42 @@ export default function ProductDetails() {
         </div>
     );
 
-    // Dynamic Price/Color Selection logic
-    const colorVariants = product.specifications && Array.isArray(product.specifications)
-        ? product.specifications.filter(s => s.key?.toLowerCase().includes('color'))
-        : [];
 
-    const activeVariant = colorVariants.length > 0 
-        ? colorVariants[selectedImageIndex % colorVariants.length]
-        : null;
 
-    const activeColor = activeVariant?.value || null;
-    const activePrice = (activeVariant?.price && parseFloat(activeVariant.price) > 0) 
-        ? activeVariant.price 
-        : product.price;
 
-    const activeStock = (activeVariant?.stock !== undefined && activeVariant?.stock !== null) 
-    ? parseInt(activeVariant.stock) 
-    : parseInt(product.stock_quantity);
+
+    const handleVariantSelect = (vId) => {
+        // Identify what type of variant was selected
+        const isColor = colorVariants.some(cv => cv.variant_id === vId);
+        const isMemory = memoryVariants.some(mv => mv.variant_id === vId);
+
+        if (isColor) {
+            setSelectedColorId(vId);
+            setLastSelectedType('color');
+            const colorIndex = colorVariants.findIndex(cv => cv.variant_id === vId);
+            if (colorIndex !== -1 && gallery[colorIndex]) {
+                setSelectedImageIndex(colorIndex);
+            }
+        } else if (isMemory) {
+            setSelectedMemoryId(vId);
+            setLastSelectedType('memory');
+        }
+    };
+
+    const selectedVarId = lastSelectedType === 'color' ? (selectedColorId || selectedMemoryId) : (selectedMemoryId || selectedColorId);
+
+    const activeColor = colorVariants.find(cv => cv.variant_id === selectedColorId);
+    const activeMemory = memoryVariants.find(mv => mv.variant_id === selectedMemoryId) || 
+                         specs.find(s => s.variant_id === selectedMemoryId);
+
+    const activeVariant = lastSelectedType === 'color' ? (activeColor || activeMemory) : (activeMemory || activeColor);
+
+    const activePrice = activeVariant?.price || product.price;
+    const activeMRP = activeVariant?.mrp || product.mrp;
+    const activeStock = activeVariant?.stock !== undefined ? parseInt(activeVariant.stock) : parseInt(product.stock_quantity);
+    const activeValue = activeVariant?.value || null;
 
     const priceString = `₹${parseFloat(activePrice).toLocaleString()}`;
-    const gallery = product.images && product.images.length > 0 ? product.images : ['/placeholder.png'];
     const activeImage = gallery[selectedImageIndex] || '/placeholder.png';
 
     return (
@@ -215,52 +300,24 @@ export default function ProductDetails() {
                         <motion.p variants={{ hidden: { opacity: 0, y: 20 }, visible: { opacity: 1, y: 0 } }} className="text-amber-600 text-xs md:text-sm font-black tracking-[0.3em] uppercase mb-4">
                             {product.brand}
                         </motion.p>
-                        <motion.h1 variants={{ hidden: { opacity: 0, y: 20 }, visible: { opacity: 1, y: 0 } }} className="text-2xl md:text-4xl font-bold mb-1 tracking-tight leading-tight text-stone-900 uppercase">
+                        <motion.h1 variants={{ hidden: { opacity: 0, y: 20 }, visible: { opacity: 1, y: 0 } }} className="text-xl md:text-2xl font-bold mb-1 tracking-tight leading-tight text-stone-900 uppercase">
                             {product.name}
-                        </motion.h1>
-
-                        {/* Dynamic Variant/Color Display */}
-                        {activeColor && (
-                            <motion.div 
-                                variants={{ hidden: { opacity: 0, x: -10 }, visible: { opacity: 1, x: 0 } }}
-                                key={selectedImageIndex}
-                                className="flex items-center gap-2 mb-4"
-                            >
-                                <span className="text-[10px] font-black uppercase tracking-widest text-amber-600">Selected Color:</span>
-                                <span className="text-xs font-bold text-stone-800 uppercase tracking-tight bg-amber-50 px-2 py-0.5 rounded">
-                                    {activeColor}
-                                </span>
+                        </motion.h1>                        {/* Color Selection */}
+                        {colorVariants.length > 0 && (
+                            <motion.div variants={{ hidden: { opacity: 0, y: 10 }, visible: { opacity: 1, y: 0 } }} className="mb-6">
+                                <h3 className="text-[10px] font-black mt-2 uppercase tracking-widest text-stone-400">Selected Color: <span className="text-stone-900 ml-1">{activeColor?.value || 'N/A'}</span></h3>
                             </motion.div>
                         )}
 
-                        <motion.div variants={{ hidden: { opacity: 0, y: 20 }, visible: { opacity: 1, y: 0 } }} className="flex flex-wrap items-center gap-6 mb-6 border-b border-amber-100 pb-6 w-full">
-                            <div className="flex flex-col">
-                                <p className="text-3xl font-black text-amber-600 leading-none">
-                                    {priceString}
-                                </p>
-                                {product.mrp && parseFloat(product.mrp) > parseFloat(product.price) && (
-                                    <span className="text-stone-400 line-through text-xs mt-1 font-bold">
-                                        MRP: ₹{parseFloat(product.mrp).toLocaleString()}
-                                    </span>
-                                )}
-                            </div>
-                            <span className={`px-3 py-1 text-white text-[10px] font-black uppercase tracking-widest rounded-full transition-colors ${activeStock > 0 ? 'bg-amber-600' : 'bg-red-500'}`}>
-                                {activeStock > 0 ? 'In Stock' : 'Out of Stock'}
-                            </span>
-                        </motion.div>
-                        <motion.p variants={{ hidden: { opacity: 0, y: 20 }, visible: { opacity: 1, y: 0 } }} className="text-stone-500 mb-6 leading-relaxed max-w-lg text-lg font-medium">
-                            {product.description}
-                        </motion.p>
-
+                        {/* Gallery Thumbnails */}
                         {gallery.length > 1 && (
-                            <motion.div variants={{ hidden: { opacity: 0, y: 20 }, visible: { opacity: 1, y: 0 } }} className="mb-8">
-                                <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-stone-400 mb-3">Gallery</h3>
-                                <div className="flex gap-4">
+                            <motion.div variants={{ hidden: { opacity: 0, y: 10 }, visible: { opacity: 1, y: 0 } }} className="mb-5">
+                                <div className="flex gap-3">
                                     {gallery.map((img, index) => (
                                         <div
                                             key={index}
                                             onClick={() => setSelectedImageIndex(index)}
-                                            className={`w-12 h-12 rounded-xl cursor-pointer transition-all duration-300 border overflow-hidden ${selectedImageIndex === index ? `ring-2 ring-offset-2 ring-offset-white ring-amber-600 scale-110` : 'hover:scale-110 opacity-60 hover:opacity-100 border-stone-200'}`}
+                                            className={`w-14 h-14 rounded-xl cursor-pointer transition-all duration-300 border overflow-hidden ${selectedImageIndex === index ? `ring-2 ring-stone-900 scale-105` : 'opacity-60 hover:opacity-100 border-stone-200'}`}
                                         >
                                             <img src={img} className="w-full h-full object-cover" alt="Gallery" />
                                         </div>
@@ -269,43 +326,98 @@ export default function ProductDetails() {
                             </motion.div>
                         )}
 
+                        {/* Memory Variant Boxes */}
+                        {memoryVariants.length > 0 && (
+                            <motion.div variants={{ hidden: { opacity: 0, y: 10 }, visible: { opacity: 1, y: 0 } }} className="mb-8">
+                                <h3 className="text-lg font-bold text-stone-800 mb-4">Vareint: <span className="text-stone-500 font-medium">{activeMemory?.value || ''}</span></h3>
+                                <div className="flex flex-wrap gap-4">
+                                    {memoryVariants.map((v) => {
+                                        const disc = v.mrp && v.price && parseFloat(v.mrp) > parseFloat(v.price) ? Math.round(((parseFloat(v.mrp) - parseFloat(v.price)) / parseFloat(v.mrp)) * 100) : 0;
+                                        return (
+                                            <div
+                                                key={v.variant_id}
+                                                onClick={() => handleVariantSelect(v.variant_id)}
+                                                className={`flex flex-col p-4 min-w-[150px] border rounded-2xl cursor-pointer transition-all duration-300 ${selectedMemoryId === v.variant_id ? 'border-stone-900 bg-stone-50 shadow-lg scale-[1.02]' : 'border-stone-200 hover:border-stone-400 bg-white'}`}
+                                            >
+                                                <span className="text-sm font-bold text-stone-900 mb-2">{v.value}</span>
+                                                <div className="border-t border-stone-100 pt-2 flex flex-col gap-1">
+                                                    <div className="flex items-center gap-2">
+                                                        {disc > 0 && <span className="text-green-700 text-xs font-black">↓{disc}%</span>}
+                                                        {v.mrp && parseFloat(v.mrp) > parseFloat(v.price) && (
+                                                            <span className="text-stone-400 line-through text-xs">₹{parseFloat(v.mrp).toLocaleString()}</span>
+                                                        )}
+                                                    </div>
+                                                    <span className="text-lg font-black text-stone-900 tracking-tight">₹{parseFloat(v.price).toLocaleString()}</span>
+                                                </div>
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+                            </motion.div>
+                        )}
+
+
+
+                        <motion.div variants={{ hidden: { opacity: 0, y: 10 }, visible: { opacity: 1, y: 0 } }} className="flex flex-col gap-1 mb-8">
+                            <div className="flex items-baseline gap-3">
+                                <p className="text-3xl font-black text-stone-900 tracking-tighter">
+                                    {priceString}
+                                </p>
+                                {activeMRP && parseFloat(activeMRP) > parseFloat(activePrice) && (
+                                    <span className="text-stone-400 line-through text-md font-medium">
+                                        ₹{parseFloat(activeMRP).toLocaleString()}
+                                    </span>
+                                )}
+                            </div>
+                            <span className={`text-[10px] font-black uppercase tracking-widest mt-1 ${activeStock > 0 ? 'text-green-600' : 'text-red-500'}`}>
+                                {activeStock > 0 ? `Plenty in Stock (${activeStock})` : 'Temporarily Unavailable'}
+                            </span>
+                        </motion.div>
+
+                        <motion.p variants={{ hidden: { opacity: 0, y: 10 }, visible: { opacity: 1, y: 0 } }} className="text-stone-500 mb-6 leading-relaxed max-w-lg text-sm font-medium text-justify">
+                            {product.description}
+                        </motion.p>
+
                         <motion.div
-                            variants={{ hidden: { opacity: 0, y: 20 }, visible: { opacity: 1, y: 0 } }}
-                            className="flex items-stretch gap-3"
+                            variants={{ hidden: { opacity: 0, y: 10 }, visible: { opacity: 1, y: 0 } }}
+                            className="flex items-stretch gap-4 mb-10"
                         >
+                            {/* Add to Cart Icon Button - Left */}
                             <motion.button
                                 onClick={handleAddToCart}
                                 disabled={activeStock === 0}
-                                whileHover={activeStock > 0 ? { scale: 1.01 } : {}}
-                                whileTap={activeStock > 0 ? { scale: 0.99 } : {}}
-                                className={`w-16 flex items-center justify-center transition-all duration-300 border ${activeStock === 0 ? 'bg-stone-50 text-stone-300 border-stone-100 cursor-not-allowed' : addedToCart ? 'bg-green-600 text-white border-green-600' : 'bg-stone-100 text-stone-900 border-stone-200 hover:bg-stone-200'}`}
-                                title={activeStock === 0 ? "Out of Stock" : addedToCart ? "Added" : "Add to Bag"}
+                                whileHover={{ scale: 1.05 }}
+                                whileTap={{ scale: 0.95 }}
+                                className={`flex-1 flex items-center justify-center p-5 transition-all duration-300 border-2 ${activeStock === 0 ? 'bg-stone-50 border-stone-100 text-stone-200' : addedToCart ? 'bg-green-600 border-green-600 text-white' : 'bg-stone-100 border-stone-200 text-stone-900 hover:bg-stone-200'}`}
+                                title="Add to Bag"
                             >
-                                {addedToCart ? <FaCheck size={18} /> : <FaBagShopping size={18} />}
+                                {addedToCart ? <FaCheck size={20} /> : <FaBagShopping size={20} />}
                             </motion.button>
 
+                            {/* Buy Now - Center Action */}
                             <motion.button
                                 onClick={activeStock > 0 ? handleBuyNow : undefined}
                                 disabled={activeStock === 0}
-                                whileHover={activeStock > 0 ? { scale: 1.01 } : {}}
-                                whileTap={activeStock > 0 ? { scale: 0.99 } : {}}
-                                className={`w-64 py-5 font-black text-[10px] uppercase tracking-[0.2em] transition-all shadow-xl ${activeStock === 0 ? 'bg-stone-100 text-stone-300 cursor-not-allowed' : 'bg-stone-900 text-amber-500 hover:bg-stone-800 shadow-stone-900/10'}`}
+                                whileHover={{ scale: 1.02 }}
+                                whileTap={{ scale: 0.98 }}
+                                className="flex-[4] py-5 bg-stone-900 text-amber-500 font-black text-xs uppercase tracking-[0.2em] hover:bg-stone-800 transition shadow-2xl shadow-stone-900/20 disabled:bg-stone-100 disabled:text-stone-300"
                             >
-                                {activeStock > 0 ? "Buy Now" : "Sold Out"}
+                                {activeStock > 0 ? "Buy Now" : "Unavailable"}
                             </motion.button>
 
+                            {/* Wishlist Icon Button - Right */}
                             <motion.button
                                 onClick={() => toggleWishlist(product)}
-                                whileHover={{ scale: 1.01 }}
-                                whileTap={{ scale: 0.99 }}
-                                className={`w-16 flex items-center justify-center border transition-all duration-300 ${isWishlisted ? 'border-red-500 text-red-500 bg-red-50' : 'border-stone-200 text-stone-400 hover:border-stone-900 hover:bg-stone-50 bg-white'}`}
-                                title="Wishlist"
+                                whileHover={{ scale: 1.05 }}
+                                whileTap={{ scale: 0.95 }}
+                                className={`flex-1 flex items-center justify-center p-5 border-2 transition-all duration-300 ${isWishlisted ? 'border-red-500 bg-red-50 text-red-500' : 'border-stone-200 bg-white text-stone-400 hover:border-stone-900 hover:text-stone-900'}`}
+                                title={isWishlisted ? "Remove from Wishlist" : "Add to Wishlist"}
                             >
-                                <svg xmlns="http://www.w3.org/2000/svg" className={`h-5 w-5 ${isWishlisted ? 'fill-current' : 'fill-none'}`} viewBox="0 0 24 24" stroke="currentColor">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
-                                </svg>
+                                <FaHeart size={20} className={isWishlisted ? 'fill-current' : 'fill-none stroke-2'} />
                             </motion.button>
                         </motion.div>
+
+
                     </motion.div>
                 </div>
             </div>
@@ -358,7 +470,7 @@ export default function ProductDetails() {
 
 
                         {product.specifications && product.specifications.map((spec, index) => (
-                            spec.value && spec.value !== "N/A" && !spec.key.toLowerCase().includes('color') && (
+                            spec.value && spec.value !== "N/A" && !['color', 'ram', 'rom', 'storage', 'memory'].some(k => spec.key.toLowerCase().includes(k)) && (
                                 <div key={index} className="border-b border-stone-100 pb-3 group hover:border-amber-600 transition-colors duration-500">
                                     <h5 className="text-[8px] font-black uppercase tracking-widest text-stone-400 mb-1 group-hover:text-amber-600 transition-colors capitalize">{spec.key}</h5>
                                     <p className="text-sm font-bold text-stone-800">{spec.value}</p>

@@ -9,7 +9,7 @@ const client = new Client({
 
 async function run() {
   await client.connect();
-  const res = await client.query("SELECT column_name, data_type FROM information_schema.columns WHERE table_name = 'product_variants'");
+  const res = await client.query("SELECT order_id, product_id, quantity, unit_price, total_price FROM order_items ORDER BY order_id DESC LIMIT 5");
   console.table(res.rows);
   await client.end();
 }

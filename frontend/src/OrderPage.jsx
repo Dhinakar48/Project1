@@ -175,6 +175,7 @@ export default function OrderPage() {
                 cartItems: cart,
                 subtotal: subtotal,
                 discountAmount: couponDiscountAmount,
+                shippingCharge: codFee, 
                 totalAmount: totalPayable,
                 couponId: appliedDiscount?.code
             });

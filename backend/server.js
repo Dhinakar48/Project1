@@ -798,7 +798,7 @@ app.get("/seller-products/:seller_id", async (req, res) => {
     const products = result.rows;
     for (const p of products) {
       const variants = await pool.query(
-        "SELECT variant_name as key, variant_value as value, price, stock_quantity as stock, sku FROM product_variants WHERE product_id = $1 ORDER BY variant_id ASC",
+        "SELECT variant_id, variant_name as key, variant_value as value, price, mrp, stock_quantity as stock, sku FROM product_variants WHERE product_id = $1 ORDER BY variant_id ASC",
         [p.product_id]
       );
       p.specifications = variants.rows;
@@ -868,7 +868,7 @@ app.get("/product/:id", async (req, res) => {
     );
 
     const variantsResult = await pool.query(
-      "SELECT variant_name as key, variant_value as value, price, stock_quantity as stock, sku FROM product_variants WHERE product_id = $1 ORDER BY variant_id ASC",
+      "SELECT variant_id, variant_name as key, variant_value as value, price, mrp, stock_quantity as stock, sku FROM product_variants WHERE product_id = $1 ORDER BY variant_id ASC",
       [id]
     );
 
@@ -1066,7 +1066,7 @@ app.post("/cart/remove", async (req, res) => {
 
 app.post("/order/place", async (req, res) => {
   console.log("--- ORDER PLACE REQUEST RECEIVED ---", req.body);
-  const { customerId, addressId, cartItems, subtotal, discountAmount, totalAmount, couponId } = req.body;
+  const { customerId, addressId, cartItems, subtotal, discountAmount, totalAmount, couponId, shippingCharge } = req.body;
   const client = await pool.connect();
   try {
     await client.query("BEGIN");
@@ -1083,14 +1083,16 @@ app.post("/order/place", async (req, res) => {
 
     // Insert Order
     await client.query(
-      `INSERT INTO orders (order_id, customer_id, address_id, coupon_id, subtotal, discount_amount, total_amount, order_status, payment_status)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
-      [orderId, customerId, addressId || null, couponId || null, subtotal, discountAmount || 0, totalAmount, 'Confirmed', 'Paid']
+      `INSERT INTO orders (order_id, customer_id, address_id, coupon_id, subtotal, discount_amount, shipping_charge, total_amount, order_status, payment_status)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)`,
+      [orderId, customerId, addressId || null, couponId || null, subtotal, discountAmount || 0, shippingCharge || 0, totalAmount, 'Confirmed', 'Paid']
     );
 
     // Insert Items
     for (const item of cartItems) {
-       const uPrice = parseFloat(String(item.variant?.price || item.price || 0).replace(/[^\d.]/g, ''));
+       // Robust price extraction: prefer variant price, then item price, then base price
+       const rawPrice = item.variant?.price || item.price || 0;
+       const uPrice = parseFloat(String(rawPrice).replace(/[^\d.]/g, ''));
        const tPrice = uPrice * item.quantity;
        
        // Get seller_id for this product
@@ -1136,7 +1138,8 @@ app.get("/cart/:customerId", async (req, res) => {
   const { customerId } = req.params;
   try {
     const result = await pool.query(`
-      SELECT ci.*, p.name, p.price as base_price, p.images, p.brand, p.discount, pv.price as variant_price, pv.variant_name, pv.variant_value
+      SELECT ci.*, p.name, p.price as base_price, p.mrp as base_mrp, p.images, p.brand, p.discount, 
+             pv.price as variant_price, pv.mrp as variant_mrp, pv.variant_name, pv.variant_value
       FROM cart_items ci
       JOIN carts c ON ci.cart_id = c.cart_id
       JOIN products p ON ci.product_id = p.product_id
@@ -1151,22 +1154,7 @@ app.get("/cart/:customerId", async (req, res) => {
   }
 });
  
-app.get("/product/:id", async (req, res) => {
-  const { id } = req.params;
-  try {
-    const result = await pool.query("SELECT * FROM products WHERE product_id = $1", [id]);
-    if (result.rows.length === 0) return res.status(404).json({ message: "Product not found" });
-    
-    const product = result.rows[0];
-    const variantsRes = await pool.query("SELECT * FROM product_variants WHERE product_id = $1", [id]);
-    product.variants = variantsRes.rows;
-    
-    res.json(product);
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ message: "Error fetching product" });
-  }
-});
+
 
 app.get("/products/category/:categoryName", async (req, res) => {
   const { categoryName } = req.params;
