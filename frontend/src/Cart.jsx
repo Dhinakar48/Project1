@@ -74,9 +74,9 @@ export default function Cart() {
                   >
                     {/* Image */}
                     <div className="flex-shrink-0 w-30 h-35 bg-gradient-to-br from-stone-50 to-stone-100 rounded-xl flex items-center justify-center overflow-hidden">
-                      <Link to={`/product/${item.id}`} className="block w-full h-full">
+                      <Link to={`/product/${item.product_id}`} className="block w-full h-full">
                         <img
-                          src={item.variant.img}
+                          src={item.variant?.img || (item.images && item.images[0]) || "/placeholder-product.png"}
                           alt={item.name}
                           className="w-full h-full object-contain p-3 group-hover:scale-105 transition-transform duration-500"
                         />
@@ -88,7 +88,7 @@ export default function Cart() {
                       <p className="text-[10px] font-black uppercase tracking-[0.18em] text-amber-600 mb-1">
                         {item.title}
                       </p>
-                      <Link to={`/product/${item.id}`} className="hover:text-amber-600 transition-colors">
+                      <Link to={`/product/${item.product_id}`} className="hover:text-amber-600 transition-colors">
                         <h2 className="text-lg font-bold text-stone-900 tracking-tight leading-snug mb-3">
                           {item.name}
                         </h2>
@@ -111,7 +111,7 @@ export default function Cart() {
                         {/* Qty control */}
                         <div className="flex items-center bg-stone-100 border border-stone-200 rounded-xl p-1 gap-1">
                           <button
-                            onClick={() => updateQuantity(item.id, item.variantId, -1)}
+                            onClick={() => updateQuantity(item.product_id, item.variantId, -1)}
                             className="w-8 h-8 flex items-center justify-center rounded-lg text-stone-600 hover:bg-white hover:shadow-sm transition-all duration-200 active:scale-90"
                           >
                             <FaMinus size={9} />
@@ -120,7 +120,7 @@ export default function Cart() {
                             {item.quantity}
                           </span>
                           <button
-                            onClick={() => updateQuantity(item.id, item.variantId, 1)}
+                            onClick={() => updateQuantity(item.product_id, item.variantId, 1)}
                             className="w-8 h-8 flex items-center justify-center rounded-lg text-stone-600 hover:bg-white hover:shadow-sm transition-all duration-200 active:scale-90"
                           >
                             <FaPlus size={9} />
@@ -132,15 +132,15 @@ export default function Cart() {
                           {item.discount ? (
                             <>
                               <p className="text-xl font-black text-stone-900 tracking-tight">
-                                ₹{(parseInt(item.variant.price.replace(/[^\d]/g, "")) * (1 - item.discount / 100)).toLocaleString()}
+                                ₹{(parseFloat(String(item.variant?.price || 0).replace(/[^\d.]/g, "")) * (1 - item.discount / 100)).toLocaleString()}
                               </p>
                               <p className="text-[12px] text-red-500 font-bold line-through opacity-70">
-                                {item.variant.price}
+                                ₹{parseFloat(String(item.variant?.price || 0)).toLocaleString()}
                               </p>
                             </>
                           ) : (
                             <p className="text-xl font-black text-stone-900 tracking-tight">
-                              {item.variant.price}
+                              ₹{parseFloat(String(item.variant?.price || 0)).toLocaleString()}
                             </p>
                           )}
                           <p className="text-[10px] text-stone-400 font-bold uppercase tracking-wider mt-0.5">
@@ -152,7 +152,7 @@ export default function Cart() {
 
                     {/* Delete */}
                     <button
-                      onClick={() => removeFromCart(item.id, item.variantId)}
+                      onClick={() => removeFromCart(item.product_id, item.variantId)}
                       className="w-10 h-10 flex items-center justify-center bg-red-50 text-red-500 rounded-2xl hover:bg-red-500 hover:text-white transition-all duration-500 shadow-sm active:scale-95 group/remove"
                     >
                       <FaTrash size={14} className="group-hover/remove:rotate-12 transition-transform" />

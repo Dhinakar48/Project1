@@ -16,7 +16,22 @@ export default function Products({
 }) {
   const [isAddingNewPage, setIsAddingNewPage] = useState(false);
   const [editingIndex, setEditingIndex] = useState(null);
+  const [currentPage, setCurrentPage] = useState(1);
+  const productsPerPage = 4;
+
+  const filteredProducts = [...inventoryProducts]
+    .reverse()
+    .filter(p => selectedCategory === 'All' || p.category_name === selectedCategory)
+    .filter(p => p.name.toLowerCase().includes(globalSearch.toLowerCase()));
+
+  const totalPages = Math.ceil(filteredProducts.length / productsPerPage);
+  const currentProducts = filteredProducts.slice((currentPage - 1) * productsPerPage, currentPage * productsPerPage);
+
   const [newProduct, setNewProduct] = useState({ name: "", price: "", category: "", stock: "", img: "" });
+
+  React.useEffect(() => {
+    setCurrentPage(1);
+  }, [selectedCategory, globalSearch]);
 
   if (isAddingNewPage) {
     return (
@@ -101,15 +116,12 @@ export default function Products({
                 <th className="px-12 py-8 text-[10px] font-semibold text-stone-900">Sector</th>
                 <th className="px-12 py-8 text-[10px] font-semibold text-stone-900">Availability</th>
                 <th className="px-6 py-8 text-[10px] font-semibold text-stone-900">Valuation</th>
+                <th className="px-6 py-8 text-[10px] font-semibold text-stone-900">SKU</th>
                 <th className="px-12 py-8 text-right text-[10px] font-semibold text-stone-900">Operational</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-stone-50">
-              {[...inventoryProducts]
-                .reverse()
-                .filter(p => selectedCategory === 'All' || p.category_name === selectedCategory)
-                .filter(p => p.name.toLowerCase().includes(globalSearch.toLowerCase()))
-                .map((p, i) => {
+              {currentProducts.map((p, i) => {
                   const originalIndex = inventoryProducts.findIndex(item => item.product_id === p.product_id);
                   return (
                     <motion.tr
@@ -154,6 +166,9 @@ export default function Products({
                       <td className="px-7 py-6">
                         <span className="font-semibold text-stone-900 text-base">₹{p.price}</span>
                       </td>
+                      <td className="px-7 py-6">
+                        <span className="text-[10px] font-bold text-stone-500 uppercase tracking-tight">{p.sku || '---'}</span>
+                      </td>
                       <td className="px-8 py-6 text-right">
                         <div className="flex items-center justify-end gap-3">
                           <button
@@ -182,6 +197,44 @@ export default function Products({
             </tbody>
           </table>
         </div>
+
+        {/* Pagination Controls */}
+        {totalPages > 1 && (
+          <div className="flex items-center justify-between px-8 py-6 border-t border-stone-50 bg-stone-50/20">
+            <div className="text-[10px] font-bold text-stone-400">
+              Showing <span className="text-stone-900">{((currentPage - 1) * productsPerPage) + 1}</span> to <span className="text-stone-900">{Math.min(currentPage * productsPerPage, filteredProducts.length)}</span> of <span className="text-stone-900">{filteredProducts.length}</span> Assets
+            </div>
+            <div className="flex items-center gap-2">
+              <button
+                disabled={currentPage === 1}
+                onClick={() => setCurrentPage(prev => prev - 1)}
+                className={`p-2 rounded-xl border transition-all ${currentPage === 1 ? 'opacity-30 cursor-not-allowed border-stone-200 text-stone-300' : 'border-stone-200 text-stone-900 hover:bg-white hover:shadow-sm'}`}
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" /></svg>
+              </button>
+              
+              <div className="flex items-center gap-1">
+                {[...Array(totalPages)].map((_, idx) => (
+                  <button
+                    key={idx + 1}
+                    onClick={() => setCurrentPage(idx + 1)}
+                    className={`w-8 h-8 rounded-xl text-[10px] font-bold transition-all ${currentPage === idx + 1 ? 'bg-stone-900 text-amber-500 shadow-lg' : 'text-stone-400 hover:text-stone-900 hover:bg-white'}`}
+                  >
+                    {idx + 1}
+                  </button>
+                ))}
+              </div>
+
+              <button
+                disabled={currentPage === totalPages}
+                onClick={() => setCurrentPage(prev => prev + 1)}
+                className={`p-2 rounded-xl border transition-all ${currentPage === totalPages ? 'opacity-30 cursor-not-allowed border-stone-200 text-stone-300' : 'border-stone-200 text-stone-900 hover:bg-white hover:shadow-sm'}`}
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" /></svg>
+              </button>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

@@ -9,6 +9,13 @@ app.use(cors());
 app.use(bodyParser.json({ limit: "50mb" }));
 app.use(bodyParser.urlencoded({ limit: "50mb", extended: true }));
 
+app.use((req, res, next) => {
+  if (req.method !== 'GET') {
+    console.log(`[${new Date().toISOString()}] ${req.method} ${req.url}`, JSON.stringify(req.body).substring(0, 500));
+  }
+  next();
+});
+
 // ✅ PostgreSQL connection
 const pool = new Pool({
   user: "postgres",
@@ -16,6 +23,9 @@ const pool = new Pool({
   database: "local_db",
   password: "3616",
   port: 5432,
+  max: 20, // Limit connections
+  idleTimeoutMillis: 30000,
+  connectionTimeoutMillis: 2000,
 });
 
 // ✅ PostgreSQL connection check
@@ -540,7 +550,12 @@ app.post("/categories", async (req, res) => {
 });
 
 app.post("/seller-add-product", async (req, res) => {
-  const { seller_id, category_id, new_category_name, name, description, price, stock, images } = req.body;
+  console.log("Add Product Request:", req.body);
+  const { 
+    seller_id, category_id, new_category_name, name, description, 
+    price, mrp, stock, images, sku, brand, 
+    weight, height, width, breadth, specifications 
+  } = req.body;
   const client = await pool.connect();
 
   try {
@@ -570,11 +585,66 @@ app.post("/seller-add-product", async (req, res) => {
 
     // 1. Insert into products
     const productResult = await client.query(
-      `INSERT INTO products (product_id, seller_id, category_id, name, description, price, stock_quantity, images)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING product_id`,
-      [pId, seller_id, final_category_id, name, description, price, stock, images]
+      `INSERT INTO products (
+        product_id, seller_id, category_id, name, description, 
+        price, mrp, stock_quantity, images, sku, brand, 
+        weight, height, width, breadth
+      )
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15) RETURNING product_id`,
+      [
+        pId, seller_id, final_category_id, name, description, 
+        price, mrp || price, stock, images, sku || null, brand, 
+        weight, height, width, breadth
+      ]
     );
 
+    // 1.5. Sync into product_images
+    if (images && Array.isArray(images)) {
+      for (const [idx, imgUrl] of images.entries()) {
+        const lastImgResult = await client.query("SELECT image_id FROM product_images ORDER BY image_id DESC LIMIT 1");
+        let nextImgNum = 1;
+        if (lastImgResult.rows.length > 0) {
+          const lastImgId = lastImgResult.rows[0].image_id;
+          nextImgNum = (parseInt(lastImgId.split('-')[1]) || 0) + 1;
+        }
+        const imgId = `IMG-${nextImgNum.toString().padStart(3, '0')}`;
+        await client.query(
+          "INSERT INTO product_images (image_id, product_id, image, sort_order) VALUES ($1, $2, $3, $4)",
+          [imgId, pId, imgUrl, idx]
+        );
+      }
+    }
+
+    // 2. Insert into product_variants (Specifications)
+    console.log("Adding specifications for product:", pId, specifications);
+    if (specifications && Array.isArray(specifications)) {
+      for (const spec of specifications) {
+        if (spec.key && spec.value) {
+          try {
+            // Generate semantic variant_id (VAR-001 format)
+            const maxVarIdResult = await client.query("SELECT variant_id FROM product_variants ORDER BY variant_id DESC LIMIT 1");
+            let nextVarNum = 1;
+            if (maxVarIdResult.rows.length > 0) {
+              const lastVarId = maxVarIdResult.rows[0].variant_id;
+              // Extract number from VAR-001 or VAR001
+              const match = lastVarId.match(/\d+/);
+              const lastVarNum = match ? parseInt(match[0]) : 0;
+              nextVarNum = lastVarNum + 1;
+            }
+            const vId = `VAR-${nextVarNum.toString().padStart(3, '0')}`;
+
+            console.log("Inserting spec:", spec, "with ID:", vId);
+            await client.query(
+              "INSERT INTO product_variants (variant_id, product_id, sku, variant_name, variant_value, price, stock_quantity) VALUES ($1, $2, $3, $4, $5, $6, $7)",
+              [vId, pId, sku || null, spec.key, spec.value, spec.price || price, spec.stock || stock]
+            );
+          } catch (loopErr) {
+            console.error("Error inserting specific variant:", spec, loopErr.message);
+            throw loopErr;
+          }
+        }
+      }
+    }
 
     await client.query('COMMIT');
     res.json({ message: "Product added successfully", product_id: pId });
@@ -590,7 +660,11 @@ app.post("/seller-add-product", async (req, res) => {
 
 app.put("/seller-update-product/:product_id", async (req, res) => {
   const { product_id } = req.params;
-  const { category_id, new_category_name, name, description, price, stock, images } = req.body;
+  const { 
+    category_id, new_category_name, name, description, 
+    price, mrp, stock, images, sku, brand,
+    weight, height, width, breadth, is_active, specifications
+  } = req.body;
   const client = await pool.connect();
 
   try {
@@ -609,11 +683,19 @@ app.put("/seller-update-product/:product_id", async (req, res) => {
 
     // 1. Update product
     console.log("Updating product ID:", product_id, "with data:", { name, price, stock });
-    const updateResult = await client.query(
-      `UPDATE products SET 
-       category_id = $1, name = $2, description = $3, price = $4, stock_quantity = $5, images = $6, updated_at = CURRENT_TIMESTAMP
-       WHERE product_id = $7`,
-      [final_category_id, name, description, price, stock, images, product_id]
+    const sql = `UPDATE products SET 
+       category_id = $1, name = $2, description = $3, price = $4, mrp = $5, 
+       stock_quantity = $6, images = $7, sku = $8, brand = $9, 
+       weight = $10, height = $11, width = $12, breadth = $13, 
+       is_active = $14, updated_at = CURRENT_TIMESTAMP
+       WHERE product_id = $15`;
+    console.log("Executing SQL:", sql);
+    const updateResult = await client.query(sql, [
+        final_category_id, name, description, price, mrp, 
+        stock, images, sku || null, brand, 
+        weight, height, width, breadth, 
+        is_active !== undefined ? is_active : true, product_id
+      ]
     );
     console.log("Update result rows affected:", updateResult.rowCount);
 
@@ -622,12 +704,63 @@ app.put("/seller-update-product/:product_id", async (req, res) => {
       throw new Error(`Product with ID ${product_id} not found`);
     }
 
+    // 1.5. Sync into product_images
+    await client.query("DELETE FROM product_images WHERE product_id = $1", [product_id]);
+    if (images && Array.isArray(images)) {
+      for (const [idx, imgUrl] of images.entries()) {
+        const lastImgResult = await client.query("SELECT image_id FROM product_images ORDER BY image_id DESC LIMIT 1");
+        let nextImgNum = 1;
+        if (lastImgResult.rows.length > 0) {
+          const lastImgId = lastImgResult.rows[0].image_id;
+          nextImgNum = (parseInt(lastImgId.split('-')[1]) || 0) + 1;
+        }
+        const imgId = `IMG-${nextImgNum.toString().padStart(3, '0')}`;
+        await client.query(
+          "INSERT INTO product_images (image_id, product_id, image, sort_order) VALUES ($1, $2, $3, $4)",
+          [imgId, product_id, imgUrl, idx]
+        );
+      }
+    }
+
+    // 2. Sync product_variants (Specifications)
+    // For simplicity, we drop existing ones and re-insert
+    console.log("Syncing specifications for product:", product_id, specifications);
+    await client.query("DELETE FROM product_variants WHERE product_id = $1", [product_id]);
+    if (specifications && Array.isArray(specifications)) {
+      for (const spec of specifications) {
+        if (spec.key && spec.value) {
+          try {
+            // Generate semantic variant_id (VAR-001 format)
+            const maxVarIdResult = await client.query("SELECT variant_id FROM product_variants ORDER BY variant_id DESC LIMIT 1");
+            let nextVarNum = 1;
+            if (maxVarIdResult.rows.length > 0) {
+              const lastVarId = maxVarIdResult.rows[0].variant_id;
+              // Extract number from VAR-001 or VAR001
+              const match = lastVarId.match(/\d+/);
+              const lastVarNum = match ? parseInt(match[0]) : 0;
+              nextVarNum = lastVarNum + 1;
+            }
+            const vId = `VAR-${nextVarNum.toString().padStart(3, '0')}`;
+
+            console.log("Inserting spec:", spec, "with ID:", vId);
+            await client.query(
+              "INSERT INTO product_variants (variant_id, product_id, sku, variant_name, variant_value, price, stock_quantity) VALUES ($1, $2, $3, $4, $5, $6, $7)",
+              [vId, product_id, sku || null, spec.key, spec.value, spec.price || price, spec.stock || stock]
+            );
+          } catch (loopErr) {
+            console.error("Error inserting specific variant:", spec, loopErr.message);
+            throw loopErr; // Re-throw to trigger transaction rollback
+          }
+        }
+      }
+    }
+
     await client.query('COMMIT');
     res.json({ message: "Product updated successfully" });
 
   } catch (err) {
     if (client) await client.query('ROLLBACK');
-    console.error("Update error:", err.message);
+    console.error("Update error full stack:", err);
     res.status(500).json({ message: "Error updating product: " + err.message });
   } finally {
     if (client) client.release();
@@ -637,7 +770,11 @@ app.put("/seller-update-product/:product_id", async (req, res) => {
 app.delete("/seller-delete-product/:product_id", async (req, res) => {
   const { product_id } = req.params;
   try {
-    await pool.query("DELETE FROM products WHERE product_id = $1", [product_id]);
+    // Soft delete: set deleted_at and is_active = false
+    await pool.query(
+      "UPDATE products SET deleted_at = CURRENT_TIMESTAMP, is_active = false WHERE product_id = $1", 
+      [product_id]
+    );
     res.json({ message: "Product deleted successfully" });
   } catch (err) {
     console.error(err);
@@ -652,11 +789,19 @@ app.get("/seller-products/:seller_id", async (req, res) => {
        p.images[1] as main_image
        FROM products p
        LEFT JOIN categories c ON p.category_id = c.category_id
-       WHERE p.seller_id = $1
+       WHERE p.seller_id = $1 AND p.deleted_at IS NULL
        ORDER BY p.created_at DESC`,
       [req.params.seller_id]
     );
-    res.json(result.rows);
+    const products = result.rows;
+    for (const p of products) {
+      const variants = await pool.query(
+        "SELECT variant_name as key, variant_value as value, price, stock_quantity as stock, sku FROM product_variants WHERE product_id = $1 ORDER BY variant_id ASC",
+        [p.product_id]
+      );
+      p.specifications = variants.rows;
+    }
+    res.json(products);
   } catch (err) {
     console.error(err);
     res.status(500).json({ message: "Error fetching products" });
@@ -670,6 +815,7 @@ app.get("/products", async (req, res) => {
        p.images[1] as main_image
        FROM products p
        LEFT JOIN categories c ON p.category_id = c.category_id
+       WHERE p.deleted_at IS NULL
        ORDER BY p.created_at DESC`
     );
     res.json(result.rows);
@@ -687,7 +833,7 @@ app.get("/products/category/:categoryName", async (req, res) => {
        p.images[1] as main_image
        FROM products p
        JOIN categories c ON p.category_id = c.category_id
-       WHERE LOWER(c.name) = LOWER($1) OR LOWER(c.slug) = LOWER($1)
+       WHERE (LOWER(c.name) = LOWER($1) OR LOWER(c.slug) = LOWER($1)) AND p.deleted_at IS NULL
        ORDER BY p.created_at DESC`,
       [categoryName]
     );
@@ -706,7 +852,7 @@ app.get("/product/:id", async (req, res) => {
        FROM products p
        LEFT JOIN categories c ON p.category_id = c.category_id
        LEFT JOIN sellers s ON p.seller_id = s.seller_id
-       WHERE p.product_id = $1`,
+       WHERE p.product_id = $1 AND p.deleted_at IS NULL`,
       [id]
     );
 
@@ -719,9 +865,15 @@ app.get("/product/:id", async (req, res) => {
       [id]
     );
 
+    const variantsResult = await pool.query(
+      "SELECT variant_name as key, variant_value as value, price, stock_quantity as stock, sku FROM product_variants WHERE product_id = $1 ORDER BY variant_id ASC",
+      [id]
+    );
+
     const product = {
       ...productResult.rows[0],
-      gallery: imagesResult.rows
+      gallery: imagesResult.rows,
+      specifications: variantsResult.rows
     };
 
     res.json(product);
@@ -735,6 +887,200 @@ app.get("/", (req, res) => {
   res.send("Backend is running 🚀");
 });
 
+
+app.post("/wishlist/toggle", async (req, res) => {
+  const { customerId, productId } = req.body;
+  console.log("Wishlist toggle request received:", { customerId, productId });
+  if (!customerId || !productId) {
+    console.error("Missing fields in wishlist toggle:", { customerId, productId });
+    return res.status(400).json({ message: "Missing data" });
+  }
+
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+    
+    // 1. Ensure wishlist exists for customer
+    let wishlistResult = await client.query("SELECT wishlist_id FROM wishlists WHERE customer_id = $1", [customerId]);
+    let wishlistId;
+    
+    if (wishlistResult.rows.length === 0) {
+      console.log("Creating new wishlist for customer:", customerId);
+      // Generate semantic WIS ID
+      const countRes = await client.query("SELECT COUNT(*) FROM wishlists");
+      const nextNum = parseInt(countRes.rows[0].count) + 1;
+      wishlistId = `WIS-${nextNum.toString().padStart(3, '0')}`;
+      
+      await client.query("INSERT INTO wishlists (wishlist_id, customer_id) VALUES ($1, $2)", [wishlistId, customerId]);
+      console.log("New wishlist created:", wishlistId);
+    } else {
+      wishlistId = wishlistResult.rows[0].wishlist_id;
+      console.log("Existing wishlist found:", wishlistId);
+    }
+
+    // 2. Check if item already exists
+    const itemCheck = await client.query("SELECT * FROM wishlist_items WHERE wishlist_id = $1 AND product_id = $2", [wishlistId, productId]);
+    console.log("Item check status for product:", productId, "found count:", itemCheck.rowCount);
+    
+    if (itemCheck.rows.length > 0) {
+      // Remove it
+      await client.query("DELETE FROM wishlist_items WHERE wishlist_id = $1 AND product_id = $2", [wishlistId, productId]);
+      await client.query('COMMIT');
+      console.log("Item removed from wishlist:", productId);
+      return res.json({ status: 'removed' });
+    } else {
+      // Add it
+      const countRes = await client.query("SELECT COUNT(*) FROM wishlist_items");
+      const nextNum = parseInt(countRes.rows[0].count) + 1;
+      const itemId = `WIS-IT-${nextNum.toString().padStart(3, '0')}`;
+      
+      await client.query("INSERT INTO wishlist_items (wishlist_item_id, wishlist_id, product_id) VALUES ($1, $2, $3)", [itemId, wishlistId, productId]);
+      await client.query('COMMIT');
+      console.log("Item added to wishlist:", productId, "with ID:", itemId);
+      return res.json({ status: 'added' });
+    }
+  } catch (err) {
+    if (client) await client.query('ROLLBACK');
+    console.error("Wishlist toggle error:", err);
+    res.status(500).json({ message: "Wishlist error" });
+  } finally {
+    if (client) client.release();
+  }
+});
+
+app.get("/wishlist/:customerId", async (req, res) => {
+  const { customerId } = req.params;
+  try {
+    const result = await pool.query(`
+      SELECT p.* 
+      FROM products p
+      JOIN wishlist_items wi ON p.product_id = wi.product_id
+      JOIN wishlists w ON wi.wishlist_id = w.wishlist_id
+      WHERE w.customer_id = $1
+    `, [customerId]);
+    res.json(result.rows);
+  } catch (err) {
+    console.error("Fetch wishlist error:", err);
+    res.status(500).json({ message: "Error fetching wishlist" });
+  }
+});
+
+
+app.post("/cart/add", async (req, res) => {
+  console.log("Cart add request:", req.body);
+  const { customerId, productId, variantId, quantity } = req.body;
+  if (!customerId || !productId) {
+    console.warn("Cart add failed: Missing required fields", { customerId, productId });
+    return res.status(400).json({ message: "Missing data" });
+  }
+
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+    
+    // 1. Ensure cart exists
+    let cartRes = await client.query("SELECT cart_id FROM carts WHERE customer_id = $1", [customerId]);
+    let cartId;
+    if (cartRes.rows.length === 0) {
+      const countCartsRes = await client.query("SELECT COUNT(*) FROM carts");
+      const nextCartNum = parseInt(countCartsRes.rows[0].count) + 1;
+      cartId = `CRT-${nextCartNum.toString().padStart(3, '0')}`;
+      
+      await client.query("INSERT INTO carts (cart_id, customer_id) VALUES ($1, $2)", [cartId, customerId]);
+    } else {
+      cartId = cartRes.rows[0].cart_id;
+    }
+
+    // 2. Add or Update
+    const itemCheck = await client.query(
+      "SELECT * FROM cart_items WHERE cart_id = $1 AND product_id = $2 AND variant_id IS NOT DISTINCT FROM $3", 
+      [cartId, productId, variantId || null]
+    );
+
+    if (itemCheck.rows.length > 0) {
+      await client.query(
+        "UPDATE cart_items SET quantity = quantity + $1, updated_at = CURRENT_TIMESTAMP WHERE cart_id = $2 AND product_id = $3 AND variant_id IS NOT DISTINCT FROM $4",
+        [quantity || 1, cartId, productId, variantId || null]
+      );
+    } else {
+      const maxIdRes = await client.query("SELECT cart_item_id FROM cart_items ORDER BY cart_item_id DESC LIMIT 1");
+      let nextNum = 1;
+      if (maxIdRes.rows.length > 0) {
+        const lastId = maxIdRes.rows[0].cart_item_id;
+        const match = lastId.match(/\d+/);
+        nextNum = (match ? parseInt(match[0]) : 0) + 1;
+      }
+      const itemId = `CRT-IT-${nextNum.toString().padStart(4, '0')}`;
+      
+      await client.query(
+        "INSERT INTO cart_items (cart_item_id, cart_id, product_id, variant_id, quantity) VALUES ($1, $2, $3, $4, $5)",
+        [itemId, cartId, productId, variantId || null, quantity || 1]
+      );
+    }
+    
+    await client.query('COMMIT');
+    res.json({ message: "Cart updated" });
+  } catch (err) {
+    if (client) await client.query('ROLLBACK');
+    console.error("Cart add error:", err);
+    res.status(500).json({ message: "Cart error" });
+  } finally {
+    if (client) client.release();
+  }
+});
+
+app.post("/cart/update", async (req, res) => {
+  const { customerId, productId, variantId, quantity } = req.body;
+  try {
+    await pool.query(`
+      UPDATE cart_items ci
+      SET quantity = $4, updated_at = CURRENT_TIMESTAMP
+      FROM carts c
+      WHERE ci.cart_id = c.cart_id AND c.customer_id = $1 
+      AND ci.product_id = $2 AND ci.variant_id IS NOT DISTINCT FROM $3
+    `, [customerId, productId, variantId || null, quantity]);
+    res.json({ message: "Quantity updated" });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: "Update quantity error" });
+  }
+});
+
+app.post("/cart/remove", async (req, res) => {
+  const { customerId, productId, variantId } = req.body;
+  try {
+    await pool.query(`
+      DELETE FROM cart_items ci
+      USING carts c
+      WHERE ci.cart_id = c.cart_id AND c.customer_id = $1 
+      AND ci.product_id = $2 AND ci.variant_id IS NOT DISTINCT FROM $3
+    `, [customerId, productId, variantId || null]);
+    res.json({ message: "Item removed" });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: "Remove item error" });
+  }
+});
+
+app.get("/cart/:customerId", async (req, res) => {
+  const { customerId } = req.params;
+  try {
+    const result = await pool.query(`
+      SELECT ci.*, p.name, p.price as base_price, p.images, p.brand, pv.price as variant_price, pv.variant_name, pv.variant_value
+      FROM cart_items ci
+      JOIN carts c ON ci.cart_id = c.cart_id
+      JOIN products p ON ci.product_id = p.product_id
+      LEFT JOIN product_variants pv ON ci.variant_id = pv.variant_id
+      WHERE c.customer_id = $1
+    `, [customerId]);
+    console.log("Fetched cart data for", customerId, ":", result.rows.length, "items");
+    res.json(result.rows);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: "Fetch cart error" });
+  }
+});
+
 app.listen(5000, () => {
-  console.log("Server running on http://localhost:5000");
+    console.log("Server running on http://localhost:5000");
 });

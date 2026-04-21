@@ -1,6 +1,30 @@
 import { createContext, useContext, useState, useEffect } from "react";
+import axios from "axios";
+import { productsData } from "./data";
 
 const StoreContext = createContext();
+
+const stripProduct = (product) => {
+  if (!product) return null;
+  const pId = product.product_id || product.id;
+  
+  // Find the best image: either from images array or from first variant
+  let primaryImg = "/placeholder-product.png";
+  if (product.images && product.images.length > 0) {
+    primaryImg = product.images[0];
+  } else if (product.variants && product.variants.length > 0 && product.variants[0].img) {
+    primaryImg = product.variants[0].img;
+  }
+
+  return {
+    product_id: pId,
+    id: pId, // For compatibility
+    name: product.name,
+    price: product.price,
+    brand: product.brand,
+    images: [primaryImg] 
+  };
+};
 
 export function StoreProvider({ children }) {
   const [cart, setCart] = useState(() => {
@@ -35,53 +59,217 @@ export function StoreProvider({ children }) {
   });
 
   useEffect(() => {
-    localStorage.setItem("userProfile", JSON.stringify(userProfile));
+    try {
+      localStorage.setItem("userProfile", JSON.stringify(userProfile));
+    } catch (e) {
+      console.error("Profile storage failed", e);
+    }
   }, [userProfile]);
 
   useEffect(() => {
-    localStorage.setItem("cart", JSON.stringify(cart));
+    try {
+      localStorage.setItem("cart", JSON.stringify(cart));
+    } catch (e) {
+      if (e.name === 'QuotaExceededError') {
+        localStorage.removeItem("cart"); // Emergency clear
+      }
+    }
   }, [cart]);
 
   useEffect(() => {
-    localStorage.setItem("wishlist", JSON.stringify(wishlist));
+    const fetchWishlist = async () => {
+      const savedUser = localStorage.getItem("user");
+      if (savedUser) {
+        const user = JSON.parse(savedUser);
+        if (user.customerId) {
+          try {
+            const res = await axios.get(`http://localhost:5000/wishlist/${user.customerId}`);
+            setWishlist(res.data.map(p => stripProduct(p)));
+          } catch (err) {
+            console.error("Failed to fetch wishlist:", err);
+          }
+        }
+      }
+    };
+
+    const fetchCart = async () => {
+      const savedUser = localStorage.getItem("user");
+      if (savedUser) {
+        const user = JSON.parse(savedUser);
+        if (user.customerId) {
+          try {
+            const res = await axios.get(`http://localhost:5000/cart/${user.customerId}`);
+            const mapped = res.data.map(item => {
+                let primaryImg = "/placeholder-product.png";
+                if (item.images && item.images.length > 0) {
+                    primaryImg = item.images[0];
+                } else {
+                    // Fallback to static data
+                    const staticP = productsData[item.product_id];
+                    if (staticP && staticP.variants && staticP.variants.length > 0) {
+                        primaryImg = staticP.variants[0].img;
+                    }
+                }
+                return {
+                    product_id: item.product_id,
+                    id: item.product_id, // Compatibility
+                    name: item.name,
+                    price: item.variant_price || item.base_price,
+                    brand: item.brand,
+                    images: item.images || [primaryImg],
+                    quantity: item.quantity,
+                    variant: {
+                        id: item.variant_id,
+                        name: item.variant_name,
+                        value: item.variant_value,
+                        price: item.variant_price || item.base_price,
+                        img: primaryImg // Set the image for the variant
+                    },
+                    variantId: item.variant_id
+                };
+            });
+            setCart(mapped);
+          } catch (err) {
+            console.error("Fetch cart failed:", err);
+          }
+        }
+      }
+    };
+
+    fetchWishlist();
+    fetchCart();
+  }, []);
+
+  // One-time cleanup to fix QuotaExceededError
+  useEffect(() => {
+    try {
+      const cartTotal = JSON.stringify(cart).length;
+      const wishTotal = JSON.stringify(wishlist).length;
+      if (cartTotal + wishTotal > 4000000) { // If > 4MB (out of 5MB limit)
+         console.warn("Storage usage high, stripping extra data...");
+         setCart(prev => prev.map(p => stripProduct(p)));
+         setWishlist(prev => prev.map(p => stripProduct(p)));
+      }
+    } catch (e) {}
+  }, []);
+
+  useEffect(() => {
+    try {
+       const data = JSON.stringify(wishlist);
+       // Optimization: If wishlist is somehow still too huge, don't even try to save to avoid crashing
+       if (data.length < 2000000) {
+          localStorage.setItem("wishlist", data);
+       }
+    } catch (e) {
+       if (e.name === 'QuotaExceededError') {
+         console.warn("Wishlist storage full, clearing old entries...");
+         localStorage.removeItem("wishlist");
+       }
+    }
   }, [wishlist]);
 
-  const addToCart = (product, variant) => {
+  const addToCart = async (product, variant) => {
+    const lightProduct = stripProduct(product);
     setCart((prev) => {
-      const existing = prev.find((item) => item.id === product.id && item.variantId === variant.id);
+      const existing = prev.find((item) => item.product_id === lightProduct.product_id && item.variantId === variant.id);
       if (existing) {
         return prev.map((item) =>
-          item.id === product.id && item.variantId === variant.id
+          item.product_id === lightProduct.product_id && item.variantId === variant.id
             ? { ...item, quantity: item.quantity + 1 }
             : item
         );
       }
-      return [...prev, { ...product, variant, variantId: variant.id, quantity: 1 }];
+      return [...prev, { ...lightProduct, variant: { ...variant, img: null }, variantId: variant.id, quantity: 1 }];
     });
-  };
 
-  const removeFromCart = (productId, variantId) => {
-    setCart((prev) => prev.filter((item) => !(item.id === productId && item.variantId === variantId)));
-  };
-
-  const updateQuantity = (productId, variantId, delta) => {
-    setCart((prev) =>
-      prev.map((item) =>
-        item.id === productId && item.variantId === variantId
-          ? { ...item, quantity: Math.max(1, item.quantity + delta) }
-          : item
-      )
-    );
-  };
-
-  const toggleWishlist = (product) => {
-    setWishlist((prev) => {
-      const exists = prev.find((item) => item.id === product.id);
-      if (exists) {
-        return prev.filter((item) => item.id !== product.id);
+    const savedUser = localStorage.getItem("user");
+    if (savedUser) {
+      const user = JSON.parse(savedUser);
+      if (user.customerId) {
+        try {
+          await axios.post("http://localhost:5000/cart/add", {
+            customerId: user.customerId,
+            productId: lightProduct.product_id,
+            variantId: variant.id,
+            quantity: 1
+          });
+        } catch (err) { console.error(err); }
       }
-      return [...prev, product];
+    }
+  };
+
+  const removeFromCart = async (productId, variantId) => {
+    setCart((prev) => prev.filter((item) => !(item.product_id === productId && item.variantId === variantId)));
+    
+    const savedUser = localStorage.getItem("user");
+    if (savedUser) {
+      const user = JSON.parse(savedUser);
+      if (user.customerId) {
+        try {
+          await axios.post("http://localhost:5000/cart/remove", {
+            customerId: user.customerId,
+            productId,
+            variantId
+          });
+        } catch (err) { console.error(err); }
+      }
+    }
+  };
+
+  const updateQuantity = async (productId, variantId, delta) => {
+    let newQty = 1;
+    setCart((prev) =>
+      prev.map((item) => {
+        if (item.product_id === productId && item.variantId === variantId) {
+            newQty = Math.max(1, item.quantity + delta);
+            return { ...item, quantity: newQty };
+        }
+        return item;
+      })
+    );
+
+    const savedUser = localStorage.getItem("user");
+    if (savedUser) {
+      const user = JSON.parse(savedUser);
+      if (user.customerId) {
+        try {
+          await axios.post("http://localhost:5000/cart/update", {
+            customerId: user.customerId,
+            productId,
+            variantId,
+            quantity: newQty
+          });
+        } catch (err) { console.error(err); }
+      }
+    }
+  };
+
+  const toggleWishlist = async (product) => {
+    const lightProduct = stripProduct(product);
+    // 1. Optimistic UI update
+    setWishlist((prev) => {
+      const exists = prev.find((item) => item.product_id === lightProduct.product_id);
+      if (exists) {
+        return prev.filter((item) => item.product_id !== lightProduct.product_id);
+      }
+      return [...prev, lightProduct];
     });
+
+    // 2. Sync with backend
+    const savedUser = localStorage.getItem("user");
+    if (savedUser) {
+      const user = JSON.parse(savedUser);
+      if (user.customerId) {
+        try {
+          await axios.post("http://localhost:5000/wishlist/toggle", {
+            customerId: user.customerId,
+            productId: product.product_id
+          });
+        } catch (err) {
+          console.error("Wishlist sync failed:", err);
+        }
+      }
+    }
   };
 
   const clearCart = () => setCart([]);

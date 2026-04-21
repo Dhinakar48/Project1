@@ -13,6 +13,12 @@ export default function AddProduct({ onBack, onAddProduct, initialData, sellerId
     discountPrice: initialData.discountPrice || "",
     stock: initialData.stock_quantity || initialData.stock || "",
     sku: initialData.sku || "",
+    mrp: initialData.mrp || initialData.price || "",
+    brand: initialData.brand || "",
+    weight: initialData.weight || "",
+    height: initialData.height || "",
+    width: initialData.width || "",
+    breadth: initialData.breadth || "",
     status: initialData.status || "Active",
     featured: initialData.featured || false,
   } : {
@@ -20,7 +26,12 @@ export default function AddProduct({ onBack, onAddProduct, initialData, sellerId
     description: "",
     category_id: "",
     price: "",
-    discountPrice: "",
+    mrp: "",
+    brand: "",
+    weight: "",
+    height: "",
+    width: "",
+    breadth: "",
     stock: "",
     sku: "",
     status: "Active",
@@ -28,7 +39,7 @@ export default function AddProduct({ onBack, onAddProduct, initialData, sellerId
   });
 
   const [images, setImages] = useState(initialData && initialData.images ? initialData.images : []);
-  const [specifications, setSpecifications] = useState(initialData && initialData.specifications ? initialData.specifications : [{ key: "", value: "" }]);
+  const [specifications, setSpecifications] = useState(initialData && initialData.specifications ? initialData.specifications : [{ key: "", value: "", price: "", stock: "", sku: "" }]);
 
   useEffect(() => {
     fetchCategories();
@@ -77,7 +88,7 @@ export default function AddProduct({ onBack, onAddProduct, initialData, sellerId
   };
 
   const addSpecification = () => {
-    setSpecifications([...specifications, { key: "", value: "" }]);
+    setSpecifications([...specifications, { key: "", value: "", price: "", stock: "", sku: "" }]);
   };
 
   const removeSpecification = (index) => {
@@ -98,9 +109,18 @@ export default function AddProduct({ onBack, onAddProduct, initialData, sellerId
       new_category_name: formData.category_id === "new" ? formData.new_category_name : null,
       name: formData.name,
       description: formData.description,
+      brand: formData.brand,
+      sku: formData.sku,
       price: parseFloat(formData.price) || 0,
+      mrp: parseFloat(formData.mrp) || parseFloat(formData.price) || 0,
       stock: parseInt(formData.stock) || 0,
+      weight: parseFloat(formData.weight) || 0,
+      height: parseFloat(formData.height) || 0,
+      width: parseFloat(formData.width) || 0,
+      breadth: parseFloat(formData.breadth) || 0,
       images: images,
+      is_active: formData.status === "Active",
+      specifications: specifications,
     };
 
     try {
@@ -126,7 +146,7 @@ export default function AddProduct({ onBack, onAddProduct, initialData, sellerId
     <motion.div 
       initial={{ opacity: 0, y: 10 }} 
       animate={{ opacity: 1, y: 0 }} 
-      className="space-y-8 pb-10"
+      className="space-y-8 pb-4"
     >
       <div className="flex items-center gap-4">
         <button 
@@ -213,14 +233,23 @@ export default function AddProduct({ onBack, onAddProduct, initialData, sellerId
                   className="w-full p-4 bg-stone-50 border border-stone-200 rounded-2xl focus:border-amber-500 focus:ring-1 focus:ring-amber-500 outline-none transition-all"
                 />
               </div>
+
+              <div className="space-y-2">
+                <label className="text-sm font-semibold text-stone-600 block">Brand</label>
+                <input 
+                  type="text" name="brand" 
+                  value={formData.brand} onChange={handleInputChange}
+                  placeholder="e.g. Sony"
+                  className="w-full p-4 bg-stone-50 border border-stone-200 rounded-2xl focus:border-amber-500 focus:ring-1 focus:ring-amber-500 outline-none transition-all"
+                />
+              </div>
             </div>
           </div>
 
           <div className="space-y-5 pt-4">
-            <h3 className="text-lg font-bold text-stone-900 border-b border-stone-100 pb-3">Pricing & Inventory</h3>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-5">
               <div className="space-y-2">
-                <label className="text-sm font-semibold text-stone-600 block">Regular Price (₹) *</label>
+                <label className="text-sm font-semibold text-stone-600 block">Selling Price (₹) *</label>
                 <input 
                   type="number" name="price" 
                   value={formData.price} onChange={handleInputChange} required
@@ -229,20 +258,59 @@ export default function AddProduct({ onBack, onAddProduct, initialData, sellerId
                 />
               </div>
               <div className="space-y-2">
-                <label className="text-sm font-semibold text-stone-600 block">Discount Price (₹)</label>
+                <label className="text-sm font-semibold text-stone-600 block">MRP (₹)</label>
                 <input 
-                  type="number" name="discountPrice" 
-                  value={formData.discountPrice} onChange={handleInputChange}
+                  type="number" name="mrp" 
+                  value={formData.mrp} onChange={handleInputChange}
                   min="0" placeholder="0.00"
                   className="w-full p-4 bg-stone-50 border border-stone-200 rounded-2xl focus:border-amber-500 focus:ring-1 focus:ring-amber-500 outline-none transition-all"
                 />
               </div>
               <div className="space-y-2">
-                <label className="text-sm font-semibold text-stone-600 block">Stock Quantity *</label>
+                <label className="text-sm font-semibold text-stone-600 block">Stock Qty *</label>
                 <input 
                   type="number" name="stock" 
                   value={formData.stock} onChange={handleInputChange} required
                   min="0" placeholder="0"
+                  className="w-full p-4 bg-stone-50 border border-stone-200 rounded-2xl focus:border-amber-500 focus:ring-1 focus:ring-amber-500 outline-none transition-all"
+                />
+              </div>
+              <div className="space-y-2">
+                <label className="text-sm font-semibold text-stone-600 block">Weight (grams)</label>
+                <input 
+                  type="number" name="weight" step="0.01"
+                  value={formData.weight} onChange={handleInputChange}
+                  min="0" placeholder="0.00"
+                  className="w-full p-4 bg-stone-50 border border-stone-200 rounded-2xl focus:border-amber-500 focus:ring-1 focus:ring-amber-500 outline-none transition-all"
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-3 gap-5 pt-2">
+              <div className="space-y-2">
+                <label className="text-sm font-semibold text-stone-600 block">Height (mm)</label>
+                <input 
+                  type="number" name="height" step="0.01"
+                  value={formData.height} onChange={handleInputChange}
+                  min="0" placeholder="0.00"
+                  className="w-full p-4 bg-stone-50 border border-stone-200 rounded-2xl focus:border-amber-500 focus:ring-1 focus:ring-amber-500 outline-none transition-all"
+                />
+              </div>
+              <div className="space-y-2">
+                <label className="text-sm font-semibold text-stone-600 block">Width (mm)</label>
+                <input 
+                  type="number" name="width" step="0.01"
+                  value={formData.width} onChange={handleInputChange}
+                  min="0" placeholder="0.00"
+                  className="w-full p-4 bg-stone-50 border border-stone-200 rounded-2xl focus:border-amber-500 focus:ring-1 focus:ring-amber-500 outline-none transition-all"
+                />
+              </div>
+              <div className="space-y-2">
+                <label className="text-sm font-semibold text-stone-600 block">Breadth (mm)</label>
+                <input 
+                  type="number" name="breadth" step="0.01"
+                  value={formData.breadth} onChange={handleInputChange}
+                  min="0" placeholder="0.00"
                   className="w-full p-4 bg-stone-50 border border-stone-200 rounded-2xl focus:border-amber-500 focus:ring-1 focus:ring-amber-500 outline-none transition-all"
                 />
               </div>
@@ -263,27 +331,47 @@ export default function AddProduct({ onBack, onAddProduct, initialData, sellerId
             
             <div className="space-y-3">
               {specifications.map((spec, index) => (
-                <div key={index} className="flex items-start gap-3">
-                  <div className="flex-1 grid grid-cols-2 gap-3">
+                <div key={index} className="flex flex-col gap-3 p-4 bg-stone-50/50 border border-stone-200 rounded-[1.5rem]">
+                  <div className="grid grid-cols-3 gap-3">
                     <input 
-                      type="text" placeholder="Key (e.g. Color)" 
+                      type="text" placeholder="Varient (e.g. Color)" 
                       value={spec.key} onChange={(e) => handleSpecChange(index, "key", e.target.value)}
-                      className="w-full p-3 bg-stone-50 border border-stone-200 rounded-xl focus:border-amber-500 focus:ring-1 focus:ring-amber-500 outline-none transition-all text-sm"
+                      className="w-full p-3 bg-white border border-stone-200 rounded-xl focus:border-amber-500 focus:ring-1 focus:ring-amber-500 outline-none transition-all text-xs"
                     />
                     <input 
                       type="text" placeholder="Value (e.g. Matte Black)" 
                       value={spec.value} onChange={(e) => handleSpecChange(index, "value", e.target.value)}
-                      className="w-full p-3 bg-stone-50 border border-stone-200 rounded-xl focus:border-amber-500 focus:ring-1 focus:ring-amber-500 outline-none transition-all text-sm"
+                      className="w-full p-3 bg-white border border-stone-200 rounded-xl focus:border-amber-500 focus:ring-1 focus:ring-amber-500 outline-none transition-all text-xs"
                     />
                   </div>
-                  {specifications.length > 1 && (
-                    <button 
-                      type="button" onClick={() => removeSpecification(index)}
-                      className="w-11 h-11 bg-red-50 text-red-500 rounded-xl flex items-center justify-center hover:bg-red-100 transition-colors flex-shrink-0"
-                    >
-                      <FaTrash size={12} />
-                    </button>
-                  )}
+                  <div className="flex items-center gap-3">
+                    <div className="flex-1 grid grid-cols-2 gap-3">
+                      <div className="flex items-center gap-2 bg-white border border-stone-200 rounded-xl px-3 group focus-within:border-amber-500 focus-within:ring-1 focus-within:ring-amber-500 transition-all">
+                        <span className="text-[10px] font-bold text-stone-400">₹</span>
+                        <input 
+                          type="number" placeholder="Price" 
+                          value={spec.price} onChange={(e) => handleSpecChange(index, "price", e.target.value)}
+                          className="w-full py-3 bg-transparent border-none outline-none text-xs"
+                        />
+                      </div>
+                      <div className="flex items-center gap-2 bg-white border border-stone-200 rounded-xl px-3 group focus-within:border-amber-500 focus-within:ring-1 focus-within:ring-amber-500 transition-all">
+                        <span className="text-[10px] font-bold text-stone-400 font-mono">#</span>
+                        <input 
+                          type="number" placeholder="Stock" 
+                          value={spec.stock} onChange={(e) => handleSpecChange(index, "stock", e.target.value)}
+                          className="w-full py-3 bg-transparent border-none outline-none text-xs"
+                        />
+                      </div>
+                    </div>
+                    {specifications.length > 1 && (
+                      <button 
+                        type="button" onClick={() => removeSpecification(index)}
+                        className="w-10 h-10 bg-red-50 text-red-500 rounded-xl flex items-center justify-center hover:bg-red-100 transition-colors flex-shrink-0"
+                      >
+                        <FaTrash size={10} />
+                      </button>
+                    )}
+                  </div>
                 </div>
               ))}
             </div>
@@ -291,7 +379,7 @@ export default function AddProduct({ onBack, onAddProduct, initialData, sellerId
         </div>
 
         {/* Right Column: Media & Status */}
-        <div className="space-y-8">
+        <div className="space-y-8 lg:sticky lg:top-8 self-start">
           
           <div className="bg-white p-8 rounded-[2.5rem] border border-stone-100 shadow-sm space-y-5">
             <h3 className="text-lg font-bold text-stone-900 border-b border-stone-100 pb-3">Product Media</h3>

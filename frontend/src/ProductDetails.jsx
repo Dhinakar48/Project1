@@ -16,9 +16,12 @@ export default function ProductDetails() {
     const [relatedProducts, setRelatedProducts] = useState([]);
 
     const { addToCart, toggleWishlist, wishlist } = useStore();
-    const isWishlisted = product && wishlist.some(item => item.id === product.product_id);
+    const isWishlisted = product && wishlist.some(item => item.product_id === product.product_id);
 
     const [addedToCart, setAddedToCart] = useState(false);
+
+    // The dynamic logic moves below where it has access to product/variants
+    // after loading checks.
 
     const [reviews, setReviews] = useState([
         { id: 1, name: "Alex Johnson", rating: 5, comment: "Absolutely blown away by the quality. Worth every penny.", img: null },
@@ -47,7 +50,7 @@ export default function ProductDetails() {
             const res = await axios.get(`http://localhost:5000/product/${id}`);
             const data = res.data;
             setProduct(data);
-            
+
             // Fetch related products (same category)
             if (data.category_name) {
                 const relatedRes = await axios.get(`http://localhost:5000/products/category/${data.category_name}`);
@@ -70,9 +73,10 @@ export default function ProductDetails() {
             img: product.gallery && product.gallery.length > 0 ? product.gallery[0].image_url : '/placeholder.png'
         };
         const variant = {
-            id: `v${product.product_id}`,
-            img: storeProduct.img,
-            price: `₹${parseFloat(product.price).toLocaleString()}`
+            id: `v${product.product_id}-${activeColor || 'default'}`,
+            name: activeColor || 'Standard',
+            img: activeImage,
+            price: `₹${parseFloat(activePrice).toLocaleString()}`
         };
         addToCart(storeProduct, variant);
         setAddedToCart(true);
@@ -108,15 +112,33 @@ export default function ProductDetails() {
         </div>
     );
 
-    const priceString = `₹${parseFloat(product.price).toLocaleString()}`;
+    // Dynamic Price/Color Selection logic
+    const colorVariants = product.specifications && Array.isArray(product.specifications)
+        ? product.specifications.filter(s => s.key?.toLowerCase().includes('color'))
+        : [];
+
+    const activeVariant = colorVariants.length > 0 
+        ? colorVariants[selectedImageIndex % colorVariants.length]
+        : null;
+
+    const activeColor = activeVariant?.value || null;
+    const activePrice = (activeVariant?.price && parseFloat(activeVariant.price) > 0) 
+        ? activeVariant.price 
+        : product.price;
+
+    const activeStock = (activeVariant?.stock !== undefined && activeVariant?.stock !== null) 
+    ? parseInt(activeVariant.stock) 
+    : parseInt(product.stock_quantity);
+
+    const priceString = `₹${parseFloat(activePrice).toLocaleString()}`;
     const gallery = product.images && product.images.length > 0 ? product.images : ['/placeholder.png'];
     const activeImage = gallery[selectedImageIndex] || '/placeholder.png';
 
     return (
         <div className="min-h-screen bg-stone-50 text-stone-900 pt-12 pb-4 px-6 md:px-16 overflow-hidden relative font-sans">
-            
+
             {/* Back Button */}
-            <motion.div 
+            <motion.div
                 className="max-w-7xl mx-auto mb-4"
                 initial={{ opacity: 0, x: -20 }}
                 animate={{ opacity: 1, x: 0 }}
@@ -133,20 +155,20 @@ export default function ProductDetails() {
             {/* Main Product Card - Just Border */}
             <div className="max-w-6xl mx-auto md:py-12 px-4 relative z-10">
                 <div className="flex flex-col lg:flex-row items-center justify-center gap-16 lg:gap-24">
-                    
-                    <motion.div 
+
+                    <motion.div
                         className="lg:flex-1 w-full max-w-[480px] relative group aspect-square flex items-center justify-center rounded-[40px] overflow-hidden border border-amber-200 bg-white shadow-inner"
                         initial={{ opacity: 0, x: -50 }}
                         animate={{ opacity: 1, x: 0 }}
                         transition={{ duration: 0.8 }}
                     >
                         <div className="absolute inset-0 blur-3xl opacity-10 rounded-full"></div>
-                        
+
                         {/* Navigation Arrows */}
                         {gallery.length > 1 && (
                             <>
                                 <div className="absolute inset-y-0 left-0 z-20 flex items-center">
-                                    <button 
+                                    <button
                                         onClick={() => setSelectedImageIndex((prev) => (prev - 1 + gallery.length) % gallery.length)}
                                         className="p-3 ml-6 bg-white/70 backdrop-blur-md rounded-full opacity-0 group-hover:opacity-100 transition-all hover:bg-white text-stone-900 border border-amber-100"
                                     >
@@ -157,7 +179,7 @@ export default function ProductDetails() {
                                 </div>
 
                                 <div className="absolute inset-y-0 right-0 z-20 flex items-center">
-                                    <button 
+                                    <button
                                         onClick={() => setSelectedImageIndex((prev) => (prev + 1) % gallery.length)}
                                         className="p-3 mr-6 bg-white/70 backdrop-blur-md rounded-full opacity-0 group-hover:opacity-100 transition-all hover:bg-white text-stone-900 border border-amber-100"
                                     >
@@ -169,19 +191,19 @@ export default function ProductDetails() {
                             </>
                         )}
 
-                            <motion.img 
-                                key={selectedImageIndex}
-                                src={activeImage} 
-                                alt={product.name} 
-                                className="w-[85%] h-[85%] object-contain relative z-10"
-                                initial={{ opacity: 0.6 }}
-                                animate={{ opacity: 1, scale: [0.95, 1] }}
-                                transition={{ duration: 0.5 }}
-                            />
+                        <motion.img
+                            key={selectedImageIndex}
+                            src={activeImage}
+                            alt={product.name}
+                            className="w-[85%] h-[85%] object-contain relative z-10"
+                            initial={{ opacity: 0.6 }}
+                            animate={{ opacity: 1, scale: [0.95, 1] }}
+                            transition={{ duration: 0.5 }}
+                        />
                     </motion.div>
 
                     {/* Details Section */}
-                    <motion.div 
+                    <motion.div
                         className="flex-1 w-full flex flex-col justify-center"
                         initial="hidden"
                         animate="visible"
@@ -191,17 +213,39 @@ export default function ProductDetails() {
                         }}
                     >
                         <motion.p variants={{ hidden: { opacity: 0, y: 20 }, visible: { opacity: 1, y: 0 } }} className="text-amber-600 text-xs md:text-sm font-black tracking-[0.3em] uppercase mb-4">
-                            {product.category_name}
+                            {product.brand}
                         </motion.p>
-                        <motion.h1 variants={{ hidden: { opacity: 0, y: 20 }, visible: { opacity: 1, y: 0 } }} className="text-3xl md:text-5xl font-bold mb-4 tracking-tight leading-tight text-stone-900 uppercase">
+                        <motion.h1 variants={{ hidden: { opacity: 0, y: 20 }, visible: { opacity: 1, y: 0 } }} className="text-2xl md:text-4xl font-bold mb-1 tracking-tight leading-tight text-stone-900 uppercase">
                             {product.name}
                         </motion.h1>
-                        <motion.div variants={{ hidden: { opacity: 0, y: 20 }, visible: { opacity: 1, y: 0 } }} className="flex items-center gap-6 mb-6 border-b border-amber-100 pb-6 w-full">
-                            <p className="text-3xl font-black text-amber-600">
-                                {priceString}
-                            </p>
-                            <span className="px-3 py-1 bg-amber-600 text-white text-[10px] font-black uppercase tracking-widest rounded-full">
-                                {product.stock_quantity > 0 ? 'In Stock' : 'Out of Stock'}
+
+                        {/* Dynamic Variant/Color Display */}
+                        {activeColor && (
+                            <motion.div 
+                                variants={{ hidden: { opacity: 0, x: -10 }, visible: { opacity: 1, x: 0 } }}
+                                key={selectedImageIndex}
+                                className="flex items-center gap-2 mb-4"
+                            >
+                                <span className="text-[10px] font-black uppercase tracking-widest text-amber-600">Selected Color:</span>
+                                <span className="text-xs font-bold text-stone-800 uppercase tracking-tight bg-amber-50 px-2 py-0.5 rounded">
+                                    {activeColor}
+                                </span>
+                            </motion.div>
+                        )}
+
+                        <motion.div variants={{ hidden: { opacity: 0, y: 20 }, visible: { opacity: 1, y: 0 } }} className="flex flex-wrap items-center gap-6 mb-6 border-b border-amber-100 pb-6 w-full">
+                            <div className="flex flex-col">
+                                <p className="text-3xl font-black text-amber-600 leading-none">
+                                    {priceString}
+                                </p>
+                                {product.mrp && parseFloat(product.mrp) > parseFloat(product.price) && (
+                                    <span className="text-stone-400 line-through text-xs mt-1 font-bold">
+                                        MRP: ₹{parseFloat(product.mrp).toLocaleString()}
+                                    </span>
+                                )}
+                            </div>
+                            <span className={`px-3 py-1 text-white text-[10px] font-black uppercase tracking-widest rounded-full transition-colors ${activeStock > 0 ? 'bg-amber-600' : 'bg-red-500'}`}>
+                                {activeStock > 0 ? 'In Stock' : 'Out of Stock'}
                             </span>
                         </motion.div>
                         <motion.p variants={{ hidden: { opacity: 0, y: 20 }, visible: { opacity: 1, y: 0 } }} className="text-stone-500 mb-6 leading-relaxed max-w-lg text-lg font-medium">
@@ -213,7 +257,7 @@ export default function ProductDetails() {
                                 <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-stone-400 mb-3">Gallery</h3>
                                 <div className="flex gap-4">
                                     {gallery.map((img, index) => (
-                                        <div 
+                                        <div
                                             key={index}
                                             onClick={() => setSelectedImageIndex(index)}
                                             className={`w-12 h-12 rounded-xl cursor-pointer transition-all duration-300 border overflow-hidden ${selectedImageIndex === index ? `ring-2 ring-offset-2 ring-offset-white ring-amber-600 scale-110` : 'hover:scale-110 opacity-60 hover:opacity-100 border-stone-200'}`}
@@ -225,31 +269,33 @@ export default function ProductDetails() {
                             </motion.div>
                         )}
 
-                        <motion.div 
+                        <motion.div
                             variants={{ hidden: { opacity: 0, y: 20 }, visible: { opacity: 1, y: 0 } }}
                             className="flex items-stretch gap-3"
                         >
-                            <motion.button 
+                            <motion.button
                                 onClick={handleAddToCart}
-                                whileHover={{ scale: 1.01 }}
-                                whileTap={{ scale: 0.99 }}
-                                className={`w-16 flex items-center justify-center transition-all duration-300 border ${addedToCart ? 'bg-green-600 text-white border-green-600' : 'bg-stone-100 text-stone-900 border-stone-200 hover:bg-stone-200'}`}
-                                title={addedToCart ? "Added" : "Add to Bag"}
+                                disabled={activeStock === 0}
+                                whileHover={activeStock > 0 ? { scale: 1.01 } : {}}
+                                whileTap={activeStock > 0 ? { scale: 0.99 } : {}}
+                                className={`w-16 flex items-center justify-center transition-all duration-300 border ${activeStock === 0 ? 'bg-stone-50 text-stone-300 border-stone-100 cursor-not-allowed' : addedToCart ? 'bg-green-600 text-white border-green-600' : 'bg-stone-100 text-stone-900 border-stone-200 hover:bg-stone-200'}`}
+                                title={activeStock === 0 ? "Out of Stock" : addedToCart ? "Added" : "Add to Bag"}
                             >
                                 {addedToCart ? <FaCheck size={18} /> : <FaBagShopping size={18} />}
                             </motion.button>
 
-                            <motion.button 
-                                onClick={handleBuyNow}
-                                whileHover={{ scale: 1.01 }}
-                                whileTap={{ scale: 0.99 }}
-                                className="w-64 bg-stone-900 text-amber-500 py-5 font-black text-[10px] uppercase tracking-[0.2em] hover:bg-stone-800 transition-all shadow-xl shadow-stone-900/10"
+                            <motion.button
+                                onClick={activeStock > 0 ? handleBuyNow : undefined}
+                                disabled={activeStock === 0}
+                                whileHover={activeStock > 0 ? { scale: 1.01 } : {}}
+                                whileTap={activeStock > 0 ? { scale: 0.99 } : {}}
+                                className={`w-64 py-5 font-black text-[10px] uppercase tracking-[0.2em] transition-all shadow-xl ${activeStock === 0 ? 'bg-stone-100 text-stone-300 cursor-not-allowed' : 'bg-stone-900 text-amber-500 hover:bg-stone-800 shadow-stone-900/10'}`}
                             >
-                                Buy Now
+                                {activeStock > 0 ? "Buy Now" : "Sold Out"}
                             </motion.button>
-                            
-                             <motion.button
-                                onClick={() => toggleWishlist({ id: product.product_id, ...product })}
+
+                            <motion.button
+                                onClick={() => toggleWishlist(product)}
                                 whileHover={{ scale: 1.01 }}
                                 whileTap={{ scale: 0.99 }}
                                 className={`w-16 flex items-center justify-center border transition-all duration-300 ${isWishlisted ? 'border-red-500 text-red-500 bg-red-50' : 'border-stone-200 text-stone-400 hover:border-stone-900 hover:bg-stone-50 bg-white'}`}
@@ -265,7 +311,7 @@ export default function ProductDetails() {
             </div>
 
             {/* Technical Specifications Section */}
-            <motion.div 
+            <motion.div
                 className="max-w-7xl mx-auto mt-16 border-t border-stone-200 pt-10"
                 initial={{ opacity: 0 }}
                 whileInView={{ opacity: 1 }}
@@ -281,15 +327,41 @@ export default function ProductDetails() {
                     </div>
 
                     <div className="lg:w-3/4 grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-x-8 gap-y-6">
-                        <div className="border-b border-stone-100 pb-3 group hover:border-amber-600 transition-colors duration-500">
-                            <h5 className="text-[8px] font-black uppercase tracking-widest text-stone-400 mb-1 group-hover:text-amber-600 transition-colors">Category</h5>
-                            <p className="text-sm font-bold text-stone-800">{product.category_name}</p>
-                        </div>
-                        {product.specs && Object.entries(product.specs).map(([key, value]) => (
-                            value !== "N/A" && (
-                                <div key={key} className="border-b border-stone-100 pb-3 group hover:border-amber-600 transition-colors duration-500">
-                                    <h5 className="text-[8px] font-black uppercase tracking-widest text-stone-400 mb-1 group-hover:text-amber-600 transition-colors capitalize">{key}</h5>
-                                    <p className="text-sm font-bold text-stone-800">{value}</p>
+
+                        {product.height && parseFloat(product.height) > 0 && (
+                            <div className="border-b border-stone-100 pb-3 group hover:border-amber-600 transition-colors duration-500">
+                                <h5 className="text-[8px] font-black uppercase tracking-widest text-stone-400 mb-1 group-hover:text-amber-600 transition-colors">Height</h5>
+                                <p className="text-sm font-bold text-stone-800">{product.height} mm</p>
+                            </div>
+                        )}
+
+                        {product.weight && parseFloat(product.weight) > 0 && (
+                            <div className="border-b border-stone-100 pb-3 group hover:border-amber-600 transition-colors duration-500">
+                                <h5 className="text-[8px] font-black uppercase tracking-widest text-stone-400 mb-1 group-hover:text-amber-600 transition-colors">Weight</h5>
+                                <p className="text-sm font-bold text-stone-800">{product.weight} grms</p>
+                            </div>
+                        )}
+
+                        {product.width && parseFloat(product.width) > 0 && (
+                            <div className="border-b border-stone-100 pb-3 group hover:border-amber-600 transition-colors duration-500">
+                                <h5 className="text-[8px] font-black uppercase tracking-widest text-stone-400 mb-1 group-hover:text-amber-600 transition-colors">Width</h5>
+                                <p className="text-sm font-bold text-stone-800">{product.width} mm</p>
+                            </div>
+                        )}
+
+                        {product.breadth && parseFloat(product.breadth) > 0 && (
+                            <div className="border-b border-stone-100 pb-3 group hover:border-amber-600 transition-colors duration-500">
+                                <h5 className="text-[8px] font-black uppercase tracking-widest text-stone-400 mb-1 group-hover:text-amber-600 transition-colors">Breadth</h5>
+                                <p className="text-sm font-bold text-stone-800">{product.breadth} mm</p>
+                            </div>
+                        )}
+
+
+                        {product.specifications && product.specifications.map((spec, index) => (
+                            spec.value && spec.value !== "N/A" && !spec.key.toLowerCase().includes('color') && (
+                                <div key={index} className="border-b border-stone-100 pb-3 group hover:border-amber-600 transition-colors duration-500">
+                                    <h5 className="text-[8px] font-black uppercase tracking-widest text-stone-400 mb-1 group-hover:text-amber-600 transition-colors capitalize">{spec.key}</h5>
+                                    <p className="text-sm font-bold text-stone-800">{spec.value}</p>
                                 </div>
                             )
                         ))}
@@ -304,7 +376,7 @@ export default function ProductDetails() {
                         <h4 className="text-[10px] font-black uppercase tracking-[0.3em] text-stone-400 mb-2">Social</h4>
                         <h3 className="text-4xl md:text-5xl font-black tracking-tighter">Voices of Electro</h3>
                     </div>
-                    <button 
+                    <button
                         onClick={() => document.getElementById('review-form').scrollIntoView({ behavior: 'smooth' })}
                         className="text-[10px] font-black uppercase tracking-[0.3em] border-b-2 border-stone-900 pb-1 hover:text-stone-500 hover:border-stone-500 transition-all"
                     >
@@ -313,7 +385,7 @@ export default function ProductDetails() {
                 </div>
 
                 {/* Review Form */}
-                <motion.div 
+                <motion.div
                     id="review-form"
                     initial={{ opacity: 0, y: 20 }}
                     whileInView={{ opacity: 1, y: 0 }}
@@ -325,10 +397,10 @@ export default function ProductDetails() {
                         <div className="space-y-6">
                             <div>
                                 <label className="text-[10px] font-black uppercase tracking-widest text-stone-400 block mb-2">Your Name</label>
-                                <input 
-                                    type="text" 
+                                <input
+                                    type="text"
                                     value={newReview.name}
-                                    onChange={(e) => setNewReview({...newReview, name: e.target.value})}
+                                    onChange={(e) => setNewReview({ ...newReview, name: e.target.value })}
                                     className="w-full bg-stone-50 border-none p-4 text-sm focus:ring-1 focus:ring-stone-900 outline-none transition"
                                     placeholder="Enter your name"
                                     required
@@ -341,7 +413,7 @@ export default function ProductDetails() {
                                         <button
                                             key={star}
                                             type="button"
-                                            onClick={() => setNewReview({...newReview, rating: star})}
+                                            onClick={() => setNewReview({ ...newReview, rating: star })}
                                             className={`text-2xl transition ${star <= newReview.rating ? 'text-black' : 'text-stone-200'}`}
                                         >
                                             ★
@@ -352,14 +424,14 @@ export default function ProductDetails() {
                             <div>
                                 <label className="text-[10px] font-black uppercase tracking-widest text-stone-400 block mb-2">Upload Image</label>
                                 <div className="flex items-center gap-4">
-                                    <input 
-                                        type="file" 
+                                    <input
+                                        type="file"
                                         accept="image/*"
                                         onChange={handleImageUpload}
-                                        className="hidden" 
+                                        className="hidden"
                                         id="review-img"
                                     />
-                                    <label 
+                                    <label
                                         htmlFor="review-img"
                                         className="bg-stone-100 px-6 py-3 text-[10px] font-black uppercase tracking-widest cursor-pointer hover:bg-stone-200 transition"
                                     >
@@ -372,16 +444,16 @@ export default function ProductDetails() {
                         <div className="space-y-6 flex flex-col">
                             <div className="flex-grow">
                                 <label className="text-[10px] font-black uppercase tracking-widest text-stone-400 block mb-2">Your Review</label>
-                                <textarea 
+                                <textarea
                                     rows="5"
                                     value={newReview.comment}
-                                    onChange={(e) => setNewReview({...newReview, comment: e.target.value})}
+                                    onChange={(e) => setNewReview({ ...newReview, comment: e.target.value })}
                                     className="w-full bg-stone-50 border-none p-4 text-sm focus:ring-1 focus:ring-stone-900 outline-none transition h-full resize-none"
                                     placeholder="Tell us about your experience..."
                                     required
                                 ></textarea>
                             </div>
-                            <button 
+                            <button
                                 type="submit"
                                 className="w-full bg-amber-600 text-white py-4 text-[10px] font-black uppercase tracking-[0.2em] hover:bg-amber-500 transition shadow-xl shadow-amber-600/10"
                             >
@@ -418,11 +490,11 @@ export default function ProductDetails() {
                 </div>
             </div>
 
-             {/* Related Products */}
+            {/* Related Products */}
             <div className="max-w-7xl mx-auto mt-32 mb-16 border-t border-stone-200 pt-20">
-                 <h4 className="text-[10px] font-black uppercase tracking-[0.3em] text-stone-400 mb-2">Discovery</h4>
-                 <h3 className="text-4xl font-black tracking-tighter text-stone-900 mb-12">Related Creations</h3>
-                 <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-8">
+                <h4 className="text-[10px] font-black uppercase tracking-[0.3em] text-stone-400 mb-2">Discovery</h4>
+                <h3 className="text-4xl font-black tracking-tighter text-stone-900 mb-12">Related Creations</h3>
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-8">
                     {relatedProducts.map((item) => (
                         <Link to={`/product/${item.product_id}`} key={item.product_id} className="group cursor-pointer">
                             <div className="overflow-hidden bg-stone-50 border border-stone-200 p-6 mb-4 transition-all duration-700 aspect-square flex items-center justify-center">

@@ -28,7 +28,7 @@ export default function Wishlist() {
             {wishlist.length > 0 ? (
               wishlist.map((item, i) => (
                 <motion.div
-                  key={item.id}
+                  key={item.product_id}
                   layout
                   initial={{ opacity: 0, scale: 0.9 }}
                   animate={{ opacity: 1, scale: 1 }}
@@ -38,10 +38,10 @@ export default function Wishlist() {
                 >
                   <div
                     className="h-72 overflow-hidden bg-stone-100 p-8 cursor-pointer relative"
-                    onClick={() => navigate(`/product/${item.id}`)}
+                    onClick={() => navigate(`/product/${item.product_id}`)}
                   >
                     <img
-                      src={item.variants[0].img}
+                      src={item.images && item.images.length > 0 ? item.images[0] : "/placeholder-product.png"}
                       alt={item.name}
                       className="w-full h-full object-contain group-hover:scale-110 transition duration-1000"
                     />
@@ -50,14 +50,14 @@ export default function Wishlist() {
 
                   <div className="p-6 space-y-4 flex-grow flex flex-col">
                     <div>
-                      <p className="text-stone-400 text-[10px] font-black uppercase tracking-[0.2em] mb-1">{item.title}</p>
+                      <p className="text-stone-400 text-[10px] font-black uppercase tracking-[0.2em] mb-1">{item.brand}</p>
                       <h2 className="text-xl font-bold tracking-tight mb-2 group-hover:text-stone-600 transition">{item.name}</h2>
-                      <p className="text-lg font-black text-stone-900">{item.variants[0].price}</p>
+                      <p className="text-lg font-black text-stone-900">₹{parseFloat(item.price).toLocaleString()}</p>
                     </div>
 
                     <div className="pt-4 flex gap-3 mt-auto">
                       <button
-                        onClick={() => navigate(`/product/${item.id}`)}
+                        onClick={() => navigate(`/product/${item.product_id}`)}
                         className="flex-grow bg-amber-600 text-white rounded-2xl py-3 text-xs font-black uppercase tracking-widest hover:bg-amber-500 transition shadow-lg shadow-amber-600/20"
                       >
                         View Details
