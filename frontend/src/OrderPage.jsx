@@ -53,6 +53,7 @@ export default function OrderPage() {
   });
   const [previousFormData, setPreviousFormData] = useState(null);
   const [savedAddresses, setSavedAddresses] = useState([]);
+  const [savedPaymentMethods, setSavedPaymentMethods] = useState([]);
   const [isAddingNewAddress, setIsAddingNewAddress] = useState(false);
   const [editingAddressId, setEditingAddressId] = useState(null);
   const [editingField, setEditingField] = useState('all'); // 'address1', 'address2', or 'all'
@@ -72,6 +73,19 @@ export default function OrderPage() {
       } finally {
         setIsLoadingAddresses(false);
       }
+    }
+  };
+
+  const fetchPaymentMethods = async () => {
+    const storedUser = JSON.parse(localStorage.getItem("user") || "{}");
+    if (storedUser.customerId) {
+        try {
+            const host = window.location.hostname === "localhost" ? "localhost" : "127.0.0.1";
+            const res = await axios.get(`http://${host}:5000/payment-methods/${storedUser.customerId}`);
+            setSavedPaymentMethods(res.data);
+        } catch (err) {
+            console.error("Error fetching payment methods:", err);
+        }
     }
   };
 
@@ -102,6 +116,7 @@ export default function OrderPage() {
             }));
           }
           await fetchAddresses();
+          await fetchPaymentMethods();
         } catch (err) {
           console.error("Error fetching shipping details:", err);
           hasFetched.current = false; // Allow retry on failure
@@ -136,7 +151,7 @@ export default function OrderPage() {
       total_amount: `₹${totalPayable.toLocaleString()}`,
       payment_method: formData.paymentMethod.toUpperCase(),
       payment_id: paymentId,
-      shipping_address: `${formData.addressLine1}${formData.addressLine2 ? ', ' + formData.addressLine2 : ''}, ${formData.city}, ${formData.state}, ${formData.pincode}, ${formData.country}`
+      shipping_address: `${formData.address1}${formData.address2 ? ', ' + formData.address2 : ''}, ${formData.city}, ${formData.state}, ${formData.pincode}, ${formData.country}`
     };
 
     // Update local profile if it was edited
@@ -175,9 +190,12 @@ export default function OrderPage() {
                 cartItems: cart,
                 subtotal: subtotal,
                 discountAmount: couponDiscountAmount,
+                platformFee: platformFee,
                 shippingCharge: codFee, 
                 totalAmount: totalPayable,
-                couponId: appliedDiscount?.code
+                couponId: appliedDiscount?.code,
+                paymentMethod: formData.paymentMethod,
+                transactionId: paymentId
             });
         } catch (err) {
             console.error("Failed to save order to database:", err);

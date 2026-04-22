@@ -20,12 +20,6 @@ import Analytics from "./Analytics";
 import Reviews from "./Reviews";
 import Settings from "./Settings";
 
-const stats = [
-  { id: 1, name: 'Total Revenue', value: '₹4,82,900', icon: FaChartLine, trend: '+12.5%', color: 'amber', tab: 'Analytics' },
-  { id: 2, name: 'Total Orders', value: '142', icon: FaClipboardList, trend: '+8.2%', color: 'stone', tab: 'Orders' },
-  { id: 3, name: 'Active Customers', value: '892', icon: FaUsers, trend: '+14.1%', color: 'amber', tab: 'Customers' },
-  { id: 4, name: 'Total Products', value: '24', icon: FaBox, trend: '+4 New', color: 'stone', tab: 'Products' },
-];
 
 export default function SellerDashboard() {
   const navigate = useNavigate();
@@ -62,6 +56,35 @@ export default function SellerDashboard() {
     };
   }, [navigate]);
 
+  const [realStats, setRealStats] = useState([
+    { id: 1, name: 'Total Revenue', value: '₹0', icon: FaChartLine, trend: '0%', color: 'amber', tab: 'Analytics' },
+    { id: 2, name: 'Total Orders', value: '0', icon: FaClipboardList, trend: '0%', color: 'stone', tab: 'Orders' },
+    { id: 3, name: 'Active Customers', value: '0', icon: FaUsers, trend: '0%', color: 'amber', tab: 'Customers' },
+    { id: 4, name: 'Total Products', value: '0', icon: FaBox, trend: '0%', color: 'stone', tab: 'Products' },
+  ]);
+
+  useEffect(() => {
+    if (seller?.seller_id) {
+      fetchProducts();
+      fetchStats();
+    }
+  }, [seller]);
+
+  const fetchStats = async () => {
+    try {
+      const res = await axios.get(`http://localhost:5000/seller-stats/${seller.seller_id}`);
+      const data = res.data;
+      setRealStats([
+        { id: 1, name: 'Total Revenue', value: `₹${parseFloat(data.totalRevenue).toLocaleString()}`, icon: FaChartLine, trend: '+0%', color: 'amber', tab: 'Analytics' },
+        { id: 2, name: 'Total Orders', value: data.totalOrders.toString(), icon: FaClipboardList, trend: '+0%', color: 'stone', tab: 'Orders' },
+        { id: 3, name: 'Active Listings', value: data.activeProducts.toString(), icon: FaBox, trend: '+0%', color: 'amber', tab: 'Products' },
+        { id: 4, name: 'Total Products', value: data.totalProducts.toString(), icon: FaPlus, trend: '+0%', color: 'stone', tab: 'Products' },
+      ]);
+    } catch (err) {
+      console.error("Error fetching stats:", err);
+    }
+  };
+
   useEffect(() => {
     localStorage.setItem('sellerActiveTab', activeTab);
   }, [activeTab]);
@@ -73,11 +96,6 @@ export default function SellerDashboard() {
   const [viewedCustomer, setViewedCustomer] = useState(null);
   const [inventoryProducts, setInventoryProducts] = useState([]);
 
-  useEffect(() => {
-    if (seller?.seller_id) {
-      fetchProducts();
-    }
-  }, [seller]);
 
   const fetchProducts = async () => {
     try {
@@ -313,7 +331,7 @@ export default function SellerDashboard() {
 
         {/* Dash Content */}
         <div className="p-6 space-y-8">
-          {activeTab === 'Overview' && <Overview setActiveTab={setActiveTab} stats={stats} />}
+          {activeTab === 'Overview' && <Overview setActiveTab={setActiveTab} stats={realStats} />}
 
           {activeTab === 'Products' && (
             <Products 

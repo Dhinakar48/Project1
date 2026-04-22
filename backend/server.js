@@ -16,7 +16,7 @@ app.use((req, res, next) => {
   next();
 });
 
-// ✅ PostgreSQL connection
+// âœ… PostgreSQL connection
 const pool = new Pool({
   user: "postgres",
   host: "localhost",
@@ -28,12 +28,12 @@ const pool = new Pool({
   connectionTimeoutMillis: 2000,
 });
 
-// ✅ PostgreSQL connection check
+// âœ… PostgreSQL connection check
 pool.query('SELECT NOW()', (err, res) => {
   if (err) {
-    console.error('❌ Error connecting to PostgreSQL:', err.stack);
+    console.error('âŒ Error connecting to PostgreSQL:', err.stack);
   } else {
-    console.log('✅ Successfully connected to PostgreSQL Database');
+    console.log('âœ… Successfully connected to PostgreSQL Database');
   }
 });
 
@@ -118,7 +118,7 @@ app.post("/send-otp", async (req, res) => {
       [phone, otp]
     );
 
-    console.log("OTP:", otp); // 👉 shows in terminal
+    console.log("OTP:", otp); // ðŸ‘‰ shows in terminal
 
     res.json({ message: "OTP sent", devOtp: otp });
 
@@ -552,22 +552,24 @@ app.post("/categories", async (req, res) => {
 });
 
 app.post("/seller-add-product", async (req, res) => {
-  console.log("Add Product Request:", req.body);
+  console.log("--- SELLER ADD PRODUCT REQUEST ---");
   const { 
     seller_id, category_id, new_category_name, name, description, 
     price, mrp, stock, images, sku, brand, 
-    weight, height, width, breadth, specifications 
+    weight, height, width, breadth, specifications, is_featured 
   } = req.body;
-  const client = await pool.connect();
 
+  if (!seller_id || !name) {
+    return res.status(400).json({ message: "Missing required fields: seller_id or name" });
+  }
+
+  const client = await pool.connect();
   try {
     await client.query('BEGIN');
 
     let final_category_id = category_id;
-
-    // Handle new category creation if provided
     if (new_category_name && new_category_name.trim() !== "") {
-      const slug = new_category_name.toLowerCase().trim().replace(/ /g, '-').replace(/[^\w-]+/g, '');
+      const slug = new_category_name.toLowerCase().trim().replace(/ /g, '-').replace(/[^w-]+/g, '');
       const catResult = await client.query(
         "INSERT INTO categories (name, slug) VALUES ($1, $2) ON CONFLICT (name) DO UPDATE SET name = EXCLUDED.name RETURNING category_id",
         [new_category_name.trim(), slug]
@@ -575,7 +577,6 @@ app.post("/seller-add-product", async (req, res) => {
       final_category_id = catResult.rows[0].category_id;
     }
 
-    // Generate semantic product_id safely
     const maxIdResult = await client.query("SELECT product_id FROM products WHERE product_id LIKE 'PRD%' ORDER BY product_id DESC LIMIT 1");
     let nextNum = 1;
     if (maxIdResult.rows.length > 0) {
@@ -585,29 +586,30 @@ app.post("/seller-add-product", async (req, res) => {
     }
     const pId = `PRD${nextNum.toString().padStart(3, '0')}`;
 
-    // 1. Insert into products
     const productResult = await client.query(
       `INSERT INTO products (
         product_id, seller_id, category_id, name, description, 
         price, mrp, stock_quantity, images, sku, brand, 
-        weight, height, width, breadth
+        weight, height, width, breadth, is_featured, is_active
       )
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15) RETURNING product_id`,
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17) RETURNING product_id`,
       [
-        pId, seller_id, final_category_id, name, description, 
-        price, mrp || price, stock, images, sku || null, brand, 
-        weight, height, width, breadth
+        pId, seller_id, final_category_id || null, name, description || "", 
+        parseFloat(price) || 0, parseFloat(mrp) || parseFloat(price) || 0, 
+        parseInt(stock) || 0, images || [], sku || null, brand || "", 
+        parseFloat(weight) || 0, parseFloat(height) || 0, parseFloat(width) || 0, parseFloat(breadth) || 0, 
+        is_featured || false, true
       ]
     );
 
-    // 1.5. Sync into product_images
     if (images && Array.isArray(images)) {
       for (const [idx, imgUrl] of images.entries()) {
         const lastImgResult = await client.query("SELECT image_id FROM product_images ORDER BY image_id DESC LIMIT 1");
         let nextImgNum = 1;
         if (lastImgResult.rows.length > 0) {
           const lastImgId = lastImgResult.rows[0].image_id;
-          nextImgNum = (parseInt(lastImgId.split('-')[1]) || 0) + 1;
+          const match = lastImgId.match(/\d+/);
+          nextImgNum = (match ? parseInt(match[0]) : 0) + 1;
         }
         const imgId = `IMG-${nextImgNum.toString().padStart(3, '0')}`;
         await client.query(
@@ -617,55 +619,51 @@ app.post("/seller-add-product", async (req, res) => {
       }
     }
 
-    // 2. Insert into product_variants (Specifications)
-    console.log("Adding specifications for product:", pId, specifications);
     if (specifications && Array.isArray(specifications)) {
       for (const spec of specifications) {
         if (spec.key && spec.value) {
-          try {
-            // Generate semantic variant_id (VAR-001 format)
-            const maxVarIdResult = await client.query("SELECT variant_id FROM product_variants ORDER BY variant_id DESC LIMIT 1");
-            let nextVarNum = 1;
-            if (maxVarIdResult.rows.length > 0) {
-              const lastVarId = maxVarIdResult.rows[0].variant_id;
-              // Extract number from VAR-001 or VAR001
-              const match = lastVarId.match(/\d+/);
-              const lastVarNum = match ? parseInt(match[0]) : 0;
-              nextVarNum = lastVarNum + 1;
-            }
-            const vId = `VAR-${nextVarNum.toString().padStart(3, '0')}`;
-
-            console.log("Inserting spec:", spec, "with ID:", vId);
-            await client.query(
-              "INSERT INTO product_variants (variant_id, product_id, sku, variant_name, variant_value, price, stock_quantity) VALUES ($1, $2, $3, $4, $5, $6, $7)",
-              [vId, pId, sku || null, spec.key, spec.value, spec.price || price, spec.stock || stock]
-            );
-          } catch (loopErr) {
-            console.error("Error inserting specific variant:", spec, loopErr.message);
-            throw loopErr;
+          const maxVarIdResult = await client.query("SELECT variant_id FROM product_variants ORDER BY variant_id DESC LIMIT 1");
+          let nextVarNum = 1;
+          if (maxVarIdResult.rows.length > 0) {
+            const lastVarId = maxVarIdResult.rows[0].variant_id;
+            const match = lastVarId.match(/\d+/);
+            nextVarNum = (match ? parseInt(match[0]) : 0) + 1;
           }
+          const vId = `VAR-${nextVarNum.toString().padStart(3, '0')}`;
+          await client.query(
+              "INSERT INTO product_variants (variant_id, product_id, sku, variant_name, variant_value, price, mrp, stock_quantity) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)",
+              [
+                vId, 
+                pId, 
+                spec.sku || sku || null, 
+                spec.key, 
+                spec.value, 
+                parseFloat(spec.price) || parseFloat(price) || 0, 
+                parseFloat(mrp) || parseFloat(price) || 0,
+                parseInt(spec.stock) || parseInt(stock) || 0
+              ]
+            );
         }
       }
     }
 
     await client.query('COMMIT');
     res.json({ message: "Product added successfully", product_id: pId });
-
   } catch (err) {
     if (client) await client.query('ROLLBACK');
-    console.error(err);
+    console.error("Backend Error in seller-add-product:", err);
     res.status(500).json({ message: "Error adding product: " + err.message });
   } finally {
     if (client) client.release();
   }
 });
 
-app.put("/seller-update-product/:product_id", async (req, res) => {
-  const { product_id } = req.params;
+app.put("/seller-update-product/:id", async (req, res) => {
+  const { id: product_id } = req.params;
   const { 
     category_id, new_category_name, name, description, 
-    price, mrp, stock, images, sku, brand,
-    weight, height, width, breadth, is_active, specifications
+    price, mrp, stock, images, sku, brand, 
+    weight, height, width, breadth, is_active, specifications, is_featured
   } = req.body;
   const client = await pool.connect();
 
@@ -689,14 +687,16 @@ app.put("/seller-update-product/:product_id", async (req, res) => {
        category_id = $1, name = $2, description = $3, price = $4, mrp = $5, 
        stock_quantity = $6, images = $7, sku = $8, brand = $9, 
        weight = $10, height = $11, width = $12, breadth = $13, 
-       is_active = $14, updated_at = CURRENT_TIMESTAMP
-       WHERE product_id = $15`;
+       is_active = $14, is_featured = $15, updated_at = CURRENT_TIMESTAMP
+       WHERE product_id = $16`;
     console.log("Executing SQL:", sql);
     const updateResult = await client.query(sql, [
         final_category_id, name, description, price, mrp, 
         stock, images, sku || null, brand, 
         weight, height, width, breadth, 
-        is_active !== undefined ? is_active : true, product_id
+        is_active !== undefined ? is_active : true, 
+        is_featured !== undefined ? is_featured : false,
+        product_id
       ]
     );
     console.log("Update result rows affected:", updateResult.rowCount);
@@ -746,8 +746,17 @@ app.put("/seller-update-product/:product_id", async (req, res) => {
 
             console.log("Inserting spec:", spec, "with ID:", vId);
             await client.query(
-              "INSERT INTO product_variants (variant_id, product_id, sku, variant_name, variant_value, price, stock_quantity) VALUES ($1, $2, $3, $4, $5, $6, $7)",
-              [vId, product_id, sku || null, spec.key, spec.value, spec.price || price, spec.stock || stock]
+              "INSERT INTO product_variants (variant_id, product_id, sku, variant_name, variant_value, price, mrp, stock_quantity) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)",
+              [
+                vId, 
+                product_id, 
+                spec.sku || sku || null, 
+                spec.key, 
+                spec.value, 
+                parseFloat(spec.price) || parseFloat(price) || 0, 
+                parseFloat(mrp) || parseFloat(price) || 0,
+                parseInt(spec.stock) || parseInt(stock) || 0
+              ]
             );
           } catch (loopErr) {
             console.error("Error inserting specific variant:", spec, loopErr.message);
@@ -886,7 +895,7 @@ app.get("/product/:id", async (req, res) => {
 });
 
 app.get("/", (req, res) => {
-  res.send("Backend is running 🚀");
+  res.send("Backend is running ðŸš€");
 });
 
 
@@ -908,9 +917,14 @@ app.post("/wishlist/toggle", async (req, res) => {
     
     if (wishlistResult.rows.length === 0) {
       console.log("Creating new wishlist for customer:", customerId);
-      // Generate semantic WIS ID
-      const countRes = await client.query("SELECT COUNT(*) FROM wishlists");
-      const nextNum = parseInt(countRes.rows[0].count) + 1;
+      // Robust semantic ID generation: find max and increment
+      const maxWishRes = await client.query("SELECT wishlist_id FROM wishlists ORDER BY wishlist_id DESC LIMIT 1");
+      let nextNum = 1;
+      if (maxWishRes.rows.length > 0) {
+        const lastId = maxWishRes.rows[0].wishlist_id;
+        const match = lastId.match(/\d+/);
+        nextNum = (match ? parseInt(match[0]) : 0) + 1;
+      }
       wishlistId = `WIS-${nextNum.toString().padStart(3, '0')}`;
       
       await client.query("INSERT INTO wishlists (wishlist_id, customer_id) VALUES ($1, $2)", [wishlistId, customerId]);
@@ -931,14 +945,19 @@ app.post("/wishlist/toggle", async (req, res) => {
       console.log("Item removed from wishlist:", productId);
       return res.json({ status: 'removed' });
     } else {
-      // Add it
-      const countRes = await client.query("SELECT COUNT(*) FROM wishlist_items");
-      const nextNum = parseInt(countRes.rows[0].count) + 1;
-      const itemId = `WIS-IT-${nextNum.toString().padStart(3, '0')}`;
+      // Add it - Robust semantic ID generation for item
+      const maxItemRes = await client.query("SELECT wishlist_item_id FROM wishlist_items ORDER BY wishlist_item_id DESC LIMIT 1");
+      let nextItemNum = 1;
+      if (maxItemRes.rows.length > 0) {
+          const lastId = maxItemRes.rows[0].wishlist_item_id;
+          const match = lastId.match(/\d+/);
+          nextItemNum = (match ? parseInt(match[0]) : 0) + 1;
+      }
+      const itemId = `WIS-IT-${nextItemNum.toString().padStart(3, '0')}`;
       
       await client.query("INSERT INTO wishlist_items (wishlist_item_id, wishlist_id, product_id) VALUES ($1, $2, $3)", [itemId, wishlistId, productId]);
       await client.query('COMMIT');
-      console.log("Item added to wishlist:", productId, "with ID:", itemId);
+      console.log("Item added correctly for customer:", customerId, "Product:", productId, "Item ID:", itemId);
       return res.json({ status: 'added' });
     }
   } catch (err) {
@@ -970,7 +989,8 @@ app.get("/wishlist/:customerId", async (req, res) => {
 
 app.post("/cart/add", async (req, res) => {
   console.log("Cart add request:", req.body);
-  const { customerId, productId, variantId, quantity } = req.body;
+  const { customerId, productId, quantity } = req.body;
+  const variantId = req.body.variantId || req.body.variant_id;
   if (!customerId || !productId) {
     console.warn("Cart add failed: Missing required fields", { customerId, productId });
     return res.status(400).json({ message: "Missing data" });
@@ -1032,7 +1052,8 @@ app.post("/cart/add", async (req, res) => {
 });
 
 app.post("/cart/update", async (req, res) => {
-  const { customerId, productId, variantId, quantity } = req.body;
+  const { customerId, productId, quantity } = req.body;
+  const variantId = req.body.variantId || req.body.variant_id;
   try {
     await pool.query(`
       UPDATE cart_items ci
@@ -1049,7 +1070,8 @@ app.post("/cart/update", async (req, res) => {
 });
 
 app.post("/cart/remove", async (req, res) => {
-  const { customerId, productId, variantId } = req.body;
+  const { customerId, productId } = req.body;
+  const variantId = req.body.variantId || req.body.variant_id;
   try {
     await pool.query(`
       DELETE FROM cart_items ci
@@ -1066,10 +1088,16 @@ app.post("/cart/remove", async (req, res) => {
 
 app.post("/order/place", async (req, res) => {
   console.log("--- ORDER PLACE REQUEST RECEIVED ---", req.body);
-  const { customerId, addressId, cartItems, subtotal, discountAmount, totalAmount, couponId, shippingCharge } = req.body;
+  const { customerId, addressId, cartItems, subtotal, discountAmount, totalAmount, couponId, shippingCharge, paymentMethod, transactionId } = req.body;
   const client = await pool.connect();
   try {
     await client.query("BEGIN");
+    
+    const backendSubtotal = cartItems.reduce((acc, it) => {
+      const p = parseFloat(String(it.variant?.price || it.price || 0).replace(/[^\d.]/g, ''));
+      return acc + (p * it.quantity);
+    }, 0);
+    const backendTotal = backendSubtotal - (discountAmount || 0) + (req.body.platformFee || 15) + (shippingCharge || 0);
     
     // Generate Order ID
     const maxOrderRes = await client.query("SELECT order_id FROM orders ORDER BY order_id DESC LIMIT 1");
@@ -1081,38 +1109,80 @@ app.post("/order/place", async (req, res) => {
     }
     const orderId = `ORD-${nextNum.toString().padStart(3, '0')}`;
 
+    // Set payment status based on method
+    const isPaid = paymentMethod && paymentMethod.toLowerCase() !== 'cod';
+    const paymentStatus = isPaid ? 'Paid' : 'Pending';
+
     // Insert Order
+    const platformFee = req.body.platformFee || 15;
     await client.query(
-      `INSERT INTO orders (order_id, customer_id, address_id, coupon_id, subtotal, discount_amount, shipping_charge, total_amount, order_status, payment_status)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)`,
-      [orderId, customerId, addressId || null, couponId || null, subtotal, discountAmount || 0, shippingCharge || 0, totalAmount, 'Confirmed', 'Paid']
+      `INSERT INTO orders (order_id, customer_id, address_id, coupon_id, subtotal, discount_amount, platform_fee, shipping_charge, total_amount, order_status, payment_status)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)`,
+      [orderId, customerId, addressId || null, couponId || null, backendSubtotal, discountAmount || 0, req.body.platformFee || 15, shippingCharge || 0, backendTotal, 'Confirmed', paymentStatus]
     );
 
+
+
     // Insert Items
+    const maxItemRes = await client.query("SELECT order_item_id FROM order_items ORDER BY order_item_id DESC LIMIT 1");
+    let nextItemNum = 1;
+    if (maxItemRes.rows.length > 0) {
+      const lastItemId = maxItemRes.rows[0].order_item_id;
+      const matchItem = lastItemId.match(/\d+/);
+      nextItemNum = (matchItem ? parseInt(matchItem[0]) : 0) + 1;
+    }
+
+    const sellerSubtotals = {};
+
     for (const item of cartItems) {
        // Robust price extraction: prefer variant price, then item price, then base price
        const rawPrice = item.variant?.price || item.price || 0;
        const uPrice = parseFloat(String(rawPrice).replace(/[^\d.]/g, ''));
-       const tPrice = uPrice * item.quantity;
+       const itemTotal = uPrice * item.quantity;
        
        // Get seller_id for this product
        const prodRes = await client.query("SELECT seller_id FROM products WHERE product_id = $1", [item.product_id]);
        const sellerId = prodRes.rows.length > 0 ? prodRes.rows[0].seller_id : null;
 
-       const maxItemRes = await client.query("SELECT order_item_id FROM order_items ORDER BY order_item_id DESC LIMIT 1");
-       let nextItemNum = 1;
-       if (maxItemRes.rows.length > 0) {
-         const lastItemId = maxItemRes.rows[0].order_item_id;
-         const matchItem = lastItemId.match(/\d+/);
-         nextItemNum = (matchItem ? parseInt(matchItem[0]) : 0) + 1;
+       if (sellerId) {
+         sellerSubtotals[sellerId] = (sellerSubtotals[sellerId] || 0) + itemTotal;
        }
-       const orderItemId = `ORD-IT-${nextItemNum.toString().padStart(4, '0')}`;
+
+       const orderItemId = `ORD-IT-${(nextItemNum++).toString().padStart(4, '0')}`;
 
        await client.query(
-         `INSERT INTO order_items (order_item_id, order_id, product_id, seller_id, variant_id, quantity, unit_price, total_price)
+         `INSERT INTO order_items (order_item_id, order_id, product_id, seller_id, variant_id, quantity, unit_price, total_amount)
           VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
-         [orderItemId, orderId, item.product_id, sellerId, item.variantId || null, item.quantity, uPrice, tPrice]
+         [orderItemId, orderId, item.product_id, sellerId, item.variantId || item.variant_id || (item.variant ? item.variant.id : null), item.quantity, uPrice, backendTotal]
        );
+
+       // Optional: Deduct stock
+       if ((item.variantId || item.variant_id || (item.variant && item.variant.id))) {
+         await client.query("UPDATE product_variants SET stock_quantity = stock_quantity - $1 WHERE variant_id = $2", [item.quantity, item.variantId || item.variant_id || (item.variant && item.variant.id)]);
+       } else {
+         await client.query("UPDATE products SET stock_quantity = stock_quantity - $1 WHERE product_id = $2", [item.quantity, item.product_id]);
+       }
+    }
+
+    // Insert Payment Detail
+    const sellerIds = Object.keys(sellerSubtotals);
+    const primarySellerId = sellerIds.length > 0 ? sellerIds[0] : null;
+
+    if (paymentMethod) {
+      await client.query(
+        `INSERT INTO payments (customer_id, order_id, payment_method, amount, transaction_id, payment_status, paid_at, gateway_name, seller_id)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
+        [customerId, orderId, paymentMethod, backendTotal, transactionId || null, paymentStatus, isPaid ? new Date() : null, isPaid ? 'Razorpay' : null, primarySellerId]
+      );
+    }
+
+    // Insert Seller Summaries
+    for (const sId in sellerSubtotals) {
+      await client.query(
+        `INSERT INTO order_sellers (order_id, seller_id, seller_subtotal)
+         VALUES ($1, $2, $3)`,
+        [orderId, sId, sellerSubtotals[sId]]
+      );
     }
 
     // Clear Cart
@@ -1131,6 +1201,29 @@ app.post("/order/place", async (req, res) => {
     res.status(500).json({ message: "Order placement error" });
   } finally {
     client.release();
+  }
+});
+
+app.post("/order/cancel", async (req, res) => {
+  const { orderId, reason } = req.body;
+  if (!orderId) {
+    return res.status(400).json({ message: "Order ID is required" });
+  }
+
+  try {
+    const result = await pool.query(
+      "UPDATE orders SET order_status = 'Cancelled', cancellation_reason = $1 WHERE order_id = $2 RETURNING *",
+      [reason || "User cancelled", orderId]
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ message: "Order not found" });
+    }
+
+    res.json({ success: true, message: "Order cancelled successfully", order: result.rows[0] });
+  } catch (err) {
+    console.error("Order cancellation error:", err);
+    res.status(500).json({ message: "Error cancelling order" });
   }
 });
 
@@ -1182,13 +1275,105 @@ app.get("/products", async (req, res) => {
   }
 });
  
+app.get("/seller-stats/:sellerId", async (req, res) => {
+  const { sellerId } = req.params;
+  try {
+    // Total Revenue from order_sellers
+    const revenueRes = await pool.query("SELECT SUM(seller_subtotal) as total_revenue FROM order_sellers WHERE seller_id = $1", [sellerId]);
+    const totalRevenue = revenueRes.rows[0].total_revenue || 0;
+
+    // Total Orders (Distinct order_id from order_items for this seller)
+    const ordersRes = await pool.query("SELECT COUNT(DISTINCT order_id) as total_orders FROM order_items WHERE seller_id = $1", [sellerId]);
+    const totalOrders = ordersRes.rows[0].total_orders || 0;
+
+    // Total Products
+    const productsRes = await pool.query("SELECT COUNT(*) as total_products FROM products WHERE seller_id = $1", [sellerId]);
+    const totalProducts = productsRes.rows[0].total_products || 0;
+
+    // Active Listings
+    const activeRes = await pool.query("SELECT COUNT(*) as active_products FROM products WHERE seller_id = $1 AND is_active = true", [sellerId]);
+    const activeProducts = activeRes.rows[0].active_products || 0;
+
+    res.json({
+      totalRevenue,
+      totalOrders,
+      totalProducts,
+      activeProducts
+    });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: "Error fetching seller stats" });
+  }
+});
+
+app.get("/customer-orders/:customerId", async (req, res) => {
+  const { customerId } = req.params;
+  try {
+    const result = await pool.query(`
+      SELECT o.*, 
+             (SELECT json_agg(items) FROM (
+                SELECT oi.*, p.name, p.images
+                FROM order_items oi
+                JOIN products p ON oi.product_id = p.product_id
+                WHERE oi.order_id = o.order_id
+             ) items) as items
+      FROM orders o
+      WHERE o.customer_id = $1
+      ORDER BY o.placed_at DESC
+    `, [customerId]);
+    res.json(result.rows);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: "Fetch customer orders error" });
+  }
+});
+
+app.get("/payment-methods/:customerId", async (req, res) => {
+  const { customerId } = req.params;
+  try {
+    const result = await pool.query("SELECT * FROM customer_payment_methods WHERE customer_id = $1 ORDER BY created_at DESC", [customerId]);
+    res.json(result.rows);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: "Error fetching payment methods" });
+  }
+});
+
+app.post("/payment-methods", async (req, res) => {
+  const { customerId, type, last4, expiry, isDefault } = req.body;
+  try {
+    if (isDefault) {
+      await pool.query("UPDATE customer_payment_methods SET is_default = false WHERE customer_id = $1", [customerId]);
+    }
+    const result = await pool.query(
+      "INSERT INTO customer_payment_methods (customer_id, type, last4, expiry, is_default) VALUES ($1, $2, $3, $4, $5) RETURNING *",
+      [customerId, type, last4, expiry, isDefault || false]
+    );
+    res.json(result.rows[0]);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: "Error saving payment method" });
+  }
+});
+
+app.delete("/payment-methods/:id", async (req, res) => {
+  const { id } = req.params;
+  try {
+    await pool.query("DELETE FROM customer_payment_methods WHERE payment_method_id = $1", [id]);
+    res.json({ message: "Payment method deleted" });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: "Error deleting payment method" });
+  }
+});
+
 app.get("/seller-orders/:sellerId", async (req, res) => {
   const { sellerId } = req.params;
   try {
     const result = await pool.query(`
       SELECT 
         oi.*, 
-        o.placed_at, o.order_status, o.payment_status,
+        o.placed_at, o.order_status, o.payment_status, o.total_amount,
         p.name as product_name, p.images as product_images,
         c.name as customer_name, c.email as customer_email,
         a.full_name as shipping_name, a.address1, a.address2, a.city, a.state, a.pincode, a.phone as shipping_phone
@@ -1207,6 +1392,63 @@ app.get("/seller-orders/:sellerId", async (req, res) => {
   }
 });
 
-app.listen(5000, () => {
-    console.log("Server running on http://localhost:5000");
+app.get("/product-reviews/:productId", async (req, res) => {
+  const { productId } = req.params;
+  try {
+    const result = await pool.query(`
+      SELECT r.*, c.name as customer_name, c.profile_image as customer_image
+      FROM reviews r
+      LEFT JOIN customers c ON r.customer_id = c.customer_id
+      WHERE r.product_id = $1
+      ORDER BY r.created_at DESC
+    `, [productId]);
+    res.json(result.rows);
+  } catch (err) {
+    console.error("Fetch reviews error:", err);
+    res.status(500).json({ message: "Error fetching reviews" });
+  }
 });
+
+app.post("/add-review", async (req, res) => {
+  const { customerId, productId, orderItemId, rating, title, body, imageUrl } = req.body;
+  
+  if (!customerId || !productId || !rating) {
+    return res.status(400).json({ message: "Missing required fields" });
+  }
+
+  try {
+    const result = await pool.query(`
+      INSERT INTO reviews (customer_id, product_id, order_item_id, rating, title, body, image_url)
+      VALUES ($1, $2, $3, $4, $5, $6, $7)
+      RETURNING *
+    `, [customerId, productId, orderItemId || null, rating, title, body, imageUrl]);
+    
+    const review = result.rows[0];
+    const customer = await pool.query("SELECT name, profile_image FROM customers WHERE customer_id = $1", [customerId]);
+    review.customer_name = customer.rows[0]?.name || "Anonymous";
+    review.customer_image = customer.rows[0]?.profile_image || null;
+    
+    res.json(review);
+  } catch (err) {
+    console.error("Add review error:", err);
+    res.status(500).json({ message: "Error adding review" });
+  }
+});
+
+app.get("/featured-products", async (req, res) => {
+  try {
+    const result = await pool.query(
+      "SELECT * FROM products WHERE is_featured = true AND is_active = true AND deleted_at IS NULL ORDER BY created_at DESC"
+    );
+    res.json(result.rows);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: "Error fetching featured products" });
+  }
+});
+
+const PORT = process.env.PORT || 5000;
+app.listen(PORT, () => {
+    console.log(`Server running on http://localhost:${PORT}`);
+});
+

@@ -8,6 +8,8 @@ export default function Orders({ globalSearch }) {
   const [activeActionMenu, setActiveActionMenu] = useState(null);
   const [orders, setOrders] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 5;
 
   const getStatusColor = (status) => {
     switch (status) {
@@ -28,6 +30,7 @@ export default function Orders({ globalSearch }) {
           const res = await axios.get(`http://localhost:5000/seller-orders/${sellerId}`);
           setOrders(res.data.map(o => ({
              id: o.order_id,
+             item_id: o.order_item_id,
              date: new Date(o.placed_at).toLocaleDateString('en-IN', { month: 'short', day: 'numeric', year: 'numeric' }),
              time: new Date(o.placed_at).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' }),
              name: o.shipping_name || o.customer_name,
@@ -35,7 +38,7 @@ export default function Orders({ globalSearch }) {
              item: o.product_name,
              image: o.product_images && o.product_images.length > 0 ? o.product_images[0] : "/placeholder-product.png",
              qty: o.quantity,
-             amount: `₹${parseFloat(o.total_price).toLocaleString()}`,
+             amount: `₹${parseFloat(o.total_amount).toLocaleString()}`,
              unitPrice: `₹${parseFloat(o.unit_price).toLocaleString()}`,
              status: o.item_status || o.order_status,
              statusColor: getStatusColor(o.item_status || o.order_status)
@@ -59,6 +62,14 @@ export default function Orders({ globalSearch }) {
       o.item.toLowerCase().includes(globalSearch.toLowerCase()) || 
       o.id.toLowerCase().includes(globalSearch.toLowerCase())
     );
+
+  // Pagination Logic
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [filter, globalSearch]);
+
+  const totalPages = Math.ceil(filteredOrders.length / itemsPerPage);
+  const paginatedOrders = filteredOrders.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
 
   return (
     <div className="space-y-8 animate-in fade-in zoom-in-95 duration-1000" onClick={() => setActiveActionMenu(null)}>
@@ -105,10 +116,10 @@ export default function Orders({ globalSearch }) {
               </tr>
             </thead>
             <tbody className="divide-y divide-stone-50">
-               <AnimatePresence>
-                 {filteredOrders.map((order, i) => (
+                <AnimatePresence mode="wait">
+                  {paginatedOrders.map((order, i) => (
                     <motion.tr 
-                      key={order.id}
+                      key={order.item_id}
                       initial={{ opacity: 0, y: 10 }}
                       animate={{ opacity: 1, y: 0 }}
                       exit={{ opacity: 0, scale: 0.95 }}
@@ -142,7 +153,7 @@ export default function Orders({ globalSearch }) {
                          </div>
                       </td>
                       <td className="px-8 py-6">
-                        <span className="font-bold text-stone-900 text-sm block">{order.amount}</span>
+                        <span className="font-bold text-stone-900 text-sm block">{order.unitPrice}</span>
                         {order.qty > 1 && <span className="text-[10px] text-stone-400 font-medium">{order.unitPrice} / unit</span>}
                       </td>
                       <td className="px-8 py-6">
@@ -154,14 +165,14 @@ export default function Orders({ globalSearch }) {
                       <td className="px-8 py-6 text-right relative">
                         <div className="flex justify-end">
                            <button 
-                             onClick={(e) => { e.stopPropagation(); setActiveActionMenu(activeActionMenu === order.id ? null : order.id); }}
+                             onClick={(e) => { e.stopPropagation(); setActiveActionMenu(activeActionMenu === order.item_id ? null : order.item_id); }}
                              className="w-8 h-8 rounded-xl flex items-center justify-center text-stone-400 hover:text-stone-900 hover:bg-white border border-transparent hover:border-stone-200 hover:shadow-sm transition-all relative z-10"
                            >
                              <FaEllipsisV size={12} />
                            </button>
 
                            <AnimatePresence>
-                             {activeActionMenu === order.id && (
+                             {activeActionMenu === order.item_id && (
                                <motion.div 
                                  initial={{ opacity: 0, scale: 0.95, y: -10 }}
                                  animate={{ opacity: 1, scale: 1, y: 0 }}
@@ -198,6 +209,42 @@ export default function Orders({ globalSearch }) {
           </table>
         </div>
       </div>
+
+      {/* PAGINATION CONTROLS */}
+      {totalPages > 1 && (
+        <div className="flex items-center justify-between px-8 py-4 bg-white rounded-3xl border border-stone-100 shadow-sm">
+          <div className="text-[10px] font-bold text-stone-400 uppercase tracking-widest">
+            Showing <span className="text-stone-900">{Math.min(filteredOrders.length, (currentPage - 1) * itemsPerPage + 1)}-{Math.min(filteredOrders.length, currentPage * itemsPerPage)}</span> of <span className="text-stone-900">{filteredOrders.length}</span> results
+          </div>
+          <div className="flex items-center gap-1">
+            <button
+              onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+              disabled={currentPage === 1}
+              className={`w-8 h-8 rounded-lg flex items-center justify-center transition-all ${currentPage === 1 ? 'text-stone-300 cursor-not-allowed' : 'text-stone-600 hover:bg-stone-100 hover:text-stone-900'}`}
+            >
+              <span className="text-sm">‹</span>
+            </button>
+            
+            {[...Array(totalPages)].map((_, i) => (
+              <button
+                key={i + 1}
+                onClick={() => setCurrentPage(i + 1)}
+                className={`w-8 h-8 rounded-lg text-[10px] font-bold transition-all ${currentPage === i + 1 ? 'bg-stone-900 text-amber-500 shadow-lg' : 'text-stone-400 hover:bg-stone-50 hover:text-stone-900'}`}
+              >
+                {i + 1}
+              </button>
+            ))}
+
+            <button
+              onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+              disabled={currentPage === totalPages}
+              className={`w-8 h-8 rounded-lg flex items-center justify-center transition-all ${currentPage === totalPages ? 'text-stone-300 cursor-not-allowed' : 'text-stone-600 hover:bg-stone-100 hover:text-stone-900'}`}
+            >
+              <span className="text-sm">›</span>
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

@@ -30,6 +30,8 @@ export default function MyAccount() {
   const [activeTab, setActiveTab] = useState('profile');
 
   const [selectedOrder, setSelectedOrder] = useState(null);
+  const [isCancellingOrder, setIsCancellingOrder] = useState(false);
+  const [cancellationReason, setCancellationReason] = useState("");
   const [isEditingProfile, setIsEditingProfile] = useState(false);
   const [isChangingPassword, setIsChangingPassword] = useState(false);
   const [passwordForm, setPasswordForm] = useState({ current: '', new: '', confirm: '' });
@@ -127,59 +129,83 @@ export default function MyAccount() {
     { id: 'settings', label: 'Settings', icon: FaGear },
   ];
 
-  const orders = [
-    {
-      id: "ORD-2024-0847",
-      date: "April 10, 2026",
-      status: "Delivered",
-      total: "₹1,09,999",
-      items: [
-        { name: "Sony WH-1000XM5 Wireless Headphones", quantity: 1, price: "₹29,999" },
-        { name: "Samsung Galaxy S24 Ultra 256GB", quantity: 1, price: "₹80,000" }
-      ],
-      icon: FaMobileScreenButton
-    },
-    {
-      id: "ORD-2024-0823",
-      date: "March 28, 2026",
-      status: "In Transit",
-      total: "₹2,10,000",
-      items: [
-        { name: "MacBook Pro 14\" M3 Pro", quantity: 1, price: "₹2,10,000" }
-      ],
-      icon: FaLaptop
-    },
-    {
-      id: "ORD-2024-0791",
-      date: "March 15, 2026",
-      status: "Delivered",
-      total: "₹2,09,999",
-      items: [
-        { name: "Sony Alpha A7 IV Camera Body", quantity: 1, price: "₹2,09,999" }
-      ],
-      icon: FaCamera
+  const [realOrders, setRealOrders] = useState([]);
+  const [isLoadingOrders, setIsLoadingOrders] = useState(false);
+
+  useEffect(() => {
+    if (activeUser.customerId && activeTab === 'orders') {
+      setIsLoadingOrders(true);
+      axios.get(`http://127.0.0.1:5000/customer-orders/${activeUser.customerId}`)
+        .then(res => {
+          setRealOrders(res.data.map(o => ({
+            id: o.order_id,
+            date: new Date(o.placed_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' }),
+            status: o.order_status,
+            cancellationReason: o.cancellation_reason,
+            total: `₹${parseFloat(o.total_amount).toLocaleString()}`,
+            items: o.items.map(it => ({
+              name: it.name,
+              quantity: it.quantity,
+              price: `₹${parseFloat(it.unit_price).toLocaleString()}`
+            })),
+            icon: FaBoxOpen
+          })));
+        })
+        .catch(err => console.error("Error fetching orders:", err))
+        .finally(() => setIsLoadingOrders(false));
     }
-  ];
+  }, [activeUser.customerId, activeTab]);
 
 
-  const [paymentMethods, setPaymentMethods] = useState([
-    {
-      id: 1,
-      type: "Visa",
-      last4: "4242",
-      expiry: "12/27",
-      isDefault: true,
-      icon: FaCcVisa
-    },
-    {
-      id: 2,
-      type: "Mastercard",
-      last4: "8888",
-      expiry: "09/26",
-      isDefault: false,
-      icon: FaCcMastercard
+  const handleCancelOrderSubmit = async () => {
+    if (!selectedOrder) return;
+    
+    try {
+      const res = await axios.post("http://127.0.0.1:5000/order/cancel", {
+        orderId: selectedOrder.id,
+        reason: cancellationReason
+      });
+      
+      if (res.data.success) {
+        // Update local state
+        setRealOrders(prev => prev.map(o => 
+          o.id === selectedOrder.id ? { ...o, status: 'Cancelled' } : o
+        ));
+        setSelectedOrder(prev => ({ ...prev, status: 'Cancelled' }));
+        setIsCancellingOrder(false);
+        alert("Order cancelled successfully");
+      }
+    } catch (err) {
+      console.error("Cancellation failed:", err);
+      alert("Failed to cancel order. Please try again.");
     }
-  ]);
+  };
+
+
+  const [paymentMethods, setPaymentMethods] = useState([]);
+
+  useEffect(() => {
+    const fetchPaymentMethods = async () => {
+      const savedUser = JSON.parse(localStorage.getItem("user") || "{}");
+      if (savedUser.customerId) {
+        try {
+          const res = await axios.get(`http://127.0.0.1:5000/payment-methods/${savedUser.customerId}`);
+          setPaymentMethods(res.data.map(p => ({
+            id: p.payment_method_id,
+            type: p.type,
+            last4: p.last4,
+            expiry: p.expiry,
+            isDefault: p.is_default,
+            icon: p.type === 'Visa' ? FaCcVisa : FaCcMastercard
+          })));
+        } catch (err) {
+          console.error("Error fetching payment methods:", err);
+        }
+      }
+    };
+    if (activeTab === 'profile') fetchPaymentMethods(); // Also fetch on profile load for highlights
+    if (activeTab === 'payments') fetchPaymentMethods();
+  }, [activeTab]);
 
   const [isAddingPayment, setIsAddingPayment] = useState(false);
   const [editingPaymentId, setEditingPaymentId] = useState(null);
@@ -191,23 +217,40 @@ export default function MyAccount() {
     twoFactorAuth: false
   });
 
-  const handleAddPayment = (e) => {
+  const handleAddPayment = async (e) => {
     e.preventDefault();
     const last4 = newPayment.cardNumber.slice(-4) || '0000';
-    let icon = FaCcVisa;
-    if (newPayment.type === 'Mastercard') icon = FaCcMastercard;
+    const savedUser = JSON.parse(localStorage.getItem("user") || "{}");
 
-    if (editingPaymentId) {
-      setPaymentMethods(paymentMethods.map(p => 
-        p.id === editingPaymentId ? { ...p, last4, expiry: newPayment.expiry, type: newPayment.type, icon } : p
-      ));
-    } else {
-      const id = Date.now();
-      setPaymentMethods([...paymentMethods, { id, isDefault: paymentMethods.length === 0, last4, expiry: newPayment.expiry, type: newPayment.type, icon }]);
+    try {
+      if (editingPaymentId) {
+        // Simple implementation: delete and re-add or just ignore edit for now
+        // Standard practice for cards is add/delete only for security
+        console.warn("Editing not fully implemented for DB yet");
+      } else {
+        const res = await axios.post("http://127.0.0.1:5000/payment-methods", {
+          customerId: savedUser.customerId,
+          type: newPayment.type,
+          last4: last4,
+          expiry: newPayment.expiry,
+          isDefault: paymentMethods.length === 0
+        });
+        const p = res.data;
+        setPaymentMethods([...paymentMethods, { 
+          id: p.payment_method_id, 
+          isDefault: p.is_default, 
+          last4: p.last4, 
+          expiry: p.expiry, 
+          type: p.type, 
+          icon: p.type === 'Visa' ? FaCcVisa : FaCcMastercard 
+        }]);
+      }
+      setIsAddingPayment(false);
+      setEditingPaymentId(null);
+      setNewPayment({ type: "Visa", cardNumber: "", expiry: "", cvv: "" });
+    } catch (err) {
+      console.error("Error saving payment method:", err);
     }
-    setIsAddingPayment(false);
-    setEditingPaymentId(null);
-    setNewPayment({ type: "Visa", cardNumber: "", expiry: "", cvv: "" });
   };
 
   const handleEditPayment = (method) => {
@@ -216,8 +259,13 @@ export default function MyAccount() {
     setIsAddingPayment(true);
   };
 
-  const handleDeletePayment = (id) => {
-    setPaymentMethods(paymentMethods.filter(p => p.id !== id));
+  const handleDeletePayment = async (id) => {
+    try {
+      await axios.delete(`http://127.0.0.1:5000/payment-methods/${id}`);
+      setPaymentMethods(paymentMethods.filter(p => p.id !== id));
+    } catch (err) {
+      console.error("Error deleting payment method:", err);
+    }
   };
 
   const handleSetDefaultPayment = (id) => {
@@ -246,6 +294,8 @@ export default function MyAccount() {
         return "bg-amber-100 text-amber-800 border-amber-200";
       case "Processing":
         return "bg-blue-100 text-blue-800 border-blue-200";
+      case "Cancelled":
+        return "bg-red-100 text-red-800 border-red-200";
       default:
         return "bg-stone-100 text-stone-800 border-stone-200";
     }
@@ -476,17 +526,22 @@ export default function MyAccount() {
                         </div>
                         {wishlist.length > 0 ? (
                           <div className="grid grid-cols-2 gap-4 flex-1">
-                            {wishlist.slice(0, 2).map((item) => (
-                              <div key={item.id} className="bg-stone-50/50 rounded-2xl p-3 border border-stone-100 flex flex-col justify-between gap-2 transition-colors hover:border-amber-200 cursor-pointer" onClick={() => navigate(`/product/${item.id}`)}>
-                                <div className="h-20 w-full overflow-hidden rounded-xl bg-white flex items-center justify-center p-2 shadow-sm border border-stone-100/50">
-                                  <img src={item.variants[0].img} alt={item.name} className="h-full object-contain mix-blend-multiply" />
+                            {wishlist.slice(0, 2).map((item) => {
+                              const displayImg = (item.variants && item.variants[0]?.img) || (item.images && item.images[0]) || "/placeholder-product.png";
+                              const displayPrice = (item.variants && item.variants[0]?.price) || item.price || "₹0";
+                              
+                              return (
+                                <div key={item.id} className="bg-stone-50/50 rounded-2xl p-3 border border-stone-100 flex flex-col justify-between gap-2 transition-colors hover:border-amber-200 cursor-pointer" onClick={() => navigate(`/product/${item.id}`)}>
+                                  <div className="h-20 w-full overflow-hidden rounded-xl bg-white flex items-center justify-center p-2 shadow-sm border border-stone-100/50">
+                                    <img src={displayImg} alt={item.name} className="h-full object-contain mix-blend-multiply" />
+                                  </div>
+                                  <div className="min-w-0">
+                                    <h3 className="text-xs font-bold text-stone-900 truncate" title={item.name}>{item.name}</h3>
+                                    <p className="text-[10px] font-black text-amber-600 mt-1">{displayPrice}</p>
+                                  </div>
                                 </div>
-                                <div className="min-w-0">
-                                  <h3 className="text-xs font-bold text-stone-900 truncate" title={item.name}>{item.name}</h3>
-                                  <p className="text-[10px] font-black text-amber-600 mt-1">{item.variants[0].price}</p>
-                                </div>
-                              </div>
-                            ))}
+                              );
+                            })}
                           </div>
                         ) : (
                           <div className="flex-1 flex flex-col items-center justify-center bg-stone-50 rounded-2xl border border-stone-200 border-dashed py-8">
@@ -508,14 +563,16 @@ export default function MyAccount() {
                             {cart.slice(0, 2).map((item, idx) => (
                               <div key={idx} className="flex gap-4 items-center bg-stone-50/50 p-3 rounded-2xl border border-stone-100 cursor-pointer hover:border-stone-200 transition-colors" onClick={() => navigate('/cart')}>
                                 <div className="w-12 h-12 bg-white rounded-xl shadow-sm border border-stone-100/50 flex items-center justify-center p-1 shrink-0">
-                                  <img src={item.variant.img} className="w-full h-full object-contain mix-blend-multiply" alt={item.name} />
+                                  <img src={item.variant?.img || item.images?.[0]} className="w-full h-full object-contain mix-blend-multiply" alt={item.name} />
                                 </div>
                                 <div className="flex-1 min-w-0">
                                   <h3 className="text-xs font-bold text-stone-900 truncate" title={item.name}>{item.name}</h3>
-                                  <p className="text-[10px] font-black text-stone-500 tracking-widest uppercase mt-0.5">Qty: {item.quantity} • {item.variant.color}</p>
+                                  <p className="text-[10px] font-black text-stone-500 tracking-widest uppercase mt-0.5">
+                                    Qty: {item.quantity} • {item.variant?.value || item.variant?.name || "Standard"}
+                                  </p>
                                 </div>
                                 <div className="text-xs font-black text-stone-900 shrink-0">
-                                  {item.variant.price}
+                                  {item.variant?.price || item.price}
                                 </div>
                               </div>
                             ))}
@@ -551,6 +608,12 @@ export default function MyAccount() {
                                 </span>
                                 <span className="text-xs font-semibold text-stone-500 uppercase tracking-widest">{selectedOrder.date}</span>
                               </div>
+                              {selectedOrder.status === 'Cancelled' && (
+                                <div className="mt-3 p-3 bg-red-50 border border-red-100 rounded-xl">
+                                  <p className="text-[10px] font-black uppercase tracking-widest text-red-600 mb-1">Cancellation Reason</p>
+                                  <p className="text-xs font-semibold text-red-800">{selectedOrder.cancellationReason || "No reason provided"}</p>
+                                </div>
+                              )}
                             </div>
                             <div className="text-right">
                               <p className="text-3xl font-black text-stone-900">{selectedOrder.total}</p>
@@ -599,12 +662,41 @@ export default function MyAccount() {
                             </div>
 
                             <div className="flex flex-col sm:flex-row justify-end gap-4 pt-6 border-t border-stone-100 mt-8">
-                               <button className="bg-white border border-stone-200 text-stone-900 px-8 py-4 rounded-xl font-black uppercase tracking-widest text-[10px] hover:bg-stone-50 transition shadow-sm active:scale-95">
-                                 Download Invoice
-                               </button>
-                               <button className="bg-stone-900 text-amber-500 px-8 py-4 rounded-xl font-black uppercase tracking-widest text-[10px] hover:bg-stone-800 transition shadow-md active:scale-95">
-                                 Track Package
-                               </button>
+                               {isCancellingOrder ? (
+                                  <div className="w-full space-y-4">
+                                     <div className="space-y-2">
+                                        <label className="text-[10px] font-black uppercase tracking-widest text-stone-500">Reason for cancellation</label>
+                                        <textarea 
+                                          placeholder="Please tell us why you are cancelling..."
+                                          className="w-full bg-stone-50 p-4 rounded-xl border border-stone-200 outline-none focus:border-red-500 text-sm font-medium resize-none h-24"
+                                          value={cancellationReason}
+                                          onChange={(e) => setCancellationReason(e.target.value)}
+                                        />
+                                     </div>
+                                     <div className="flex gap-3 justify-end items-center">
+                                        <button onClick={() => setIsCancellingOrder(false)} className="text-[10px] font-black uppercase tracking-widest text-stone-500 hover:text-stone-900 px-4 py-2 transition-colors">
+                                          Keep Order
+                                        </button>
+                                        <button onClick={handleCancelOrderSubmit} className="text-[10px] font-black uppercase tracking-widest text-white bg-red-600 hover:bg-red-700 px-6 py-3 rounded-xl shadow-sm transition-colors">
+                                          Confirm Cancellation
+                                        </button>
+                                     </div>
+                                  </div>
+                               ) : (
+                                  <>
+                                     {selectedOrder.status !== 'Cancelled' && selectedOrder.status !== 'Delivered' && (
+                                       <button onClick={() => setIsCancellingOrder(true)} className="bg-white border border-red-200 text-red-600 px-8 py-4 rounded-xl font-black uppercase tracking-widest text-[10px] hover:bg-red-50 transition shadow-sm active:scale-95">
+                                         Cancel Order
+                                       </button>
+                                     )}
+                                     <button className="bg-white border border-stone-200 text-stone-900 px-8 py-4 rounded-xl font-black uppercase tracking-widest text-[10px] hover:bg-stone-50 transition shadow-sm active:scale-95">
+                                       Download Invoice
+                                     </button>
+                                     <button className="bg-stone-900 text-amber-500 px-8 py-4 rounded-xl font-black uppercase tracking-widest text-[10px] hover:bg-stone-800 transition shadow-md active:scale-95">
+                                       Track Package
+                                     </button>
+                                  </>
+                               )}
                             </div>
                           </div>
                         </motion.div>
@@ -616,7 +708,7 @@ export default function MyAccount() {
                           <p className="text-stone-500 text-sm font-medium">View and track your previous orders.</p>
                         </div>
                         <div className="space-y-6">
-                          {orders.map((order) => (
+                          {realOrders.length > 0 ? realOrders.map((order) => (
                             <div key={order.id} className="border border-stone-200 rounded-3xl p-6 hover:border-amber-400 transition-colors group">
                               <div className="flex flex-wrap gap-4 items-start justify-between mb-6">
                                 <div className="flex-1 min-w-[200px]">
@@ -658,7 +750,12 @@ export default function MyAccount() {
                                 </button>
                               </div>
                             </div>
-                          ))}
+                          )) : (
+                            <div className="py-12 text-center bg-stone-50 rounded-3xl border border-dashed border-stone-200">
+                               <FaBoxOpen className="mx-auto text-stone-300 mb-4" size={48} />
+                               <p className="text-stone-400 font-bold uppercase tracking-widest text-xs">No orders placed yet.</p>
+                            </div>
+                          )}
                         </div>
                       </>
                     )}

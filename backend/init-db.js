@@ -215,7 +215,7 @@ async function setup() {
         variant_id VARCHAR(50),
         quantity INT NOT NULL,
         unit_price DECIMAL(10, 2) NOT NULL,
-        total_price DECIMAL(10, 2) NOT NULL,
+        total_amount DECIMAL(10, 2) NOT NULL,
         item_status VARCHAR(50) DEFAULT 'Processing',
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
@@ -250,7 +250,7 @@ async function setup() {
 
     await client1.query(`
       CREATE TABLE IF NOT EXISTS wishlists (
-        wishlist_id VARCHAR(20) PRIMARY KEY,
+        wishlist_id VARCHAR(50) PRIMARY KEY,
         customer_id VARCHAR(20) REFERENCES customers(customer_id) ON DELETE CASCADE,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         CONSTRAINT unique_customer_wishlist UNIQUE (customer_id)
@@ -260,21 +260,22 @@ async function setup() {
 
     await client1.query(`
       CREATE TABLE IF NOT EXISTS wishlist_items (
-        wishlist_item_id VARCHAR(30) PRIMARY KEY,
-        wishlist_id VARCHAR(20) REFERENCES wishlists(wishlist_id) ON DELETE CASCADE,
-        product_id VARCHAR(20) REFERENCES products(product_id) ON DELETE CASCADE,
+        wishlist_item_id VARCHAR(50) PRIMARY KEY,
+        wishlist_id VARCHAR(50) REFERENCES wishlists(wishlist_id) ON DELETE CASCADE,
+        product_id VARCHAR(50) REFERENCES products(product_id) ON DELETE CASCADE,
         added_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         UNIQUE (wishlist_id, product_id)
       );
     `);
     console.log("Table 'wishlist_items' initialized successfully.");
 
+    await client1.query(`CREATE SEQUENCE IF NOT EXISTS payment_id_seq START 1;`);
     await client1.query(`
       CREATE TABLE IF NOT EXISTS payments (
-        payment_id SERIAL PRIMARY KEY,
+        payment_id VARCHAR(20) PRIMARY KEY,
         seller_id VARCHAR(20) REFERENCES sellers(seller_id) ON DELETE SET NULL,
         customer_id VARCHAR(20) REFERENCES customers(customer_id) ON DELETE SET NULL,
-        order_id INT REFERENCES orders(order_id) ON DELETE CASCADE,
+        order_id VARCHAR(20) REFERENCES orders(order_id) ON DELETE CASCADE,
         payment_method VARCHAR(50) NOT NULL,
         amount DECIMAL(10, 2) NOT NULL,
         transaction_id VARCHAR(100) UNIQUE,
@@ -287,18 +288,71 @@ async function setup() {
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       );
     `);
-    console.log("Table 'payments' initialized successfully.");
+    await client1.query(`
+      CREATE OR REPLACE FUNCTION generate_payment_id()
+      RETURNS TRIGGER AS $$
+      BEGIN
+          IF NEW.payment_id IS NULL THEN
+            NEW.payment_id := 'PMT-' || LPAD(nextval('payment_id_seq')::text, 3, '0');
+          END IF;
+          RETURN NEW;
+      END;
+      $$ LANGUAGE plpgsql;
+    `);
+    await client1.query(`
+      DROP TRIGGER IF EXISTS trigger_generate_payment_id ON payments;
+      CREATE TRIGGER trigger_generate_payment_id
+      BEFORE INSERT ON payments
+      FOR EACH ROW
+      EXECUTE FUNCTION generate_payment_id();
+    `);
+    console.log("Table 'payments' with semantic ID initialized successfully.");
 
     await client1.query(`
       CREATE TABLE IF NOT EXISTS order_sellers (
         order_seller_id SERIAL PRIMARY KEY,
-        order_id INT REFERENCES orders(order_id) ON DELETE CASCADE,
+        order_id VARCHAR(20) REFERENCES orders(order_id) ON DELETE CASCADE,
         seller_id VARCHAR(20) REFERENCES sellers(seller_id) ON DELETE CASCADE,
         seller_subtotal DECIMAL(10, 2) NOT NULL,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       );
     `);
     console.log("Table 'order_sellers' initialized successfully.");
+
+    // Reviews table with semantic ID generation
+    await client1.query(`CREATE SEQUENCE IF NOT EXISTS review_id_seq START 1;`);
+    await client1.query(`
+      CREATE TABLE IF NOT EXISTS reviews (
+        review_id VARCHAR(20) PRIMARY KEY,
+        order_item_id VARCHAR(30) REFERENCES order_items(order_item_id) ON DELETE CASCADE,
+        customer_id VARCHAR(20) REFERENCES customers(customer_id) ON DELETE CASCADE,
+        product_id VARCHAR(50) REFERENCES products(product_id) ON DELETE CASCADE,
+        rating INT CHECK (rating >= 1 AND rating <= 5),
+        title VARCHAR(255),
+        body TEXT,
+        image_url TEXT,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      );
+    `);
+    await client1.query(`
+      CREATE OR REPLACE FUNCTION generate_review_id()
+      RETURNS TRIGGER AS $$
+      BEGIN
+          IF NEW.review_id IS NULL THEN
+            NEW.review_id := 'rev-' || LPAD(nextval('review_id_seq')::text, 3, '0');
+          END IF;
+          RETURN NEW;
+      END;
+      $$ LANGUAGE plpgsql;
+    `);
+    await client1.query(`
+      DROP TRIGGER IF EXISTS trigger_generate_review_id ON reviews;
+      CREATE TRIGGER trigger_generate_review_id
+      BEFORE INSERT ON reviews
+      FOR EACH ROW
+      EXECUTE FUNCTION generate_review_id();
+    `);
+    console.log("Table 'reviews' with ID trigger initialized successfully.");
 
   } catch (e) {
     console.error("Error creating tables:", e.message);

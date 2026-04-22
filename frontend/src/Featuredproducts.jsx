@@ -1,11 +1,36 @@
+import React, { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { useNavigate } from "react-router-dom";
-import { featuredProductsArray as products } from "./data";
-
+import axios from "axios";
 
 export default function Featured() {
     const navigate = useNavigate();
+    const [products, setProducts] = useState([]);
+    const [isLoading, setIsLoading] = useState(true);
 
+    useEffect(() => {
+        const fetchFeatured = async () => {
+            try {
+                const res = await axios.get("http://localhost:5000/featured-products");
+                // Map the DB format to the UI format
+                const mapped = res.data.map(p => ({
+                    id: p.product_id,
+                    name: p.name,
+                    price: `₹${parseFloat(p.price).toLocaleString()}`,
+                    img: (p.images && p.images.length > 0) ? p.images[0] : "/placeholder-product.png"
+                }));
+                setProducts(mapped);
+            } catch (err) {
+                console.error("Error fetching featured products:", err);
+            } finally {
+                setIsLoading(false);
+            }
+        };
+        fetchFeatured();
+    }, []);
+
+    if (isLoading) return null;
+    if (products.length === 0) return null;
 
     return (
         <div className="bg-stone-50 text-stone-900 py-24 px-6 md:px-16 lg:px-24">
@@ -37,15 +62,12 @@ export default function Featured() {
                             {/* Product Card Image Wrapper */}
                             <div className="relative aspect-[4/5] bg-amber-100/20 border border-amber-100 overflow-hidden mb-6 transition-all duration-700">
                                 <img
-                                    src={item.variants[0].img}
+                                    src={item.img}
                                     alt={item.name}
                                     className="w-full h-full object-contain p-12 group-hover:scale-110 transition duration-1000"
                                     onClick={() => navigate(`/product/${item.id}`, { state: { from: 'home' } })}
                                 />
                                 
-
-
-
                                 <div className="absolute bottom-0 left-0 right-0 p-6 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none">
                                     <button className="w-full bg-amber-600 text-white py-3 text-[10px] font-black uppercase tracking-[0.2em]">
                                         Quick Purchase
@@ -59,7 +81,7 @@ export default function Featured() {
                                         {item.name}
                                     </h2>
                                     <p className="text-sm font-black text-amber-600 mt-1">
-                                        {item.variants[0].price}
+                                        {item.price}
                                     </p>
                                 </div>
                             </div>

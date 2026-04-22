@@ -43,21 +43,29 @@ export function StoreProvider({ children }) {
 
   const [userProfile, setUserProfile] = useState(() => {
     const savedProfile = localStorage.getItem("userProfile");
-    if (savedProfile) return JSON.parse(savedProfile);
-    
     const savedUser = localStorage.getItem("user");
+    
+    let profile = null;
+    if (savedProfile) {
+      profile = JSON.parse(savedProfile);
+    }
+    
     if (savedUser) {
       const user = JSON.parse(savedUser);
-      return {
-        name: user.name || "",
-        email: user.email || "",
-        phone: user.phone || "",
-        is_verified: user.is_verified || false,
-        image: user.profile_image || null
-      };
+      // Ensure customerId is always present if we have a saved user
+      if (!profile || !profile.customerId) {
+        profile = {
+          ...(profile || {}),
+          customerId: user.customerId || user.customer_id || "",
+          name: profile?.name || user.name || "",
+          email: profile?.email || user.email || "",
+          is_verified: profile?.is_verified || user.is_verified || false,
+          image: profile?.image || user.profilePicture || user.profile_image || null
+        };
+      }
     }
 
-    return null;
+    return profile;
   });
 
   useEffect(() => {
@@ -143,7 +151,7 @@ export function StoreProvider({ children }) {
 
     fetchWishlist();
     fetchCart();
-  }, []);
+  }, [userProfile]);
 
   // One-time cleanup to fix QuotaExceededError
   useEffect(() => {

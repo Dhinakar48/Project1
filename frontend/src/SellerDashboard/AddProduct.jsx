@@ -120,6 +120,7 @@ export default function AddProduct({ onBack, onAddProduct, initialData, sellerId
       breadth: parseFloat(formData.breadth) || 0,
       images: images,
       is_active: formData.status === "Active",
+      is_featured: formData.featured,
       specifications: specifications,
     };
 
@@ -331,47 +332,50 @@ export default function AddProduct({ onBack, onAddProduct, initialData, sellerId
             
             <div className="space-y-3">
               {specifications.map((spec, index) => (
-                <div key={index} className="flex flex-col gap-3 p-4 bg-stone-50/50 border border-stone-200 rounded-[1.5rem]">
-                  <div className="grid grid-cols-3 gap-3">
+                <div key={index} className="flex items-center gap-3 p-3 bg-stone-50/50 border border-stone-200 rounded-2xl group">
+                  <div className="flex-[2]">
                     <input 
                       type="text" placeholder="Varient (e.g. Color)" 
                       value={spec.key} onChange={(e) => handleSpecChange(index, "key", e.target.value)}
-                      className="w-full p-3 bg-white border border-stone-200 rounded-xl focus:border-amber-500 focus:ring-1 focus:ring-amber-500 outline-none transition-all text-xs"
+                      className="w-full p-2.5 bg-white border border-stone-200 rounded-xl focus:border-amber-500 focus:ring-1 focus:ring-amber-500 outline-none transition-all text-[14px] font-semibold"
                     />
+                  </div>
+                  <div className="flex-[2]">
                     <input 
                       type="text" placeholder="Value (e.g. Matte Black)" 
                       value={spec.value} onChange={(e) => handleSpecChange(index, "value", e.target.value)}
-                      className="w-full p-3 bg-white border border-stone-200 rounded-xl focus:border-amber-500 focus:ring-1 focus:ring-amber-500 outline-none transition-all text-xs"
+                      className="w-full p-2.5 bg-white border border-stone-200 rounded-xl focus:border-amber-500 focus:ring-1 focus:ring-amber-400 outline-none transition-all text-[14px] font-semibold"
                     />
                   </div>
-                  <div className="flex items-center gap-3">
-                    <div className="flex-1 grid grid-cols-2 gap-3">
-                      <div className="flex items-center gap-2 bg-white border border-stone-200 rounded-xl px-3 group focus-within:border-amber-500 focus-within:ring-1 focus-within:ring-amber-500 transition-all">
-                        <span className="text-[10px] font-bold text-stone-400">₹</span>
-                        <input 
-                          type="number" placeholder="Price" 
-                          value={spec.price} onChange={(e) => handleSpecChange(index, "price", e.target.value)}
-                          className="w-full py-3 bg-transparent border-none outline-none text-xs"
-                        />
-                      </div>
-                      <div className="flex items-center gap-2 bg-white border border-stone-200 rounded-xl px-3 group focus-within:border-amber-500 focus-within:ring-1 focus-within:ring-amber-500 transition-all">
-                        <span className="text-[10px] font-bold text-stone-400 font-mono">#</span>
-                        <input 
-                          type="number" placeholder="Stock" 
-                          value={spec.stock} onChange={(e) => handleSpecChange(index, "stock", e.target.value)}
-                          className="w-full py-3 bg-transparent border-none outline-none text-xs"
-                        />
-                      </div>
+                  <div className="flex-2 min-w-[80px]">
+                    <div className="flex items-center gap-1.5 bg-white border border-stone-200 rounded-xl px-2.5 focus-within:border-amber-500 focus-within:ring-1 focus-within:ring-amber-500 transition-all">
+                      <span className="text-[14px] font-bold text-stone-400">₹</span>
+                      <input 
+                        type="number" placeholder="Price" 
+                        value={spec.price} onChange={(e) => handleSpecChange(index, "price", e.target.value)}
+                        className="w-full py-2.5 bg-transparent border-none outline-none text-[11px] font-semibold"
+                      />
                     </div>
-                    {specifications.length > 1 && (
-                      <button 
-                        type="button" onClick={() => removeSpecification(index)}
-                        className="w-10 h-10 bg-red-50 text-red-500 rounded-xl flex items-center justify-center hover:bg-red-100 transition-colors flex-shrink-0"
-                      >
-                        <FaTrash size={10} />
-                      </button>
-                    )}
                   </div>
+                  <div className="flex-1 min-w-[70px]">
+                    <div className="flex items-center gap-1.5 bg-white border border-stone-200 rounded-xl px-2.5 focus-within:border-amber-500 focus-within:ring-1 focus-within:ring-amber-500 transition-all">
+                      <span className="text-[14px] font-bold text-stone-400 font-mono">#</span>
+                      <input 
+                        type="number" placeholder="Stock" 
+                        value={spec.stock} onChange={(e) => handleSpecChange(index, "stock", e.target.value)}
+                        className="w-full py-2.5 bg-transparent border-none outline-none text-[11px] font-semibold"
+                      />
+                    </div>
+                  </div>
+                  
+                  {specifications.length > 1 && (
+                    <button 
+                      type="button" onClick={() => removeSpecification(index)}
+                      className="w-9 h-9 bg-red-50 text-red-500 rounded-xl flex items-center justify-center hover:bg-red-500 hover:text-white transition-all flex-shrink-0"
+                    >
+                      <FaTrash size={10} />
+                    </button>
+                  )}
                 </div>
               ))}
             </div>

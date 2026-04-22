@@ -18,7 +18,7 @@ export default function ProductDetails() {
     const [selectedImageIndex, setSelectedImageIndex] = useState(0);
     const [relatedProducts, setRelatedProducts] = useState([]);
 
-    const { addToCart, toggleWishlist, wishlist } = useStore();
+    const { addToCart, toggleWishlist, wishlist, userProfile } = useStore();
     
     // Move logic here
     const specs = product?.specifications || [];
@@ -60,24 +60,59 @@ export default function ProductDetails() {
     // The dynamic logic moves below where it has access to product/variants
     // after loading checks.
 
-    const [reviews, setReviews] = useState([
-        { id: 1, name: "Alex Johnson", rating: 5, comment: "Absolutely blown away by the quality. Worth every penny.", img: null },
-        { id: 2, name: "Samantha Lee", rating: 5, comment: "Sleek design and phenomenal performance. Highly recommended!", img: null },
-        { id: 3, name: "Michael T.", rating: 4, comment: "Great product, solid build. It feels incredibly premium in hand, simply stellar.", img: null }
-    ]);
-    const [newReview, setNewReview] = useState({ name: "", rating: 5, comment: "", img: null });
+    const [reviews, setReviews] = useState([]);
+    const [fetchingReviews, setFetchingReviews] = useState(true);
+    const [newReview, setNewReview] = useState({ rating: 5, comment: "", img: null });
 
-    const handleImageUpload = (e) => {
-        if (e.target.files && e.target.files[0]) {
-            setNewReview({ ...newReview, img: URL.createObjectURL(e.target.files[0]) });
+    const fetchReviews = async () => {
+        setFetchingReviews(true);
+        try {
+            const res = await axios.get(`http://localhost:5000/product-reviews/${id}`);
+            setReviews(res.data);
+        } catch (err) {
+            console.error("Error fetching reviews:", err);
+        } finally {
+            setFetchingReviews(false);
         }
     };
 
-    const handleReviewSubmit = (e) => {
+    const handleImageUpload = (e) => {
+        if (e.target.files && e.target.files[0]) {
+            const file = e.target.files[0];
+            const reader = new FileReader();
+            reader.onloadend = () => {
+                setNewReview({ ...newReview, img: reader.result });
+            };
+            reader.readAsDataURL(file);
+        }
+    };
+
+    const handleReviewSubmit = async (e) => {
         e.preventDefault();
-        if (newReview.name && newReview.comment) {
-            setReviews([{ ...newReview, id: Date.now() }, ...reviews]);
-            setNewReview({ name: "", rating: 5, comment: "", img: null });
+        console.log("Submitting review. UserProfile:", userProfile);
+        if (!userProfile || !userProfile.customerId) {
+            alert("Session issue: Please logout and login again to post a review.");
+            console.error("Missing customerId in userProfile:", userProfile);
+            return;
+        }
+        if (newReview.comment) {
+            const payload = {
+                customerId: userProfile.customerId,
+                productId: id,
+                rating: newReview.rating,
+                body: newReview.comment,
+                title: "Verified Purchase",
+                imageUrl: newReview.img
+            };
+            console.log("Review payload:", payload);
+            try {
+                const res = await axios.post("http://localhost:5000/add-review", payload);
+                setReviews([res.data, ...reviews]);
+                setNewReview({ rating: 5, comment: "", img: null });
+            } catch (err) {
+                console.error("Error posting review:", err);
+                alert("Failed to post review. Please try again.");
+            }
         }
     };
 
@@ -130,6 +165,7 @@ export default function ProductDetails() {
     useEffect(() => {
         window.scrollTo(0, 0);
         fetchProduct();
+        fetchReviews();
         setSelectedImageIndex(0);
     }, [id]);
 
@@ -388,7 +424,7 @@ export default function ProductDetails() {
                                 disabled={activeStock === 0}
                                 whileHover={{ scale: 1.05 }}
                                 whileTap={{ scale: 0.95 }}
-                                className={`flex-1 flex items-center justify-center p-5 transition-all duration-300 border-2 ${activeStock === 0 ? 'bg-stone-50 border-stone-100 text-stone-200' : addedToCart ? 'bg-green-600 border-green-600 text-white' : 'bg-stone-100 border-stone-200 text-stone-900 hover:bg-stone-200'}`}
+                                className={`flex-1 flex items-center justify-center p-1 transition-all duration-300 border-2 ${activeStock === 0 ? 'bg-stone-50 border-stone-100 text-stone-200' : addedToCart ? 'bg-green-600 border-green-600 text-white' : 'bg-stone-100 border-stone-200 text-stone-900 hover:bg-stone-200'}`}
                                 title="Add to Bag"
                             >
                                 {addedToCart ? <FaCheck size={20} /> : <FaBagShopping size={20} />}
@@ -410,10 +446,10 @@ export default function ProductDetails() {
                                 onClick={() => toggleWishlist(product)}
                                 whileHover={{ scale: 1.05 }}
                                 whileTap={{ scale: 0.95 }}
-                                className={`flex-1 flex items-center justify-center p-5 border-2 transition-all duration-300 ${isWishlisted ? 'border-red-500 bg-red-50 text-red-500' : 'border-stone-200 bg-white text-stone-400 hover:border-stone-900 hover:text-stone-900'}`}
+                                className={`flex-1 flex items-center justify-center p-1 border-2 transition-all duration-300 ${isWishlisted ? 'border-red-500 bg-red-50 text-red-500' : 'border-stone-200 bg-white text-stone-400 hover:border-stone-900 hover:text-stone-900'}`}
                                 title={isWishlisted ? "Remove from Wishlist" : "Add to Wishlist"}
                             >
-                                <FaHeart size={20} className={isWishlisted ? 'fill-current' : 'fill-none stroke-2'} />
+                                <FaHeart size={20} className={isWishlisted ? 'fill-current' : ' stroke-2 '} />
                             </motion.button>
                         </motion.div>
 
@@ -508,15 +544,10 @@ export default function ProductDetails() {
                     <form onSubmit={handleReviewSubmit} className="grid grid-cols-1 md:grid-cols-2 gap-8">
                         <div className="space-y-6">
                             <div>
-                                <label className="text-[10px] font-black uppercase tracking-widest text-stone-400 block mb-2">Your Name</label>
-                                <input
-                                    type="text"
-                                    value={newReview.name}
-                                    onChange={(e) => setNewReview({ ...newReview, name: e.target.value })}
-                                    className="w-full bg-stone-50 border-none p-4 text-sm focus:ring-1 focus:ring-stone-900 outline-none transition"
-                                    placeholder="Enter your name"
-                                    required
-                                />
+                                <label className="text-[10px] font-black uppercase tracking-widest text-stone-400 block mb-2">Reviewer</label>
+                                <div className="w-full bg-stone-50 border-none p-4 text-sm text-stone-400 font-bold">
+                                    {userProfile ? userProfile.name : "Sign in to post"}
+                                </div>
                             </div>
                             <div>
                                 <label className="text-[10px] font-black uppercase tracking-widest text-stone-400 block mb-2">Rating</label>
@@ -549,7 +580,7 @@ export default function ProductDetails() {
                                     >
                                         Choose File
                                     </label>
-                                    {newReview.img && <img src={newReview.img} alt="preview" className="w-12 h-12 object-cover rounded" />}
+                                    {newReview.img && <img src={newReview.img} alt="preview" className="w-16 h-16 object-cover rounded-full border border-stone-200 shadow-sm transition-transform hover:scale-105" />}
                                 </div>
                             </div>
                         </div>
@@ -576,29 +607,34 @@ export default function ProductDetails() {
                 </motion.div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-                    {reviews.map(review => (
-                        <div key={review.id} className="bg-white border border-stone-200 p-8 transition-all duration-500">
-                            <div className="flex gap-1 mb-6">
-                                {[...Array(5)].map((_, i) => (
-                                    <svg key={i} className={`w-4 h-4 ${i < review.rating ? 'text-black' : 'text-stone-200'}`} fill="currentColor" viewBox="0 0 20 20">
-                                        <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
-                                    </svg>
-                                ))}
-                            </div>
-                            <p className="text-stone-600 text-sm leading-relaxed mb-6 font-medium">"{review.comment}"</p>
-                            {review.img && (
-                                <div className="mb-6 overflow-hidden">
-                                    <img src={review.img} alt="Review" className="w-full h-40 object-cover rounded-sm hover:scale-105 transition duration-500" />
+                    {reviews.length > 0 ? (
+                        reviews.map((review, idx) => (
+                            <div key={review.review_id || idx} className="bg-white border border-stone-200 p-8 transition-all duration-500">
+                                <div className="flex justify-between items-start gap-4">
+                                    <div className="flex-1">
+                                        <div className="flex gap-1 mb-6">
+                                            {[...Array(5)].map((_, i) => (
+                                                <svg key={i} className={`w-4 h-4 ${i < review.rating ? 'text-black' : 'text-stone-200'}`} fill="currentColor" viewBox="0 0 20 20">
+                                                    <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
+                                                </svg>
+                                            ))}
+                                        </div>
+                                        <p className="text-stone-600 text-sm leading-relaxed mb-6 font-medium">"{review.body || review.comment}"</p>
+                                    </div>
+                                    {(review.image_url || review.img) && (
+                                        <img src={review.image_url || review.img} alt="Review" className="w-20 h-20 object-cover rounded-full border-2 border-stone-100 hover:scale-110 transition duration-500 shadow-sm shrink-0" />
+                                    )}
                                 </div>
-                            )}
-                            <div className="flex items-center gap-4 border-t border-stone-100 pt-6">
-                                <span className="w-10 h-10 rounded-full bg-stone-100 flex items-center justify-center text-[10px] font-black text-stone-900 border border-stone-200 uppercase">
-                                    {review.name.charAt(0)}
-                                </span>
-                                <span className="text-stone-900 font-bold text-sm tracking-tight">{review.name}</span>
+                                <div className="flex items-center border-t border-stone-100 pt-6">
+                                    <span className="text-stone-900 font-bold text-sm tracking-tight">{review.customer_name || review.name}</span>
+                                </div>
                             </div>
+                        ))
+                    ) : (
+                        <div className="col-span-full py-20 text-center bg-stone-100 border border-dashed border-stone-300">
+                            <p className="text-stone-400 font-black uppercase tracking-widest text-xs">No one has spoken yet. Be the first.</p>
                         </div>
-                    ))}
+                    )}
                 </div>
             </div>
 
