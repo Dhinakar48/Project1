@@ -696,7 +696,26 @@ async function setup() {
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       );
     `);
-    console.log("Table 'finance_transactions' initialized successfully.");
+    await client1.query(`
+      CREATE TABLE IF NOT EXISTS admins (
+        admin_id VARCHAR(20) PRIMARY KEY,
+        name VARCHAR(100) NOT NULL,
+        email VARCHAR(150) UNIQUE NOT NULL,
+        password_hash TEXT NOT NULL,
+        role VARCHAR(50) DEFAULT 'SuperAdmin',
+        permissions JSONB,
+        is_active BOOLEAN DEFAULT TRUE,
+        last_login_at TIMESTAMP,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      );
+    `);
+    await client1.query(`
+      INSERT INTO admins (admin_id, name, email, password_hash, role)
+      VALUES ('ADM001', 'System Administrator', 'admin@electroshop.com', 'admin123', 'SuperAdmin')
+      ON CONFLICT (email) DO NOTHING;
+    `);
+    console.log("Table 'admins' initialized successfully.");
 
   } catch (e) {
     console.error("Error creating tables:", e.message);

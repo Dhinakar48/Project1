@@ -212,4 +212,223 @@ router.delete('/admin/delete-product/:id', async (req, res) => {
    }
 });
 
+// Get all orders for Admin
+router.get('/admin/orders', async (req, res) => {
+   try {
+      const result = await pool.query(`
+         SELECT o.*, c.name as customer_name, c.email as customer_email,
+                a.full_name as shipping_name, a.address1, a.address2, a.city, a.state, a.pincode, a.phone,
+                p.payment_method, p.transaction_id
+         FROM orders o 
+         LEFT JOIN customers c ON o.customer_id = c.customer_id 
+         LEFT JOIN addresses a ON o.address_id = a.address_id
+         LEFT JOIN payments p ON o.order_id = p.order_id
+         ORDER BY o.placed_at DESC
+      `);
+      res.json({ success: true, orders: result.rows });
+   } catch (err) {
+      console.error('[admin-orders] Error:', err);
+      res.status(500).json({ success: false });
+   }
+});
+
+// Get order details for Admin
+router.get('/admin/order-details/:id', async (req, res) => {
+   try {
+      const orderRes = await pool.query(`
+         SELECT o.*, c.name as customer_name, c.email as customer_email,
+                a.full_name as shipping_name, a.address1, a.address2, a.city, a.state, a.pincode, a.phone,
+                pay.payment_method, pay.transaction_id
+         FROM orders o 
+         LEFT JOIN customers c ON o.customer_id = c.customer_id 
+         LEFT JOIN addresses a ON o.address_id = a.address_id
+         LEFT JOIN payments pay ON o.order_id = pay.order_id
+         WHERE o.order_id = $1
+      `, [req.params.id]);
+
+      if (orderRes.rows.length === 0) {
+         return res.status(404).json({ success: false, message: 'Order not found' });
+      }
+
+      const itemsRes = await pool.query(`
+         SELECT oi.*, p.name as product_name, p.images as product_images, s.store_name as seller_name
+         FROM order_items oi
+         JOIN products p ON oi.product_id = p.product_id
+         LEFT JOIN sellers s ON oi.seller_id = s.seller_id
+         WHERE oi.order_id = $1
+      `, [req.params.id]);
+
+      const historyRes = await pool.query(`
+         SELECT * FROM order_status_history 
+         WHERE order_id = $1 
+         ORDER BY changed_at DESC
+      `, [req.params.id]);
+
+      res.json({ 
+         success: true, 
+         order: orderRes.rows[0], 
+         items: itemsRes.rows,
+         history: historyRes.rows
+      });
+   } catch (err) {
+      console.error('[admin-order-details] Error:', err);
+      res.status(500).json({ success: false });
+   }
+});
+
+// Get shipping stats for Admin
+router.get('/admin/shipping-stats', async (req, res) => {
+   try {
+      const pending = await pool.query("SELECT COUNT(*) FROM orders WHERE order_status = 'Confirmed'");
+      const shipped = await pool.query("SELECT COUNT(*) FROM orders WHERE order_status = 'Shipped'");
+      const delivered = await pool.query("SELECT COUNT(*) FROM orders WHERE order_status = 'Delivered'");
+      const transit = await pool.query("SELECT COUNT(*) FROM orders WHERE order_status = 'In Transit'");
+
+      res.json({
+         success: true,
+         stats: {
+            pending: pending.rows[0].count,
+            shipped: shipped.rows[0].count,
+            delivered: delivered.rows[0].count,
+            inTransit: transit.rows[0].count
+         }
+      });
+   } catch (err) {
+      console.error('[admin-shipping-stats] Error:', err);
+      res.status(500).json({ success: false });
+   }
+});
+
+// Get all shipments for Admin
+router.get('/admin/shipments', async (req, res) => {
+   try {
+      const result = await pool.query(`
+         SELECT o.*, c.name as customer_name,
+                a.full_name as shipping_name, a.city, a.state, a.pincode
+         FROM orders o 
+         LEFT JOIN customers c ON o.customer_id = c.customer_id 
+         LEFT JOIN addresses a ON o.address_id = a.address_id
+         WHERE o.order_status IN ('Confirmed', 'Shipped', 'In Transit', 'Delivered')
+         ORDER BY o.placed_at DESC
+      `);
+      res.json({ success: true, shipments: result.rows });
+   } catch (err) {
+      console.error('[admin-shipments] Error:', err);
+      res.status(500).json({ success: false });
+   }
+});
+
+// --- USERS MANAGEMENT ---
+router.get('/admin/all-users', async (req, res) => {
+   try {
+      const customers = await pool.query("SELECT customer_id as id, name, email, phone, profile_image as image, is_active, created_at, 'Customer' as type FROM customers ORDER BY created_at DESC");
+      const sellers = await pool.query("SELECT seller_id as id, full_name as name, email, phone, store_logo_url as image, is_active, created_at, 'Seller' as type FROM sellers ORDER BY created_at DESC");
+      
+      res.json({
+         success: true,
+         users: [...customers.rows, ...sellers.rows]
+      });
+   } catch (err) {
+      console.error('[admin-all-users] Error:', err);
+      res.status(500).json({ success: false });
+   }
+});
+
+router.patch('/admin/toggle-user-status', async (req, res) => {
+   const { userId, type, isActive } = req.body;
+   try {
+      if (type === 'Customer') {
+         await pool.query("UPDATE customers SET is_active = $1 WHERE customer_id = $2", [isActive, userId]);
+      } else {
+         await pool.query("UPDATE sellers SET is_active = $1 WHERE seller_id = $2", [isActive, userId]);
+      }
+      res.json({ success: true, message: `User ${isActive ? 'activated' : 'deactivated'} successfully.` });
+   } catch (err) {
+      console.error('[toggle-user-status] Error:', err);
+      res.status(500).json({ success: false });
+   }
+});
+
+// --- PAYMENTS MANAGEMENT ---
+router.get('/admin/transactions', async (req, res) => {
+   try {
+      const result = await pool.query(`
+         SELECT p.*, c.name as customer_name, o.total_amount as order_total
+         FROM payments p
+         LEFT JOIN customers c ON p.customer_id = c.customer_id
+         LEFT JOIN orders o ON p.order_id = o.order_id
+         ORDER BY p.created_at DESC
+      `);
+      res.json({ success: true, transactions: result.rows });
+   } catch (err) {
+      console.error('[admin-transactions] Error:', err);
+      res.status(500).json({ success: false });
+   }
+});
+
+// --- RETURNS MANAGEMENT ---
+router.get('/admin/returns', async (req, res) => {
+   try {
+      const result = await pool.query(`
+         SELECT o.*, c.name as customer_name
+         FROM orders o
+         LEFT JOIN customers c ON o.customer_id = c.customer_id
+         WHERE o.order_status IN ('Cancelled', 'Returned', 'Refunded')
+         ORDER BY o.updated_at DESC
+      `);
+      res.json({ success: true, returns: result.rows });
+   } catch (err) {
+      console.error('[admin-returns] Error:', err);
+      res.status(500).json({ success: false });
+   }
+});
+
+// --- ANALYTICS DETAILED ---
+router.get('/admin/analytics-detailed', async (req, res) => {
+   try {
+      // Monthly Revenue for last 6 months
+      const revenueRes = await pool.query(`
+         SELECT TO_CHAR(placed_at, 'Mon') as month, SUM(total_amount) as amount
+         FROM orders
+         WHERE placed_at > CURRENT_DATE - INTERVAL '6 months'
+         GROUP BY month, TO_CHAR(placed_at, 'MM')
+         ORDER BY TO_CHAR(placed_at, 'MM') ASC
+      `);
+
+      // Category Distribution
+      const categoryRes = await pool.query(`
+         SELECT c.name, COUNT(oi.order_item_id) as sales
+         FROM order_items oi
+         JOIN products p ON oi.product_id = p.product_id
+         JOIN categories c ON p.category_id = c.category_id
+         GROUP BY c.name
+         ORDER BY sales DESC
+      `);
+
+      res.json({
+         success: true,
+         revenueTrend: revenueRes.rows,
+         categoryDistribution: categoryRes.rows
+      });
+   } catch (err) {
+      console.error('[admin-analytics-detailed] Error:', err);
+      res.status(500).json({ success: false });
+   }
+});
+
+// --- PROFILE ---
+router.get('/admin/profile/:id', async (req, res) => {
+   try {
+      const result = await pool.query("SELECT admin_id, name, email, role, last_login_at, created_at FROM admins WHERE admin_id = $1", [req.params.id]);
+      if (result.rows.length === 0) return res.status(404).json({ success: false });
+      res.json({ success: true, profile: result.rows[0] });
+   } catch (err) {
+      console.error('[admin-profile] Error:', err);
+      res.status(500).json({ success: false });
+   }
+});
+
 module.exports = router;
+
+
+
