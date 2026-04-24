@@ -21,12 +21,15 @@ import UserOnboarding from "./UserOnboarding"
 
 
 
+import AdminDashboard from "./AdminDashboard/AdminDashboard"
+import AdminLogin from "./AdminDashboard/AdminLogin"
+
 function App () {
   const location = useLocation();
-  const authPaths = ["/seller-login", "/seller-register", "/seller-dashboard", "/seller-onboarding", "/portal-selection", "/login", "/signup", "/user-onboarding"];
+  const authPaths = ["/seller-login", "/seller-register", "/seller-dashboard", "/seller-onboarding", "/portal-selection", "/login", "/signup", "/user-onboarding", "/admin", "/admin-login"];
   const isAuthPage = authPaths.includes(location.pathname);
 
-  const hideFooterPaths = ["/order"];
+  const hideFooterPaths = ["/order", "/admin", "/admin-login"];
   const isHideFooterPage = hideFooterPaths.includes(location.pathname);
 
   return (
@@ -50,6 +53,8 @@ function App () {
         <Route path="/user-onboarding" element={<UserOnboarding />} />
         <Route path="/order" element={<OrderPage />} />
         <Route path="/my-account" element={<MyAccount />} />
+        <Route path="/admin" element={<AdminDashboard />} />
+        <Route path="/admin-login" element={<AdminLogin />} />
       </Routes>
 
 

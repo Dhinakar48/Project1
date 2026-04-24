@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import axios from "axios";
 import { FaOpencart, FaUser, FaShopify } from "react-icons/fa6";
-import { FaBars, FaTimes, FaSearch } from "react-icons/fa";
+import { FaBars, FaTimes, FaSearch, FaUserShield } from "react-icons/fa";
 import { PiHeartStraight } from "react-icons/pi";
 import { motion, AnimatePresence } from "framer-motion";
 import { useStore } from "./StoreContext";
@@ -249,6 +249,9 @@ export default function Navbar() {
                       <Link to="/seller-login" onClick={() => setUserDropdown(false)} className="px-4 py-2.5 text-xs font-black uppercase tracking-widest text-stone-500 hover:text-amber-600 hover:bg-stone-50 transition rounded-lg flex items-center gap-3">
                         <FaShopify size={12} /> Seller Portal
                       </Link>
+                      <Link to="/admin-login" onClick={() => setUserDropdown(false)} className="px-4 py-2.5 text-xs font-black uppercase tracking-widest text-indigo-500 hover:text-indigo-600 hover:bg-indigo-50 transition rounded-lg flex items-center gap-3">
+                        <FaUserShield size={12} /> Admin Portal
+                      </Link>
                       <div className="h-[1px] bg-stone-50 my-1 mx-2" />
 
                       {localStorage.getItem("user") ? (
@@ -359,6 +362,10 @@ export default function Navbar() {
                 <Link to="/seller-login" onClick={() => setOpen(false)} className="flex items-center gap-3 text-stone-700">
                   <FaShopify size={18} />
                   <span className="text-sm font-bold">Seller Portal</span>
+                </Link>
+                <Link to="/admin-login" onClick={() => setOpen(false)} className="flex items-center gap-3 text-indigo-600">
+                  <FaUserShield size={18} />
+                  <span className="text-sm font-bold">Admin Portal</span>
                 </Link>
 
                 {localStorage.getItem("user") ? (

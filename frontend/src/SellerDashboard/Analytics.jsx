@@ -17,7 +17,8 @@ export default function Analytics({ timeRange, setTimeRange, setActiveTab, selle
             if (timeRange === 'Weekly') type = 'weekly';
             if (timeRange === 'Monthly') type = 'monthly';
             if (timeRange === 'Quarterly') type = 'quarterly';
-            if (timeRange === 'Yearly') type = 'half-yearly';
+            if (timeRange === 'Half-Yearly') type = 'half-yearly';
+            if (timeRange === 'Yearly') type = 'annual';
             
             const res = await axios.get(`http://localhost:5000/api/seller/finances/${type}/${sellerId}`);
             setFinances(res.data);
@@ -30,9 +31,15 @@ export default function Analytics({ timeRange, setTimeRange, setActiveTab, selle
       fetchFinances();
    }, [sellerId, timeRange]);
 
-   const currentRevenue = finances.reduce((acc, curr) => acc + parseFloat(curr.total_revenue || 0), 0);
-   const currentNet = finances.reduce((acc, curr) => acc + parseFloat(curr.net_seller_earnings || 0), 0);
-   const currentCommissions = finances.reduce((acc, curr) => acc + parseFloat(curr.platform_commission || 0), 0);
+   const getCurrentPeriodData = () => {
+      if (finances.length === 0) return {};
+      return finances[0];
+   };
+
+   const currentPeriodData = getCurrentPeriodData();
+   const currentRevenue = parseFloat(currentPeriodData.total_revenue || 0);
+   const currentNet = parseFloat(currentPeriodData.net_seller_earnings || 0);
+   const currentCommissions = parseFloat(currentPeriodData.platform_commission || 0);
 
    if (loading) return (
       <div className="h-96 flex items-center justify-center">
@@ -50,6 +57,8 @@ export default function Analytics({ timeRange, setTimeRange, setActiveTab, selle
          return months[row.month_number - 1] || `M${row.month_number}`;
       } else if (timeRange === 'Quarterly') {
          return `Q${row.quarter_number} (${row.year})`;
+      } else if (timeRange === 'Half-Yearly') {
+         return `H${row.half_number} ${row.year}`;
       } else if (timeRange === 'Yearly') {
          return `${row.year}`;
       }
@@ -72,7 +81,7 @@ export default function Analytics({ timeRange, setTimeRange, setActiveTab, selle
             {/* High-End Time Range Toggle */}
             <div className="flex flex-col items-end gap-4">
                <div className="flex items-center gap-2 bg-stone-100/50 p-1.5 rounded-[2rem] border border-stone-200/50 backdrop-blur-sm">
-                  {['Daily', 'Weekly', 'Monthly', 'Quarterly', 'Yearly'].map((range) => (
+                  {['Daily', 'Weekly', 'Monthly', 'Quarterly', 'Half-Yearly', 'Yearly'].map((range) => (
                      <button
                         key={range}
                         onClick={() => setTimeRange(range)}
@@ -86,25 +95,7 @@ export default function Analytics({ timeRange, setTimeRange, setActiveTab, selle
                   ))}
                </div>
 
-               {timeRange === 'Yearly' && (
-                  <div className="flex items-center gap-2 bg-amber-500/5 p-1 rounded-2xl border border-amber-500/10 animate-in fade-in slide-in-from-right-4 duration-500">
-                     {[
-                        { label: 'Jan to June', val: 1 },
-                        { label: 'July to Dec', val: 2 }
-                     ].map((half) => (
-                        <button
-                           key={half.val}
-                           onClick={() => setSelectedHalf(half.val)}
-                           className={`px-4 py-2 rounded-xl text-[9px] font-bold uppercase tracking-wider transition-all ${selectedHalf === half.val
-                              ? 'bg-amber-500 text-stone-900 shadow-md'
-                              : 'text-amber-600/50 hover:text-amber-600 hover:bg-amber-500/10'
-                              }`}
-                        >
-                           {half.label}
-                        </button>
-                     ))}
-                  </div>
-               )}
+
             </div>
          </div>
 
@@ -129,7 +120,7 @@ export default function Analytics({ timeRange, setTimeRange, setActiveTab, selle
                   </div>
                </div>
                <div className="text-right">
-                  <span className="text-[9px] font-semibold text-stone-400 block mb-1">Total Accumulated</span>
+                  <span className="text-[9px] font-semibold text-stone-400 block mb-1">Current Revenue</span>
                   <span className="text-4xl font-semibold text-stone-900 drop-shadow-sm">
                      ₹{currentRevenue.toLocaleString()}
                   </span>
@@ -150,7 +141,7 @@ export default function Analytics({ timeRange, setTimeRange, setActiveTab, selle
                {(() => {
                   let dataToShow = [...finances].reverse();
                   if (timeRange === 'Yearly') {
-                     dataToShow = dataToShow.filter(row => row.half_number === selectedHalf);
+                     dataToShow = dataToShow.slice(-2);
                   }
                   
                   if (dataToShow.length === 0) {
@@ -161,21 +152,25 @@ export default function Analytics({ timeRange, setTimeRange, setActiveTab, selle
                      );
                   }
 
-                  return dataToShow.slice(-10).map((row, i) => {
+                  return dataToShow.map((row, i) => {
                      const maxVal = Math.max(...finances.map(f => parseFloat(f.total_revenue) || 1));
                      const grossHeight = (parseFloat(row.total_revenue) / maxVal) * 100;
                      const netHeight = (parseFloat(row.net_seller_earnings) / maxVal) * 100;
+
+                     const isWide = ['Quarterly', 'Half-Yearly', 'Yearly'].includes(timeRange);
+                     const grossWidth = isWide ? "w-[98%] max-w-[160px]" : "w-[95%] max-w-[100px]";
+                     const netWidth = isWide ? "w-[85%] max-w-[120px]" : "w-[70%] max-w-[70px]";
 
                      return (
                         <div key={i} className="flex-1 flex flex-col items-center gap-2 h-full justify-end group/bar cursor-pointer">
                            <div className="w-full relative flex items-end justify-center h-[85%]">
                               <motion.div
                                  initial={{ height: 0 }} animate={{ height: `${grossHeight}%` }}
-                                 className="absolute bottom-0 w-[95%] max-w-[100px] bg-amber-500/10 rounded-t-[1rem] group-hover/bar:bg-amber-500/20 transition-colors"
+                                 className={`absolute bottom-0 ${grossWidth} bg-amber-500/10 rounded-t-[1rem] group-hover/bar:bg-amber-500/20 transition-colors`}
                               />
                               <motion.div
                                  initial={{ height: 0 }} animate={{ height: `${netHeight}%` }}
-                                 className="absolute bottom-0 w-[70%] max-w-[70px] bg-amber-500 rounded-t-[1rem] group-hover/bar:bg-amber-500 transition-colors shadow-[0_-8px_20px_rgba(245,158,11,0.3)]"
+                                 className={`absolute bottom-0 ${netWidth} bg-amber-500 rounded-t-[1rem] group-hover/bar:bg-amber-500 transition-colors shadow-[0_-8px_20px_rgba(245,158,11,0.3)]`}
                               />
 
                               <div className="absolute -top-12 opacity-0 group-hover/bar:opacity-100 transition-opacity whitespace-nowrap z-20">
