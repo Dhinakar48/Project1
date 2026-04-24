@@ -70,7 +70,11 @@ export function StoreProvider({ children }) {
 
   useEffect(() => {
     try {
-      localStorage.setItem("userProfile", JSON.stringify(userProfile));
+      if (userProfile) {
+        // Strip out the base64 image before saving to localStorage to avoid QuotaExceededError
+        const { image, ...safeProfile } = userProfile;
+        localStorage.setItem("userProfile", JSON.stringify(safeProfile));
+      }
     } catch (e) {
       console.error("Profile storage failed", e);
     }

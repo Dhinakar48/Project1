@@ -1,28 +1,18 @@
-const { Pool } = require("pg");
-
-const pool = new Pool({
-  user: "postgres",
-  host: "localhost",
-  database: "local_db",
-  password: "3616",
-  port: 5432,
-});
+const pool = require('../db');
 
 async function checkConstraints() {
   try {
     const res = await pool.query(`
-      SELECT 
-        conname AS constraint_name, 
-        pg_get_constraintdef(oid) AS constraint_definition
-      FROM pg_constraint 
-      WHERE conrelid = 'addresses'::regclass;
+      SELECT conname, contype, pg_get_constraintdef(c.oid)
+      FROM pg_constraint c
+      JOIN pg_namespace n ON n.oid = c.connamespace
+      WHERE n.nspname = 'public' AND contype = 'u' AND conrelid = 'addresses'::regclass
     `);
-    console.log("Constraints for 'addresses':");
-    console.table(res.rows);
-  } catch (e) {
-    console.error(e.message);
-  } finally {
-    process.exit();
+    console.log(JSON.stringify(res.rows, null, 2));
+    process.exit(0);
+  } catch (err) {
+    console.error(err.message);
+    process.exit(1);
   }
 }
 

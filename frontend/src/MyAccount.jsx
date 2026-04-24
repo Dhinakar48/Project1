@@ -35,12 +35,12 @@ export default function MyAccount() {
   const [isEditingProfile, setIsEditingProfile] = useState(false);
   const [isChangingPassword, setIsChangingPassword] = useState(false);
   const [passwordForm, setPasswordForm] = useState({ current: '', new: '', confirm: '' });
-  const { cart, wishlist } = useStore();
+  const { cart, wishlist, setUserProfile } = useStore();
   const fileInputRef = useRef(null);
   const navigate = useNavigate();
 
   const activeUser = JSON.parse(localStorage.getItem("user") || "{}");
-  
+
   // Local state to handle editing
   const [profileData, setProfileData] = useState({
     firstName: activeUser.name || "User",
@@ -104,16 +104,27 @@ export default function MyAccount() {
         image: profileData.image
       });
       setIsEditingProfile(false);
-      
+
       // Update local storage to reflect changes across app
+      // CRITICAL: Omit the profile_image (base64) to avoid QuotaExceededError in localStorage
       const updatedUser = {
         ...activeUser,
         name: profileData.firstName,
-        phone: profileData.phone,
-        profile_image: profileData.image
+        phone: profileData.phone
+        // We do NOT store the image here to save space
       };
       localStorage.setItem("user", JSON.stringify(updatedUser));
       
+      // Update global context if available
+      if (typeof setUserProfile === 'function') {
+        setUserProfile(prev => ({
+          ...prev,
+          name: profileData.firstName,
+          phone: profileData.phone,
+          image: profileData.image
+        }));
+      }
+
       alert("Profile updated successfully!");
     } catch (err) {
       console.error("Error updating profile:", err);
@@ -143,7 +154,16 @@ export default function MyAccount() {
             status: o.order_status,
             cancellationReason: o.cancellation_reason,
             total: `₹${parseFloat(o.total_amount).toLocaleString()}`,
-            items: o.items.map(it => ({
+            shippingAddress: {
+              name: o.shipping_name,
+              address1: o.address1,
+              address2: o.address2,
+              city: o.city,
+              state: o.state,
+              pincode: o.pincode,
+              phone: o.shipping_phone
+            },
+            items: (o.items || []).map(it => ({
               name: it.name,
               quantity: it.quantity,
               price: `₹${parseFloat(it.unit_price).toLocaleString()}`
@@ -159,16 +179,16 @@ export default function MyAccount() {
 
   const handleCancelOrderSubmit = async () => {
     if (!selectedOrder) return;
-    
+
     try {
       const res = await axios.post("http://127.0.0.1:5000/order/cancel", {
         orderId: selectedOrder.id,
         reason: cancellationReason
       });
-      
+
       if (res.data.success) {
         // Update local state
-        setRealOrders(prev => prev.map(o => 
+        setRealOrders(prev => prev.map(o =>
           o.id === selectedOrder.id ? { ...o, status: 'Cancelled' } : o
         ));
         setSelectedOrder(prev => ({ ...prev, status: 'Cancelled' }));
@@ -210,7 +230,7 @@ export default function MyAccount() {
   const [isAddingPayment, setIsAddingPayment] = useState(false);
   const [editingPaymentId, setEditingPaymentId] = useState(null);
   const [newPayment, setNewPayment] = useState({ type: "Visa", cardNumber: "", expiry: "", cvv: "" });
-  
+
   const [settings, setSettings] = useState({
     orderUpdates: true,
     promotions: true,
@@ -236,13 +256,13 @@ export default function MyAccount() {
           isDefault: paymentMethods.length === 0
         });
         const p = res.data;
-        setPaymentMethods([...paymentMethods, { 
-          id: p.payment_method_id, 
-          isDefault: p.is_default, 
-          last4: p.last4, 
-          expiry: p.expiry, 
-          type: p.type, 
-          icon: p.type === 'Visa' ? FaCcVisa : FaCcMastercard 
+        setPaymentMethods([...paymentMethods, {
+          id: p.payment_method_id,
+          isDefault: p.is_default,
+          last4: p.last4,
+          expiry: p.expiry,
+          type: p.type,
+          icon: p.type === 'Visa' ? FaCcVisa : FaCcMastercard
         }]);
       }
       setIsAddingPayment(false);
@@ -344,8 +364,8 @@ export default function MyAccount() {
                         key={tab.id}
                         onClick={() => setActiveTab(tab.id)}
                         className={`flex items-center gap-2 justify-center px-6 py-3.5 rounded-2xl transition-all duration-300 font-bold text-sm tracking-wide ${isActive
-                            ? 'bg-stone-900 text-amber-500 shadow-md'
-                            : 'text-stone-600 hover:bg-stone-50 hover:text-stone-900'
+                          ? 'bg-stone-900 text-amber-500 shadow-md'
+                          : 'text-stone-600 hover:bg-stone-50 hover:text-stone-900'
                           }`}
                       >
                         <Icon size={16} className={isActive ? 'text-amber-500' : 'text-stone-400'} />
@@ -354,7 +374,7 @@ export default function MyAccount() {
                     );
                   })}
                 </div>
-                
+
                 <div className="flex items-center gap-2 pl-4 ml-4 border-l border-stone-200">
                   <button
                     onClick={handleLogout}
@@ -403,27 +423,27 @@ export default function MyAccount() {
                           </button>
                         )}
                       </div>
-                      
+
                       <div className="flex flex-col md:flex-row gap-10 items-start">
                         {/* Profile Picture Area */}
                         <div className="flex flex-col items-center gap-4 shrink-0 bg-stone-50/50 p-6 rounded-3xl border border-stone-100">
                           <input type="file" hidden ref={fileInputRef} accept="image/*" onChange={handleImageChange} />
-                          <div 
+                          <div
                             className="relative w-32 h-32 rounded-full border-[6px] border-white overflow-hidden shadow-lg shadow-stone-200/50 cursor-pointer group"
                             onClick={() => fileInputRef.current?.click()}
                           >
-                             {profileImage ? (
-                               <img src={profileImage} alt="Profile" className="w-full h-full object-cover" />
-                             ) : (
-                               <div className="w-full h-full bg-amber-500 flex items-center justify-center text-4xl font-black text-stone-900 border border-stone-900/10">
-                                 JS
-                               </div>
-                             )}
-                             <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-white">
-                               <FaCamera size={24} />
-                             </div>
+                            {profileImage ? (
+                              <img src={profileImage} alt="Profile" className="w-full h-full object-cover" />
+                            ) : (
+                              <div className="w-full h-full bg-amber-500 flex items-center justify-center text-4xl font-black text-stone-900 border border-stone-900/10">
+                                JS
+                              </div>
+                            )}
+                            <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-white">
+                              <FaCamera size={24} />
+                            </div>
                           </div>
-                          <button 
+                          <button
                             onClick={() => fileInputRef.current?.click()}
                             className="text-[10px] font-black uppercase tracking-widest text-stone-900 bg-white border border-stone-200 shadow-sm px-5 py-2.5 rounded-xl hover:bg-stone-50 hover:border-stone-300 transition-all active:scale-95"
                           >
@@ -436,7 +456,7 @@ export default function MyAccount() {
                           <div className="space-y-2">
                             <label className="text-[10px] font-black uppercase tracking-widest text-stone-500">Name</label>
                             {isEditingProfile ? (
-                              <input type="text" value={profileData.firstName} onChange={(e) => setProfileData({...profileData, firstName: e.target.value})} className="w-full bg-white px-4 py-3 rounded-2xl font-semibold border border-stone-200 outline-none focus:border-amber-500 focus:ring-1 focus:ring-amber-500 transition-all shadow-sm" />
+                              <input type="text" value={profileData.firstName} onChange={(e) => setProfileData({ ...profileData, firstName: e.target.value })} className="w-full bg-white px-4 py-3 rounded-2xl font-semibold border border-stone-200 outline-none focus:border-amber-500 focus:ring-1 focus:ring-amber-500 transition-all shadow-sm" />
                             ) : (
                               <div className="bg-stone-50 px-4 py-3 rounded-2xl font-semibold border border-stone-100 text-stone-900">{profileData.firstName}</div>
                             )}
@@ -444,7 +464,7 @@ export default function MyAccount() {
                           <div className="space-y-2">
                             <label className="text-[10px] font-black uppercase tracking-widest text-stone-500">Date of Birth</label>
                             {isEditingProfile ? (
-                              <input type="date" value={profileData.dob} onChange={(e) => setProfileData({...profileData, dob: e.target.value})} className="w-full bg-white px-4 py-3 rounded-2xl font-semibold border border-stone-200 outline-none focus:border-amber-500 focus:ring-1 focus:ring-amber-500 transition-all shadow-sm" />
+                              <input type="date" value={profileData.dob} onChange={(e) => setProfileData({ ...profileData, dob: e.target.value })} className="w-full bg-white px-4 py-3 rounded-2xl font-semibold border border-stone-200 outline-none focus:border-amber-500 focus:ring-1 focus:ring-amber-500 transition-all shadow-sm" />
                             ) : (
                               <div className="w-full bg-stone-50 px-4 py-3 rounded-2xl font-semibold border border-stone-100 text-stone-900">
                                 {new Date(profileData.dob).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })}
@@ -454,7 +474,7 @@ export default function MyAccount() {
                           <div className="space-y-2">
                             <label className="text-[10px] font-black uppercase tracking-widest text-stone-500">Email Address</label>
                             {isEditingProfile ? (
-                              <input type="email" value={profileData.email} onChange={(e) => setProfileData({...profileData, email: e.target.value})} className="w-full bg-white px-4 py-3 rounded-2xl font-semibold border border-stone-200 outline-none focus:border-amber-500 focus:ring-1 focus:ring-amber-500 transition-all shadow-sm" />
+                              <input type="email" value={profileData.email} onChange={(e) => setProfileData({ ...profileData, email: e.target.value })} className="w-full bg-white px-4 py-3 rounded-2xl font-semibold border border-stone-200 outline-none focus:border-amber-500 focus:ring-1 focus:ring-amber-500 transition-all shadow-sm" />
                             ) : (
                               <div className="bg-stone-50 px-4 py-3 rounded-2xl font-semibold border border-stone-100 text-stone-900">{profileData.email}</div>
                             )}
@@ -462,60 +482,60 @@ export default function MyAccount() {
                           <div className="space-y-2">
                             <label className="text-[10px] font-black uppercase tracking-widest text-stone-500">Phone</label>
                             {isEditingProfile ? (
-                              <input type="tel" value={profileData.phone} onChange={(e) => setProfileData({...profileData, phone: e.target.value})} className="w-full bg-white px-4 py-3 rounded-2xl font-semibold border border-stone-200 outline-none focus:border-amber-500 focus:ring-1 focus:ring-amber-500 transition-all shadow-sm" />
+                              <input type="tel" value={profileData.phone} onChange={(e) => setProfileData({ ...profileData, phone: e.target.value })} className="w-full bg-white px-4 py-3 rounded-2xl font-semibold border border-stone-200 outline-none focus:border-amber-500 focus:ring-1 focus:ring-amber-500 transition-all shadow-sm" />
                             ) : (
                               <div className="bg-stone-50 px-4 py-3 rounded-2xl font-semibold border border-stone-100 text-stone-900">{profileData.phone}</div>
                             )}
                           </div>
                           <div className="space-y-2 md:col-span-2">
-                             <label className="text-[10px] font-black uppercase tracking-widest text-stone-500">Street Address Line 1</label>
-                             {isEditingProfile ? (
-                               <input type="text" value={profileData.address} onChange={(e) => setProfileData({...profileData, address: e.target.value})} className="w-full bg-white px-4 py-3 rounded-2xl font-semibold border border-stone-200 outline-none focus:border-amber-500 focus:ring-1 focus:ring-amber-500 transition-all shadow-sm" />
-                             ) : (
-                               <div className="bg-stone-50 px-4 py-3 rounded-2xl font-semibold border border-stone-100 text-stone-900">{profileData.address}</div>
-                             )}
+                            <label className="text-[10px] font-black uppercase tracking-widest text-stone-500">Street Address Line 1</label>
+                            {isEditingProfile ? (
+                              <input type="text" value={profileData.address} onChange={(e) => setProfileData({ ...profileData, address: e.target.value })} className="w-full bg-white px-4 py-3 rounded-2xl font-semibold border border-stone-200 outline-none focus:border-amber-500 focus:ring-1 focus:ring-amber-500 transition-all shadow-sm" />
+                            ) : (
+                              <div className="bg-stone-50 px-4 py-3 rounded-2xl font-semibold border border-stone-100 text-stone-900">{profileData.address}</div>
+                            )}
                           </div>
                           <div className="space-y-2 md:col-span-2">
-                             <label className="text-[10px] font-black uppercase tracking-widest text-stone-500">Street Address Line 2 (Optional)</label>
-                             {isEditingProfile ? (
-                               <input type="text" value={profileData.address2} onChange={(e) => setProfileData({...profileData, address2: e.target.value})} className="w-full bg-white px-4 py-3 rounded-2xl font-semibold border border-stone-200 outline-none focus:border-amber-500 focus:ring-1 focus:ring-amber-500 transition-all shadow-sm" />
-                             ) : (
-                               <div className="bg-stone-50 px-4 py-3 rounded-2xl font-semibold border border-stone-100 text-stone-900">{profileData.address2 || "-"}</div>
-                             )}
+                            <label className="text-[10px] font-black uppercase tracking-widest text-stone-500">Street Address Line 2 (Optional)</label>
+                            {isEditingProfile ? (
+                              <input type="text" value={profileData.address2} onChange={(e) => setProfileData({ ...profileData, address2: e.target.value })} className="w-full bg-white px-4 py-3 rounded-2xl font-semibold border border-stone-200 outline-none focus:border-amber-500 focus:ring-1 focus:ring-amber-500 transition-all shadow-sm" />
+                            ) : (
+                              <div className="bg-stone-50 px-4 py-3 rounded-2xl font-semibold border border-stone-100 text-stone-900">{profileData.address2 || "-"}</div>
+                            )}
                           </div>
                           <div className="space-y-2">
-                             <label className="text-[10px] font-black uppercase tracking-widest text-stone-500">City</label>
-                             {isEditingProfile ? (
-                               <input type="text" value={profileData.city} onChange={(e) => setProfileData({...profileData, city: e.target.value})} className="w-full bg-white px-4 py-3 rounded-2xl font-semibold border border-stone-200 outline-none focus:border-amber-500 focus:ring-1 focus:ring-amber-500 transition-all shadow-sm" />
-                             ) : (
-                               <div className="bg-stone-50 px-4 py-3 rounded-2xl font-semibold border border-stone-100 text-stone-900">{profileData.city}</div>
-                             )}
+                            <label className="text-[10px] font-black uppercase tracking-widest text-stone-500">City</label>
+                            {isEditingProfile ? (
+                              <input type="text" value={profileData.city} onChange={(e) => setProfileData({ ...profileData, city: e.target.value })} className="w-full bg-white px-4 py-3 rounded-2xl font-semibold border border-stone-200 outline-none focus:border-amber-500 focus:ring-1 focus:ring-amber-500 transition-all shadow-sm" />
+                            ) : (
+                              <div className="bg-stone-50 px-4 py-3 rounded-2xl font-semibold border border-stone-100 text-stone-900">{profileData.city}</div>
+                            )}
                           </div>
-                            <div className="grid grid-cols-2 gap-4">
-                              <div className="space-y-2">
-                                 <label className="text-[10px] font-black uppercase tracking-widest text-stone-500">State</label>
-                                 {isEditingProfile ? (
-                                   <input type="text" value={profileData.state} onChange={(e) => setProfileData({...profileData, state: e.target.value})} className="w-full bg-white px-4 py-3 rounded-2xl font-semibold border border-stone-200 outline-none focus:border-amber-500 focus:ring-1 focus:ring-amber-500 transition-all shadow-sm" />
-                                 ) : (
-                                   <div className="bg-stone-50 px-4 py-3 rounded-2xl font-semibold border border-stone-100 text-stone-900">{profileData.state}</div>
-                                 )}
-                              </div>
-                              <div className="space-y-2">
-                                 <label className="text-[10px] font-black uppercase tracking-widest text-stone-500">Pincode</label>
-                                 {isEditingProfile ? (
-                                   <input type="text" value={profileData.pincode} onChange={(e) => setProfileData({...profileData, pincode: e.target.value})} className="w-full bg-white px-4 py-3 rounded-2xl font-semibold border border-stone-200 outline-none focus:border-amber-500 focus:ring-1 focus:ring-amber-500 transition-all shadow-sm" />
-                                 ) : (
-                                   <div className="bg-stone-50 px-4 py-3 rounded-2xl font-semibold border border-stone-100 text-stone-900">{profileData.pincode}</div>
-                                 )}
-                              </div>
+                          <div className="grid grid-cols-2 gap-4">
+                            <div className="space-y-2">
+                              <label className="text-[10px] font-black uppercase tracking-widest text-stone-500">State</label>
+                              {isEditingProfile ? (
+                                <input type="text" value={profileData.state} onChange={(e) => setProfileData({ ...profileData, state: e.target.value })} className="w-full bg-white px-4 py-3 rounded-2xl font-semibold border border-stone-200 outline-none focus:border-amber-500 focus:ring-1 focus:ring-amber-500 transition-all shadow-sm" />
+                              ) : (
+                                <div className="bg-stone-50 px-4 py-3 rounded-2xl font-semibold border border-stone-100 text-stone-900">{profileData.state}</div>
+                              )}
                             </div>
+                            <div className="space-y-2">
+                              <label className="text-[10px] font-black uppercase tracking-widest text-stone-500">Pincode</label>
+                              {isEditingProfile ? (
+                                <input type="text" value={profileData.pincode} onChange={(e) => setProfileData({ ...profileData, pincode: e.target.value })} className="w-full bg-white px-4 py-3 rounded-2xl font-semibold border border-stone-200 outline-none focus:border-amber-500 focus:ring-1 focus:ring-amber-500 transition-all shadow-sm" />
+                              ) : (
+                                <div className="bg-stone-50 px-4 py-3 rounded-2xl font-semibold border border-stone-100 text-stone-900">{profileData.pincode}</div>
+                              )}
+                            </div>
+                          </div>
 
                         </div>
                       </div>
                     </div>
 
                     <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                      
+
                       {/* Wishlist Highlight */}
                       <div className="bg-white rounded-3xl p-6 shadow-xl shadow-stone-200/50 border border-stone-100 flex flex-col">
                         <div className="flex justify-between items-center mb-6">
@@ -529,7 +549,7 @@ export default function MyAccount() {
                             {wishlist.slice(0, 2).map((item) => {
                               const displayImg = (item.variants && item.variants[0]?.img) || (item.images && item.images[0]) || "/placeholder-product.png";
                               const displayPrice = (item.variants && item.variants[0]?.price) || item.price || "₹0";
-                              
+
                               return (
                                 <div key={item.id} className="bg-stone-50/50 rounded-2xl p-3 border border-stone-100 flex flex-col justify-between gap-2 transition-colors hover:border-amber-200 cursor-pointer" onClick={() => navigate(`/product/${item.id}`)}>
                                   <div className="h-20 w-full overflow-hidden rounded-xl bg-white flex items-center justify-center p-2 shadow-sm border border-stone-100/50">
@@ -598,7 +618,7 @@ export default function MyAccount() {
                           <button onClick={() => setSelectedOrder(null)} className="text-[10px] font-black uppercase text-stone-500 hover:text-stone-900 tracking-widest flex items-center gap-2 mb-6 group">
                             <span className="text-lg leading-none group-hover:-translate-x-1 transition-transform">&larr;</span> Back to Orders
                           </button>
-                          
+
                           <div className="flex flex-wrap gap-4 items-start justify-between mb-8 border-b border-stone-100 pb-6">
                             <div>
                               <h2 className="text-2xl font-black uppercase tracking-tight text-stone-900 mb-2">Order {selectedOrder.id}</h2>
@@ -623,8 +643,8 @@ export default function MyAccount() {
 
                           <div className="space-y-6">
                             <div>
-                               <h3 className="text-xs font-black text-stone-400 uppercase tracking-widest mb-4">Items in this order</h3>
-                               <div className="bg-stone-50 rounded-2xl p-4 space-y-4 border border-stone-100">
+                              <h3 className="text-xs font-black text-stone-400 uppercase tracking-widest mb-4">Items in this order</h3>
+                              <div className="bg-stone-50 rounded-2xl p-4 space-y-4 border border-stone-100">
                                 {selectedOrder.items.map((item, idx) => (
                                   <div key={idx} className="flex items-center gap-4 text-sm bg-white p-4 rounded-xl border border-stone-100/50 shadow-sm">
                                     <div className="bg-stone-50 w-16 h-16 flex items-center justify-center rounded-xl border border-stone-100 text-stone-400">
@@ -637,15 +657,30 @@ export default function MyAccount() {
                                     <p className="font-black text-stone-900 text-lg shrink-0">{item.price}</p>
                                   </div>
                                 ))}
-                               </div>
+                              </div>
                             </div>
 
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                               <div className="bg-stone-50 p-6 rounded-2xl border border-stone-100 relative overflow-hidden">
                                 <h3 className="text-[10px] font-black text-stone-400 uppercase tracking-widest mb-3">Shipping Address</h3>
-                                <p className="font-bold text-stone-900 text-sm">{profileData.firstName} {profileData.lastName}</p>
-                                <p className="text-stone-500 text-sm mt-1">123 Tech Boulevard<br />Mumbai, MH 400001<br />India</p>
-                                <p className="text-stone-500 text-sm mt-2">{profileData.phone}</p>
+                                {selectedOrder.shippingAddress && selectedOrder.shippingAddress.address1 ? (
+                                  <>
+                                    <p className="font-bold text-stone-900 text-sm">{selectedOrder.shippingAddress.name}</p>
+                                    <p className="text-stone-500 text-sm mt-1">
+                                      {selectedOrder.shippingAddress.selectedAddressType === "address2"
+                                        ? selectedOrder.shippingAddress.address2
+                                        : selectedOrder.shippingAddress.address1
+                                      }
+                                      <br />
+                                      {selectedOrder.shippingAddress.city}, {selectedOrder.shippingAddress.state} {selectedOrder.shippingAddress.pincode}
+                                      <br />
+                                      India
+                                    </p>
+                                    <p className="text-stone-500 text-sm mt-2">{selectedOrder.shippingAddress.phone}</p>
+                                  </>
+                                ) : (
+                                  <p className="text-stone-500 text-sm italic">Address details unavailable</p>
+                                )}
                                 <FaLocationDot className="absolute -bottom-4 -right-4 text-stone-200/50" size={100} />
                               </div>
                               <div className="bg-stone-50 p-6 rounded-2xl border border-stone-100 relative overflow-hidden">
@@ -662,41 +697,41 @@ export default function MyAccount() {
                             </div>
 
                             <div className="flex flex-col sm:flex-row justify-end gap-4 pt-6 border-t border-stone-100 mt-8">
-                               {isCancellingOrder ? (
-                                  <div className="w-full space-y-4">
-                                     <div className="space-y-2">
-                                        <label className="text-[10px] font-black uppercase tracking-widest text-stone-500">Reason for cancellation</label>
-                                        <textarea 
-                                          placeholder="Please tell us why you are cancelling..."
-                                          className="w-full bg-stone-50 p-4 rounded-xl border border-stone-200 outline-none focus:border-red-500 text-sm font-medium resize-none h-24"
-                                          value={cancellationReason}
-                                          onChange={(e) => setCancellationReason(e.target.value)}
-                                        />
-                                     </div>
-                                     <div className="flex gap-3 justify-end items-center">
-                                        <button onClick={() => setIsCancellingOrder(false)} className="text-[10px] font-black uppercase tracking-widest text-stone-500 hover:text-stone-900 px-4 py-2 transition-colors">
-                                          Keep Order
-                                        </button>
-                                        <button onClick={handleCancelOrderSubmit} className="text-[10px] font-black uppercase tracking-widest text-white bg-red-600 hover:bg-red-700 px-6 py-3 rounded-xl shadow-sm transition-colors">
-                                          Confirm Cancellation
-                                        </button>
-                                     </div>
+                              {isCancellingOrder ? (
+                                <div className="w-full space-y-4">
+                                  <div className="space-y-2">
+                                    <label className="text-[10px] font-black uppercase tracking-widest text-stone-500">Reason for cancellation</label>
+                                    <textarea
+                                      placeholder="Please tell us why you are cancelling..."
+                                      className="w-full bg-stone-50 p-4 rounded-xl border border-stone-200 outline-none focus:border-red-500 text-sm font-medium resize-none h-24"
+                                      value={cancellationReason}
+                                      onChange={(e) => setCancellationReason(e.target.value)}
+                                    />
                                   </div>
-                               ) : (
-                                  <>
-                                     {selectedOrder.status !== 'Cancelled' && selectedOrder.status !== 'Delivered' && (
-                                       <button onClick={() => setIsCancellingOrder(true)} className="bg-white border border-red-200 text-red-600 px-8 py-4 rounded-xl font-black uppercase tracking-widest text-[10px] hover:bg-red-50 transition shadow-sm active:scale-95">
-                                         Cancel Order
-                                       </button>
-                                     )}
-                                     <button className="bg-white border border-stone-200 text-stone-900 px-8 py-4 rounded-xl font-black uppercase tracking-widest text-[10px] hover:bg-stone-50 transition shadow-sm active:scale-95">
-                                       Download Invoice
-                                     </button>
-                                     <button className="bg-stone-900 text-amber-500 px-8 py-4 rounded-xl font-black uppercase tracking-widest text-[10px] hover:bg-stone-800 transition shadow-md active:scale-95">
-                                       Track Package
-                                     </button>
-                                  </>
-                               )}
+                                  <div className="flex gap-3 justify-end items-center">
+                                    <button onClick={() => setIsCancellingOrder(false)} className="text-[10px] font-black uppercase tracking-widest text-stone-500 hover:text-stone-900 px-4 py-2 transition-colors">
+                                      Keep Order
+                                    </button>
+                                    <button onClick={handleCancelOrderSubmit} className="text-[10px] font-black uppercase tracking-widest text-white bg-red-600 hover:bg-red-700 px-6 py-3 rounded-xl shadow-sm transition-colors">
+                                      Confirm Cancellation
+                                    </button>
+                                  </div>
+                                </div>
+                              ) : (
+                                <>
+                                  {selectedOrder.status !== 'Cancelled' && selectedOrder.status !== 'Delivered' && (
+                                    <button onClick={() => setIsCancellingOrder(true)} className="bg-white border border-red-200 text-red-600 px-8 py-4 rounded-xl font-black uppercase tracking-widest text-[10px] hover:bg-red-50 transition shadow-sm active:scale-95">
+                                      Cancel Order
+                                    </button>
+                                  )}
+                                  <button className="bg-white border border-stone-200 text-stone-900 px-8 py-4 rounded-xl font-black uppercase tracking-widest text-[10px] hover:bg-stone-50 transition shadow-sm active:scale-95">
+                                    Download Invoice
+                                  </button>
+                                  <button className="bg-stone-900 text-amber-500 px-8 py-4 rounded-xl font-black uppercase tracking-widest text-[10px] hover:bg-stone-800 transition shadow-md active:scale-95">
+                                    Track Package
+                                  </button>
+                                </>
+                              )}
                             </div>
                           </div>
                         </motion.div>
@@ -752,8 +787,8 @@ export default function MyAccount() {
                             </div>
                           )) : (
                             <div className="py-12 text-center bg-stone-50 rounded-3xl border border-dashed border-stone-200">
-                               <FaBoxOpen className="mx-auto text-stone-300 mb-4" size={48} />
-                               <p className="text-stone-400 font-bold uppercase tracking-widest text-xs">No orders placed yet.</p>
+                              <FaBoxOpen className="mx-auto text-stone-300 mb-4" size={48} />
+                              <p className="text-stone-400 font-bold uppercase tracking-widest text-xs">No orders placed yet.</p>
                             </div>
                           )}
                         </div>
@@ -783,31 +818,31 @@ export default function MyAccount() {
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
                           <div className="space-y-1">
                             <label className="text-[10px] font-black uppercase tracking-widest text-stone-500">Card Type</label>
-                            <select value={newPayment.type} onChange={e => setNewPayment({...newPayment, type: e.target.value})} className="w-full bg-white px-4 py-3 rounded-xl font-semibold border border-stone-200 outline-none focus:border-amber-500 shadow-sm appearance-none">
+                            <select value={newPayment.type} onChange={e => setNewPayment({ ...newPayment, type: e.target.value })} className="w-full bg-white px-4 py-3 rounded-xl font-semibold border border-stone-200 outline-none focus:border-amber-500 shadow-sm appearance-none">
                               <option value="Visa">Visa</option>
                               <option value="Mastercard">Mastercard</option>
                             </select>
                           </div>
                           <div className="space-y-1">
                             <label className="text-[10px] font-black uppercase tracking-widest text-stone-500">Card Number</label>
-                            <input required type="text" placeholder="**** **** **** 4242" value={newPayment.cardNumber} onChange={e => setNewPayment({...newPayment, cardNumber: e.target.value})} className="w-full bg-white px-4 py-3 rounded-xl font-semibold border border-stone-200 outline-none focus:border-amber-500 shadow-sm" />
+                            <input required type="text" placeholder="**** **** **** 4242" value={newPayment.cardNumber} onChange={e => setNewPayment({ ...newPayment, cardNumber: e.target.value })} className="w-full bg-white px-4 py-3 rounded-xl font-semibold border border-stone-200 outline-none focus:border-amber-500 shadow-sm" />
                           </div>
                           <div className="space-y-1">
                             <label className="text-[10px] font-black uppercase tracking-widest text-stone-500">Expiry (MM/YY)</label>
-                            <input required type="text" placeholder="12/27" value={newPayment.expiry} onChange={e => setNewPayment({...newPayment, expiry: e.target.value})} className="w-full bg-white px-4 py-3 rounded-xl font-semibold border border-stone-200 outline-none focus:border-amber-500 shadow-sm" />
+                            <input required type="text" placeholder="12/27" value={newPayment.expiry} onChange={e => setNewPayment({ ...newPayment, expiry: e.target.value })} className="w-full bg-white px-4 py-3 rounded-xl font-semibold border border-stone-200 outline-none focus:border-amber-500 shadow-sm" />
                           </div>
                           <div className="space-y-1">
                             <label className="text-[10px] font-black uppercase tracking-widest text-stone-500">CVV</label>
-                            <input required={!editingPaymentId} type="password" placeholder="***" value={newPayment.cvv} onChange={e => setNewPayment({...newPayment, cvv: e.target.value})} className="w-full bg-white px-4 py-3 rounded-xl font-semibold border border-stone-200 outline-none focus:border-amber-500 shadow-sm" />
+                            <input required={!editingPaymentId} type="password" placeholder="***" value={newPayment.cvv} onChange={e => setNewPayment({ ...newPayment, cvv: e.target.value })} className="w-full bg-white px-4 py-3 rounded-xl font-semibold border border-stone-200 outline-none focus:border-amber-500 shadow-sm" />
                           </div>
                         </div>
                         <div className="flex gap-3 justify-end items-center border-t border-stone-200 pt-6">
-                            <button type="button" onClick={() => { setIsAddingPayment(false); setEditingPaymentId(null); setNewPayment({ type: "Visa", cardNumber: "", expiry: "", cvv: "" }); }} className="text-[10px] font-black uppercase tracking-widest text-stone-500 hover:text-stone-900 px-4 py-2 transition-colors">
-                              Cancel
-                            </button>
-                            <button type="submit" className="text-[10px] font-black uppercase tracking-widest text-stone-900 bg-amber-400 hover:bg-amber-500 px-6 py-3 rounded-xl shadow-sm transition-colors">
-                              {editingPaymentId ? 'Save Changes' : 'Save Card'}
-                            </button>
+                          <button type="button" onClick={() => { setIsAddingPayment(false); setEditingPaymentId(null); setNewPayment({ type: "Visa", cardNumber: "", expiry: "", cvv: "" }); }} className="text-[10px] font-black uppercase tracking-widest text-stone-500 hover:text-stone-900 px-4 py-2 transition-colors">
+                            Cancel
+                          </button>
+                          <button type="submit" className="text-[10px] font-black uppercase tracking-widest text-stone-900 bg-amber-400 hover:bg-amber-500 px-6 py-3 rounded-xl shadow-sm transition-colors">
+                            {editingPaymentId ? 'Save Changes' : 'Save Card'}
+                          </button>
                         </div>
                       </form>
                     ) : (
@@ -904,7 +939,7 @@ export default function MyAccount() {
                                 <p className="text-xs font-medium text-stone-500">Last changed 3 months ago</p>
                               </div>
                             </div>
-                            <button 
+                            <button
                               onClick={() => setIsChangingPassword(!isChangingPassword)}
                               className="text-[10px] font-black uppercase tracking-widest text-stone-600 border border-stone-200 px-4 py-2 rounded-lg hover:bg-stone-50 transition-colors"
                             >
@@ -914,7 +949,7 @@ export default function MyAccount() {
 
                           <AnimatePresence>
                             {isChangingPassword && (
-                              <motion.div 
+                              <motion.div
                                 initial={{ height: 0, opacity: 0 }}
                                 animate={{ height: 'auto', opacity: 1 }}
                                 exit={{ height: 0, opacity: 0 }}
@@ -924,37 +959,37 @@ export default function MyAccount() {
                                   <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                                     <div className="space-y-1.5">
                                       <label className="text-[9px] font-black text-stone-400 uppercase tracking-widest ml-1">Current Password</label>
-                                      <input 
-                                        type="password" 
+                                      <input
+                                        type="password"
                                         value={passwordForm.current}
-                                        onChange={(e) => setPasswordForm({...passwordForm, current: e.target.value})}
+                                        onChange={(e) => setPasswordForm({ ...passwordForm, current: e.target.value })}
                                         className="w-full bg-white border border-stone-200 rounded-xl px-4 py-2.5 text-xs font-semibold focus:border-amber-500 outline-none transition-all"
                                         placeholder="••••••••"
                                       />
                                     </div>
                                     <div className="space-y-1.5">
                                       <label className="text-[9px] font-black text-stone-400 uppercase tracking-widest ml-1">New Password</label>
-                                      <input 
-                                        type="password" 
+                                      <input
+                                        type="password"
                                         value={passwordForm.new}
-                                        onChange={(e) => setPasswordForm({...passwordForm, new: e.target.value})}
+                                        onChange={(e) => setPasswordForm({ ...passwordForm, new: e.target.value })}
                                         className="w-full bg-white border border-stone-200 rounded-xl px-4 py-2.5 text-xs font-semibold focus:border-amber-500 outline-none transition-all"
                                         placeholder="••••••••"
                                       />
                                     </div>
                                     <div className="space-y-1.5">
                                       <label className="text-[9px] font-black text-stone-400 uppercase tracking-widest ml-1">Confirm New</label>
-                                      <input 
-                                        type="password" 
+                                      <input
+                                        type="password"
                                         value={passwordForm.confirm}
-                                        onChange={(e) => setPasswordForm({...passwordForm, confirm: e.target.value})}
+                                        onChange={(e) => setPasswordForm({ ...passwordForm, confirm: e.target.value })}
                                         className="w-full bg-white border border-stone-200 rounded-xl px-4 py-2.5 text-xs font-semibold focus:border-amber-500 outline-none transition-all"
                                         placeholder="••••••••"
                                       />
                                     </div>
                                   </div>
                                   <div className="flex justify-end">
-                                    <button 
+                                    <button
                                       className="bg-stone-900 text-amber-500 text-[10px] font-black uppercase tracking-widest px-6 py-2.5 rounded-xl hover:bg-stone-800 transition-all active:scale-95 shadow-lg shadow-stone-900/10"
                                       onClick={() => {
                                         alert("Password updated successfully!");

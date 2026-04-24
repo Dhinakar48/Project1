@@ -10,6 +10,17 @@ export default function Orders({ globalSearch }) {
   const [isLoading, setIsLoading] = useState(true);
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 5;
+  const [viewedHistory, setViewedHistory] = useState(null);
+
+  const fetchHistory = async (orderId) => {
+    try {
+      const res = await axios.get(`http://localhost:5000/order-history/${orderId}`);
+      setViewedHistory({ orderId, history: res.data });
+    } catch (err) {
+      console.error("Error fetching history:", err);
+    }
+  };
+
 
   const getStatusColor = (status) => {
     switch (status) {
@@ -21,39 +32,59 @@ export default function Orders({ globalSearch }) {
     }
   };
 
-  useEffect(() => {
-    const fetchOrders = async () => {
-      const sellerData = JSON.parse(localStorage.getItem("sellerUser") || "{}");
-      const sellerId = sellerData.seller_id || sellerData.id;
-      if (sellerId) {
-        try {
-          const res = await axios.get(`http://localhost:5000/seller-orders/${sellerId}`);
-          setOrders(res.data.map(o => ({
-             id: o.order_id,
-             item_id: o.order_item_id,
-             date: new Date(o.placed_at).toLocaleDateString('en-IN', { month: 'short', day: 'numeric', year: 'numeric' }),
-             time: new Date(o.placed_at).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' }),
-             name: o.shipping_name || o.customer_name,
-             email: o.customer_email,
-             item: o.product_name,
-             image: o.product_images && o.product_images.length > 0 ? o.product_images[0] : "/placeholder-product.png",
-             qty: o.quantity,
-             amount: `₹${parseFloat(o.total_amount).toLocaleString()}`,
-             unitPrice: `₹${parseFloat(o.unit_price).toLocaleString()}`,
-             status: o.item_status || o.order_status,
-             statusColor: getStatusColor(o.item_status || o.order_status)
-          })));
-        } catch (err) {
-          console.error("Error fetching seller orders:", err);
-        } finally {
-          setIsLoading(false);
-        }
-      } else {
+  const fetchOrders = async () => {
+    const sellerData = JSON.parse(localStorage.getItem("sellerUser") || "{}");
+    const sellerId = sellerData.seller_id || sellerData.id;
+    if (sellerId) {
+      try {
+        const res = await axios.get(`http://localhost:5000/seller-orders/${sellerId}`);
+        setOrders(res.data.map(o => ({
+           id: o.order_id,
+           item_id: o.order_item_id,
+           date: new Date(o.placed_at).toLocaleDateString('en-IN', { month: 'short', day: 'numeric', year: 'numeric' }),
+           time: new Date(o.placed_at).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' }),
+           name: o.shipping_name || o.customer_name,
+           email: o.customer_email,
+           item: o.product_name,
+           image: o.product_images && o.product_images.length > 0 ? o.product_images[0] : "/placeholder-product.png",
+           qty: o.quantity,
+           amount: `₹${parseFloat(o.total_amount).toLocaleString()}`,
+           unitPrice: `₹${parseFloat(o.unit_price).toLocaleString()}`,
+           status: o.item_status || o.order_status,
+           statusColor: getStatusColor(o.item_status || o.order_status)
+        })));
+      } catch (err) {
+        console.error("Error fetching seller orders:", err);
+      } finally {
         setIsLoading(false);
       }
-    };
+    } else {
+      setIsLoading(false);
+    }
+  };
+
+  useEffect(() => {
     fetchOrders();
   }, []);
+
+  const advanceStatus = async (orderId, currentStatus) => {
+    const statusSequence = ['Confirmed', 'Processing', 'Shipped', 'Delivered'];
+    const currentIndex = statusSequence.indexOf(currentStatus);
+    if (currentIndex === -1 || currentIndex === statusSequence.length - 1) return;
+
+    const nextStatus = statusSequence[currentIndex + 1];
+    try {
+      await axios.patch("http://localhost:5000/order/status", {
+        orderId,
+        status: nextStatus,
+        changedBy: 'Seller Dashboard',
+        notes: `Advanced from ${currentStatus} to ${nextStatus}`
+      });
+      fetchOrders();
+    } catch (err) {
+      console.error("Error updating status:", err);
+    }
+  };
 
   const filteredOrders = orders
     .filter(o => filter === "All" ? true : o.status === filter)
@@ -181,7 +212,19 @@ export default function Orders({ globalSearch }) {
                                  className="absolute right-12 top-2 mt-2 w-48 bg-white rounded-2xl shadow-xl border border-stone-100 overflow-hidden z-[50]"
                                >
                                  <div className="p-2 flex flex-col items-start gap-1">
-                                    <button className="w-full text-left px-4 py-2.5 text-[10px] font-semibold text-stone-600 hover:text-stone-900 hover:bg-stone-50 rounded-xl transition-colors">Advance Status</button>
+                                    <button 
+                                      onClick={() => advanceStatus(order.id, order.status)}
+                                      disabled={order.status === 'Delivered'}
+                                      className="w-full text-left px-4 py-2.5 text-[10px] font-semibold text-stone-600 hover:text-stone-900 hover:bg-stone-50 disabled:opacity-30 disabled:cursor-not-allowed rounded-xl transition-colors"
+                                    >
+                                      Advance Status
+                                    </button>
+                                    <button 
+                                      onClick={() => fetchHistory(order.id)}
+                                      className="w-full text-left px-4 py-2.5 text-[10px] font-semibold text-stone-600 hover:text-stone-900 hover:bg-stone-50 rounded-xl transition-colors"
+                                    >
+                                      View Timeline
+                                    </button>
                                     <button className="w-full text-left px-4 py-2.5 text-[10px] font-semibold text-stone-600 hover:text-stone-900 hover:bg-stone-50 rounded-xl transition-colors">Download Invoice</button>
                                     <div className="h-px w-full bg-stone-100 my-1" />
                                     <button className="w-full text-left px-4 py-2.5 text-[10px] font-semibold text-red-500 hover:text-red-600 hover:bg-red-50 rounded-xl transition-colors">Terminate Order</button>
@@ -192,7 +235,7 @@ export default function Orders({ globalSearch }) {
                         </div>
                       </td>
                     </motion.tr>
-                 ))}
+                  ))}
                </AnimatePresence>
                {filteredOrders.length === 0 && (
                  <tr>
@@ -209,6 +252,49 @@ export default function Orders({ globalSearch }) {
           </table>
         </div>
       </div>
+
+      {/* TIMELINE MODAL */}
+      <AnimatePresence>
+        {viewedHistory && (
+          <motion.div
+            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-stone-900/60 backdrop-blur-md z-[100] flex items-center justify-center p-4"
+          >
+            <motion.div
+              initial={{ scale: 0.95, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.95, opacity: 0 }}
+              className="bg-white rounded-[2.5rem] w-full max-w-xl p-10 shadow-2xl relative overflow-hidden"
+            >
+              <div className="flex justify-between items-center mb-10">
+                <div className="space-y-1">
+                  <h3 className="font-semibold text-2xl text-stone-900">Order Timeline</h3>
+                  <p className="text-[10px] font-bold text-stone-400 uppercase tracking-widest">{viewedHistory.orderId}</p>
+                </div>
+                <button onClick={() => setViewedHistory(null)} className="w-10 h-10 bg-stone-50 rounded-xl flex items-center justify-center text-stone-400 hover:text-stone-900 transition-all border border-stone-100">✕</button>
+              </div>
+
+              <div className="space-y-8 relative before:absolute before:left-[19px] before:top-2 before:bottom-2 before:w-0.5 before:bg-stone-100">
+                {viewedHistory.history.map((h, i) => (
+                  <div key={h.history_id} className="relative pl-12">
+                    <div className={`absolute left-0 top-1 w-10 h-10 rounded-full border-4 border-white shadow-sm flex items-center justify-center text-xs ${i === 0 ? 'bg-amber-500 text-white' : 'bg-stone-100 text-stone-400'}`}>
+                      {i === 0 ? '●' : '○'}
+                    </div>
+                    <div className="space-y-1">
+                      <div className="flex items-center justify-between">
+                        <span className="font-bold text-stone-900 text-sm tracking-tight">{h.status}</span>
+                        <span className="text-[9px] font-bold text-stone-300 uppercase">{new Date(h.changed_at).toLocaleString()}</span>
+                      </div>
+                      <p className="text-[10px] font-medium text-stone-500">{h.notes}</p>
+                      <div className="flex items-center gap-2 mt-2">
+                        <span className="text-[8px] font-black text-amber-600 bg-amber-50 px-2 py-0.5 rounded-md uppercase tracking-tighter">By {h.changed_by}</span>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* PAGINATION CONTROLS */}
       {totalPages > 1 && (

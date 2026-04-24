@@ -195,6 +195,7 @@ async function setup() {
         discount_amount DECIMAL(10, 2) DEFAULT 0,
         tax_amount DECIMAL(10, 2) DEFAULT 0,
         shipping_charge DECIMAL(10, 2) DEFAULT 0,
+        platform_fee DECIMAL(10, 2) DEFAULT 0,
         total_amount DECIMAL(10, 2) NOT NULL,
         order_status VARCHAR(50) DEFAULT 'Pending',
         payment_status VARCHAR(50) DEFAULT 'Pending',
@@ -321,6 +322,71 @@ async function setup() {
 
     // Reviews table with semantic ID generation
     await client1.query(`CREATE SEQUENCE IF NOT EXISTS review_id_seq START 1;`);
+    await client1.query(`CREATE SEQUENCE IF NOT EXISTS notification_id_seq START 1;`);
+    await client1.query(`
+      CREATE TABLE IF NOT EXISTS notifications (
+        notification_id VARCHAR(20) PRIMARY KEY,
+        customer_id VARCHAR(20) REFERENCES customers(customer_id) ON DELETE CASCADE,
+        seller_id VARCHAR(20) REFERENCES sellers(seller_id) ON DELETE CASCADE,
+        order_id VARCHAR(20) REFERENCES orders(order_id) ON DELETE CASCADE,
+        type VARCHAR(50),
+        message TEXT,
+        is_read BOOLEAN DEFAULT FALSE,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        expires_at TIMESTAMP
+      );
+    `);
+    await client1.query(`
+      CREATE OR REPLACE FUNCTION generate_notification_id()
+      RETURNS TRIGGER AS $$
+      BEGIN
+          IF NEW.notification_id IS NULL THEN
+            NEW.notification_id := 'NOT-' || LPAD(nextval('notification_id_seq')::text, 3, '0');
+          END IF;
+          RETURN NEW;
+      END;
+      $$ LANGUAGE plpgsql;
+    `);
+    await client1.query(`
+      DROP TRIGGER IF EXISTS trigger_generate_notification_id ON notifications;
+      CREATE TRIGGER trigger_generate_notification_id
+      BEFORE INSERT ON notifications
+      FOR EACH ROW
+      EXECUTE FUNCTION generate_notification_id();
+    `);
+    console.log("Table 'notifications' initialized successfully.");
+
+    await client1.query(`CREATE SEQUENCE IF NOT EXISTS order_status_history_id_seq START 1;`);
+    await client1.query(`
+      CREATE TABLE IF NOT EXISTS order_status_history (
+        history_id VARCHAR(20) PRIMARY KEY,
+        order_id VARCHAR(20) REFERENCES orders(order_id) ON DELETE CASCADE,
+        status VARCHAR(50) NOT NULL,
+        changed_by VARCHAR(50),
+        notes TEXT,
+        changed_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      );
+    `);
+    await client1.query(`
+      CREATE OR REPLACE FUNCTION generate_history_id()
+      RETURNS TRIGGER AS $$
+      BEGIN
+          IF NEW.history_id IS NULL THEN
+            NEW.history_id := 'HST-' || LPAD(nextval('order_status_history_id_seq')::text, 3, '0');
+          END IF;
+          RETURN NEW;
+      END;
+      $$ LANGUAGE plpgsql;
+    `);
+    await client1.query(`
+      DROP TRIGGER IF EXISTS trigger_generate_history_id ON order_status_history;
+      CREATE TRIGGER trigger_generate_history_id
+      BEFORE INSERT ON order_status_history
+      FOR EACH ROW
+      EXECUTE FUNCTION generate_history_id();
+    `);
+    console.log("Table 'order_status_history' initialized successfully.");
+
     await client1.query(`
       CREATE TABLE IF NOT EXISTS reviews (
         review_id VARCHAR(20) PRIMARY KEY,
@@ -353,6 +419,284 @@ async function setup() {
       EXECUTE FUNCTION generate_review_id();
     `);
     console.log("Table 'reviews' with ID trigger initialized successfully.");
+
+    // Annual Finances table
+    await client1.query(`CREATE SEQUENCE IF NOT EXISTS annual_finance_id_seq START 1;`);
+    await client1.query(`
+      CREATE TABLE IF NOT EXISTS annual_finances (
+        annual_finance_id VARCHAR(20) PRIMARY KEY,
+        half_yearly_finances_id VARCHAR(20), -- FK added later due to circular dependency
+        seller_id VARCHAR(20) REFERENCES sellers(seller_id) ON DELETE CASCADE,
+        year INT NOT NULL,
+        total_revenue DECIMAL(15, 2) DEFAULT 0.00,
+        platform_commission DECIMAL(15, 2) DEFAULT 0.00,
+        net_seller_earnings DECIMAL(15, 2) DEFAULT 0.00,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      );
+    `);
+    await client1.query(`
+      CREATE OR REPLACE FUNCTION generate_annual_finance_id()
+      RETURNS TRIGGER AS $$
+      BEGIN
+          IF NEW.annual_finance_id IS NULL THEN
+            NEW.annual_finance_id := 'AFN-' || LPAD(nextval('annual_finance_id_seq')::text, 3, '0');
+          END IF;
+          RETURN NEW;
+      END;
+      $$ LANGUAGE plpgsql;
+    `);
+    await client1.query(`
+      DROP TRIGGER IF EXISTS trigger_generate_annual_finance_id ON annual_finances;
+      CREATE TRIGGER trigger_generate_annual_finance_id
+      BEFORE INSERT ON annual_finances
+      FOR EACH ROW
+      EXECUTE FUNCTION generate_annual_finance_id();
+    `);
+    console.log("Table 'annual_finances' initialized successfully.");
+
+    // Half-Yearly Finances table
+    await client1.query(`CREATE SEQUENCE IF NOT EXISTS half_yearly_finance_id_seq START 1;`);
+    await client1.query(`
+      CREATE TABLE IF NOT EXISTS half_yearly_finances (
+        half_yearly_finances_id VARCHAR(20) PRIMARY KEY,
+        seller_id VARCHAR(20) REFERENCES sellers(seller_id) ON DELETE CASCADE,
+        half_number INT NOT NULL CHECK (half_number BETWEEN 1 AND 2),
+        year INT NOT NULL,
+        annual_finance_id VARCHAR(20) REFERENCES annual_finances(annual_finance_id) ON DELETE SET NULL,
+        total_revenue DECIMAL(15, 2) DEFAULT 0.00,
+        platform_commission DECIMAL(15, 2) DEFAULT 0.00,
+        net_seller_earnings DECIMAL(15, 2) DEFAULT 0.00,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      );
+    `);
+    await client1.query(`
+      CREATE OR REPLACE FUNCTION generate_half_yearly_finance_id()
+      RETURNS TRIGGER AS $$
+      BEGIN
+          IF NEW.half_yearly_finances_id IS NULL THEN
+            NEW.half_yearly_finances_id := 'HFN-' || LPAD(nextval('half_yearly_finance_id_seq')::text, 3, '0');
+          END IF;
+          RETURN NEW;
+      END;
+      $$ LANGUAGE plpgsql;
+    `);
+    await client1.query(`
+      DROP TRIGGER IF EXISTS trigger_generate_half_yearly_finance_id ON half_yearly_finances;
+      CREATE TRIGGER trigger_generate_half_yearly_finance_id
+      BEFORE INSERT ON half_yearly_finances
+      FOR EACH ROW
+      EXECUTE FUNCTION generate_half_yearly_finance_id();
+    `);
+    console.log("Table 'half_yearly_finances' initialized successfully.");
+
+    // Add circular FK to annual_finances
+    await client1.query(`
+      DO $$
+      BEGIN
+        IF NOT EXISTS (SELECT 1 FROM information_schema.table_constraints WHERE constraint_name = 'fk_annual_half') THEN
+          ALTER TABLE annual_finances 
+          ADD CONSTRAINT fk_annual_half 
+          FOREIGN KEY (half_yearly_finances_id) REFERENCES half_yearly_finances(half_yearly_finances_id) ON DELETE SET NULL;
+        END IF;
+      END $$;
+    `);
+
+    // Quarterly Finances table
+    await client1.query(`CREATE SEQUENCE IF NOT EXISTS quarterly_finance_id_seq START 1;`);
+    await client1.query(`
+      CREATE TABLE IF NOT EXISTS quarterly_finances (
+        quarterly_finance_id VARCHAR(20) PRIMARY KEY,
+        monthly_finance_id VARCHAR(20), -- FK added later due to circular dependency
+        seller_id VARCHAR(20) REFERENCES sellers(seller_id) ON DELETE CASCADE,
+        quarter_number INT NOT NULL CHECK (quarter_number BETWEEN 1 AND 4),
+        year INT NOT NULL,
+        half_yearly_finances_id VARCHAR(20) REFERENCES half_yearly_finances(half_yearly_finances_id) ON DELETE SET NULL,
+        total_revenue DECIMAL(15, 2) DEFAULT 0.00,
+        platform_commission DECIMAL(15, 2) DEFAULT 0.00,
+        net_seller_earnings DECIMAL(15, 2) DEFAULT 0.00,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      );
+    `);
+    await client1.query(`
+      CREATE OR REPLACE FUNCTION generate_quarterly_finance_id()
+      RETURNS TRIGGER AS $$
+      BEGIN
+          IF NEW.quarterly_finance_id IS NULL THEN
+            NEW.quarterly_finance_id := 'QFN-' || LPAD(nextval('quarterly_finance_id_seq')::text, 3, '0');
+          END IF;
+          RETURN NEW;
+      END;
+      $$ LANGUAGE plpgsql;
+    `);
+    await client1.query(`
+      DROP TRIGGER IF EXISTS trigger_generate_quarterly_finance_id ON quarterly_finances;
+      CREATE TRIGGER trigger_generate_quarterly_finance_id
+      BEFORE INSERT ON quarterly_finances
+      FOR EACH ROW
+      EXECUTE FUNCTION generate_quarterly_finance_id();
+    `);
+    console.log("Table 'quarterly_finances' initialized successfully.");
+
+    // Monthly Finances table
+    await client1.query(`CREATE SEQUENCE IF NOT EXISTS monthly_finance_id_seq START 1;`);
+    await client1.query(`
+      CREATE TABLE IF NOT EXISTS monthly_finances (
+        monthly_finance_id VARCHAR(20) PRIMARY KEY,
+        seller_id VARCHAR(20) REFERENCES sellers(seller_id) ON DELETE CASCADE,
+        month_number INT NOT NULL CHECK (month_number BETWEEN 1 AND 12),
+        year INT NOT NULL,
+        quarterly_finance_id VARCHAR(20) REFERENCES quarterly_finances(quarterly_finance_id) ON DELETE SET NULL,
+        total_revenue DECIMAL(15, 2) DEFAULT 0.00,
+        platform_commission DECIMAL(15, 2) DEFAULT 0.00,
+        net_seller_earnings DECIMAL(15, 2) DEFAULT 0.00,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      );
+    `);
+    await client1.query(`
+      CREATE OR REPLACE FUNCTION generate_monthly_finance_id()
+      RETURNS TRIGGER AS $$
+      BEGIN
+          IF NEW.monthly_finance_id IS NULL THEN
+            NEW.monthly_finance_id := 'MFN-' || LPAD(nextval('monthly_finance_id_seq')::text, 3, '0');
+          END IF;
+          RETURN NEW;
+      END;
+      $$ LANGUAGE plpgsql;
+    `);
+    await client1.query(`
+      DROP TRIGGER IF EXISTS trigger_generate_monthly_finance_id ON monthly_finances;
+      CREATE TRIGGER trigger_generate_monthly_finance_id
+      BEFORE INSERT ON monthly_finances
+      FOR EACH ROW
+      EXECUTE FUNCTION generate_monthly_finance_id();
+    `);
+    console.log("Table 'monthly_finances' initialized successfully.");
+
+    // Add circular FK to quarterly_finances
+    await client1.query(`
+      DO $$
+      BEGIN
+        IF NOT EXISTS (SELECT 1 FROM information_schema.table_constraints WHERE constraint_name = 'fk_quarterly_monthly') THEN
+          ALTER TABLE quarterly_finances 
+          ADD CONSTRAINT fk_quarterly_monthly 
+          FOREIGN KEY (monthly_finance_id) REFERENCES monthly_finances(monthly_finance_id) ON DELETE SET NULL;
+        END IF;
+      END $$;
+    `);
+
+    // Daily Finances table
+    await client1.query(`CREATE SEQUENCE IF NOT EXISTS daily_finance_id_seq START 1;`);
+    await client1.query(`
+      CREATE TABLE IF NOT EXISTS daily_finances (
+        daily_finance_id VARCHAR(20) PRIMARY KEY,
+        seller_id VARCHAR(20) REFERENCES sellers(seller_id) ON DELETE CASCADE,
+        finance_date DATE NOT NULL,
+        weekly_finance_id VARCHAR(20), -- FK added later due to circular dependency
+        monthly_finance_id VARCHAR(20) REFERENCES monthly_finances(monthly_finance_id) ON DELETE SET NULL,
+        total_revenue DECIMAL(15, 2) DEFAULT 0.00,
+        platform_commissions DECIMAL(15, 2) DEFAULT 0.00,
+        net_seller_earnings DECIMAL(15, 2) DEFAULT 0.00,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      );
+    `);
+    await client1.query(`
+      CREATE OR REPLACE FUNCTION generate_daily_finance_id()
+      RETURNS TRIGGER AS $$
+      BEGIN
+          IF NEW.daily_finance_id IS NULL THEN
+            NEW.daily_finance_id := 'DFN-' || LPAD(nextval('daily_finance_id_seq')::text, 3, '0');
+          END IF;
+          RETURN NEW;
+      END;
+      $$ LANGUAGE plpgsql;
+    `);
+    await client1.query(`
+      DROP TRIGGER IF EXISTS trigger_generate_daily_finance_id ON daily_finances;
+      CREATE TRIGGER trigger_generate_daily_finance_id
+      BEFORE INSERT ON daily_finances
+      FOR EACH ROW
+      EXECUTE FUNCTION generate_daily_finance_id();
+    `);
+    console.log("Table 'daily_finances' initialized successfully.");
+
+    // Weekly Finances table
+    await client1.query(`CREATE SEQUENCE IF NOT EXISTS weekly_finance_id_seq START 1;`);
+    await client1.query(`
+      CREATE TABLE IF NOT EXISTS weekly_finances (
+        weekly_finance_id VARCHAR(20) PRIMARY KEY,
+        daily_finance_id VARCHAR(20) REFERENCES daily_finances(daily_finance_id) ON DELETE SET NULL,
+        seller_id VARCHAR(20) REFERENCES sellers(seller_id) ON DELETE CASCADE,
+        week_number INT NOT NULL,
+        year INT NOT NULL,
+        total_revenue DECIMAL(15, 2) DEFAULT 0.00,
+        platform_commission DECIMAL(15, 2) DEFAULT 0.00,
+        net_seller_earnings DECIMAL(15, 2) DEFAULT 0.00,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      );
+    `);
+    await client1.query(`
+      CREATE OR REPLACE FUNCTION generate_weekly_finance_id()
+      RETURNS TRIGGER AS $$
+      BEGIN
+          IF NEW.weekly_finance_id IS NULL THEN
+            NEW.weekly_finance_id := 'WFN-' || LPAD(nextval('weekly_finance_id_seq')::text, 3, '0');
+          END IF;
+          RETURN NEW;
+      END;
+      $$ LANGUAGE plpgsql;
+    `);
+    await client1.query(`
+      DROP TRIGGER IF EXISTS trigger_generate_weekly_finance_id ON weekly_finances;
+      CREATE TRIGGER trigger_generate_weekly_finance_id
+      BEFORE INSERT ON weekly_finances
+      FOR EACH ROW
+      EXECUTE FUNCTION generate_weekly_finance_id();
+    `);
+    console.log("Table 'weekly_finances' initialized successfully.");
+
+    // Add circular FK to daily_finances
+    await client1.query(`
+      DO $$
+      BEGIN
+        IF NOT EXISTS (SELECT 1 FROM information_schema.table_constraints WHERE constraint_name = 'fk_daily_weekly') THEN
+          ALTER TABLE daily_finances 
+          ADD CONSTRAINT fk_daily_weekly 
+          FOREIGN KEY (weekly_finance_id) REFERENCES weekly_finances(weekly_finance_id) ON DELETE SET NULL;
+        END IF;
+      END $$;
+    `);
+
+    // Seller Commissions table
+    await client1.query(`
+      CREATE TABLE IF NOT EXISTS seller_commissions (
+        commission_id VARCHAR(30) PRIMARY KEY,
+        order_item_id VARCHAR(30) REFERENCES order_items(order_item_id) ON DELETE CASCADE,
+        seller_id VARCHAR(20) REFERENCES sellers(seller_id) ON DELETE CASCADE,
+        order_id VARCHAR(20) REFERENCES orders(order_id) ON DELETE CASCADE,
+        sale_amount DECIMAL(15, 2) NOT NULL,
+        commission_rate DECIMAL(5, 2) NOT NULL,
+        commission_amount DECIMAL(15, 2) NOT NULL,
+        seller_earnings DECIMAL(15, 2) NOT NULL,
+        status VARCHAR(20) DEFAULT 'Pending',
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      );
+    `);
+    console.log("Table 'seller_commissions' initialized successfully.");
+
+    // Finance Transactions table
+    await client1.query(`
+      CREATE TABLE IF NOT EXISTS finance_transactions (
+        finance_transaction_id VARCHAR(30) PRIMARY KEY,
+        daily_finance_id VARCHAR(30) REFERENCES daily_finances(daily_finance_id) ON DELETE SET NULL,
+        order_id VARCHAR(20) REFERENCES orders(order_id) ON DELETE SET NULL,
+        payment_id VARCHAR(30),
+        seller_payout_id VARCHAR(30),
+        transaction_type VARCHAR(50) NOT NULL,
+        amount DECIMAL(15, 2) NOT NULL,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      );
+    `);
+    console.log("Table 'finance_transactions' initialized successfully.");
 
   } catch (e) {
     console.error("Error creating tables:", e.message);

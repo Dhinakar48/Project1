@@ -1,8 +1,52 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { FaShieldAlt, FaUserEdit, FaBell, FaStore, FaLock, FaTrashAlt } from "react-icons/fa";
+import axios from "axios";
 
 export default function Settings() {
+   const [seller, setSeller] = useState(() => {
+      const saved = localStorage.getItem('sellerUser');
+      const defaults = { seller_id: '', name: '', email: '', phone: '', storeName: '' };
+      return saved ? { ...defaults, ...JSON.parse(saved) } : defaults;
+   });
+
+   const [address, setAddress] = useState({
+      address1: '',
+      address2: '',
+      city: '',
+      state: '',
+      pincode: '',
+      country: 'India'
+   });
+
+   const [status, setStatus] = useState({ type: '', message: '' });
+   const [passwords, setPasswords] = useState({
+      currentPassword: '',
+      newPassword: ''
+   });
+
+   useEffect(() => {
+      const fetchProfile = async () => {
+         try {
+            const res = await axios.get(`http://localhost:5000/api/seller/profile/${seller.seller_id}`);
+            const data = res.data;
+            setSeller({
+               seller_id: data.seller_id,
+               name: data.name,
+               email: data.email,
+               phone: data.phone,
+               storeName: data.storeName
+            });
+            if (data.address) {
+               setAddress(data.address);
+            }
+         } catch (err) {
+            console.error("Error fetching profile:", err);
+         }
+      };
+      if (seller.seller_id) fetchProfile();
+   }, []);
+
    const [twoStepAuth, setTwoStepAuth] = useState(false);
    const [notifications, setNotifications] = useState({
       email: true,
@@ -11,6 +55,73 @@ export default function Settings() {
       marketing: false,
       system: true
    });
+
+   const handleChange = (e) => {
+      const { name, value } = e.target;
+      setSeller(prev => ({ ...prev, [name]: value }));
+   };
+
+   const handleAddressChange = (e) => {
+      const { name, value } = e.target;
+      setAddress(prev => ({ ...prev, [name]: value }));
+   };
+
+   const handlePasswordChange = (e) => {
+      const { name, value } = e.target;
+      setPasswords(prev => ({ ...prev, [name]: value }));
+   };
+
+   const handleSaveProfile = async () => {
+      try {
+         setStatus({ type: 'loading', message: 'Syncing profile...' });
+         const res = await axios.post("http://localhost:5000/api/seller/update-profile", {
+            seller_id: seller.seller_id,
+            name: seller.name,
+            email: seller.email,
+            phone: seller.phone,
+            storeName: seller.storeName,
+            address: address
+         });
+         
+         if (res.data.success) {
+            localStorage.setItem('sellerUser', JSON.stringify({
+               ...seller,
+               storeName: seller.storeName
+            }));
+            setStatus({ type: 'success', message: 'Profile updated successfully!' });
+         }
+      } catch (err) {
+         console.error(err);
+         setStatus({ type: 'error', message: 'Failed to update profile.' });
+      } finally {
+         setTimeout(() => setStatus({ type: '', message: '' }), 3000);
+      }
+   };
+
+   const handleUpdateSecurity = async () => {
+      if (!passwords.currentPassword || !passwords.newPassword) {
+         setStatus({ type: 'error', message: 'Please fill in both password fields.' });
+         return;
+      }
+      try {
+         setStatus({ type: 'loading', message: 'Updating security protocol...' });
+         const res = await axios.post("http://localhost:5000/api/seller/update-password", {
+            seller_id: seller.seller_id,
+            currentPassword: passwords.currentPassword,
+            newPassword: passwords.newPassword
+         });
+         
+         if (res.data.success) {
+            setStatus({ type: 'success', message: 'Security protocol updated!' });
+            setPasswords({ currentPassword: '', newPassword: '' });
+         }
+      } catch (err) {
+         console.error(err);
+         setStatus({ type: 'error', message: err.response?.data?.message || 'Security update failed.' });
+      } finally {
+         setTimeout(() => setStatus({ type: '', message: '' }), 3000);
+      }
+   };
 
    return (
       <div className="space-y-10 animate-in fade-in zoom-in-95 duration-1000">
@@ -24,6 +135,18 @@ export default function Settings() {
                   Settings Protocol
                </h1>
             </div>
+            {status.message && (
+               <motion.div 
+                  initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }}
+                  className={`px-6 py-3 rounded-2xl text-[10px] font-bold uppercase tracking-widest border shadow-lg ${
+                     status.type === 'error' ? 'bg-red-50 border-red-100 text-red-600' : 
+                     status.type === 'loading' ? 'bg-stone-50 border-stone-100 text-stone-600' :
+                     'bg-green-50 border-green-100 text-green-600'
+                  }`}
+               >
+                  {status.message}
+               </motion.div>
+            )}
          </div>
 
          <div className="grid grid-cols-1 xl:grid-cols-2 gap-8">
@@ -45,21 +168,60 @@ export default function Settings() {
                   </div>
 
                   <div className="space-y-6 flex-1">
+                     <div className="flex items-center justify-between px-1">
+                        <div className="space-y-1">
+                           <label className="text-[9px] font-semibold text-stone-500 ml-1">Entity ID</label>
+                           <p className="text-xs font-bold text-amber-600 ml-1 uppercase">#{seller.seller_id || 'PENDING'}</p>
+                        </div>
+                        <div className="text-right">
+                           <span className="text-[8px] font-bold text-stone-400 block mb-1">Network Status</span>
+                           <div className="flex items-center gap-1.5 justify-end">
+                              <div className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse" />
+                              <span className="text-[8px] font-bold text-stone-900 uppercase">Operational</span>
+                           </div>
+                        </div>
+                     </div>
                      <div className="space-y-1.5 flex flex-col">
                         <label className="text-[9px] font-semibold text-stone-500 ml-1">Display Name</label>
-                        <input type="text" className="w-full bg-stone-50/50 hover:bg-stone-50 border border-stone-100 focus:border-amber-500/50 outline-none rounded-xl p-4 text-sm font-bold text-stone-900 transition-all focus:shadow-[0_0_15px_rgba(245,158,11,0.1)]" placeholder="Dhinakar" />
+                        <input 
+                           type="text" 
+                           name="name"
+                           value={seller.name}
+                           onChange={handleChange}
+                           className="w-full bg-stone-50/50 hover:bg-stone-50 border border-stone-100 focus:border-amber-500/50 outline-none rounded-xl p-4 text-sm font-bold text-stone-900 transition-all focus:shadow-[0_0_15px_rgba(245,158,11,0.1)]" 
+                           placeholder="Full Name" 
+                        />
                      </div>
                      <div className="space-y-1.5 flex flex-col">
                         <label className="text-[9px] font-semibold text-stone-500 ml-1">Email</label>
-                        <input type="email" className="w-full bg-stone-50/50 hover:bg-stone-50 border border-stone-100 focus:border-amber-500/50 outline-none rounded-xl p-4 text-sm font-bold text-stone-900 transition-all focus:shadow-[0_0_15px_rgba(245,158,11,0.1)]" placeholder="director@electroseller.com" />
+                        <input 
+                           type="email" 
+                           name="email"
+                           value={seller.email}
+                           onChange={handleChange}
+                           className="w-full bg-stone-50/50 hover:bg-stone-50 border border-stone-100 focus:border-amber-500/50 outline-none rounded-xl p-4 text-sm font-bold text-stone-900 transition-all focus:shadow-[0_0_15px_rgba(245,158,11,0.1)]" 
+                           placeholder="Email Address" 
+                        />
                      </div>
                      <div className="space-y-1.5 flex flex-col">
                         <label className="text-[9px] font-semibold text-stone-500 ml-1">Mobile</label>
-                        <input type="tel" className="w-full bg-stone-50/50 hover:bg-stone-50 border border-stone-100 focus:border-amber-500/50 outline-none rounded-xl p-4 text-sm font-bold text-stone-900 transition-all focus:shadow-[0_0_15px_rgba(245,158,11,0.1)]" placeholder="+91 98765 43210" />
+                        <input 
+                           type="tel" 
+                           name="phone"
+                           value={seller.phone}
+                           onChange={handleChange}
+                           className="w-full bg-stone-50/50 hover:bg-stone-50 border border-stone-100 focus:border-amber-500/50 outline-none rounded-xl p-4 text-sm font-bold text-stone-900 transition-all focus:shadow-[0_0_15px_rgba(245,158,11,0.1)]" 
+                           placeholder="Mobile Number" 
+                        />
                      </div>
                   </div>
                   <div className="mt-8">
-                     <button className="w-full sm:w-auto bg-stone-900 text-white px-8 py-4 rounded-xl font-semibold text-[10px] hover:bg-amber-500 hover:text-stone-900 transition-all shadow-lg shadow-stone-900/10 active:scale-95">Save Profile</button>
+                     <button 
+                        onClick={handleSaveProfile}
+                        className="w-full sm:w-auto bg-stone-900 text-white px-8 py-4 rounded-xl font-semibold text-[10px] hover:bg-amber-500 hover:text-stone-900 transition-all shadow-lg shadow-stone-900/10 active:scale-95"
+                     >
+                        Save Profile
+                     </button>
                   </div>
                </div>
             </motion.div>
@@ -84,11 +246,25 @@ export default function Settings() {
                   <div className="space-y-6 flex-1">
                      <div className="space-y-1.5 flex flex-col">
                         <label className="text-[9px] font-semibold text-stone-400 ml-1">Current Password</label>
-                        <input type="password" placeholder="••••••••" className="w-full bg-stone-800/50 hover:bg-stone-800 border border-stone-700 focus:border-amber-500/50 outline-none rounded-xl p-4 text-sm font-bold text-white transition-all placeholder-stone-600" />
+                        <input 
+                           type="password" 
+                           name="currentPassword"
+                           value={passwords.currentPassword}
+                           onChange={handlePasswordChange}
+                           placeholder="••••••••" 
+                           className="w-full bg-stone-800/50 hover:bg-stone-800 border border-stone-700 focus:border-amber-500/50 outline-none rounded-xl p-4 text-sm font-bold text-white transition-all placeholder-stone-600" 
+                        />
                      </div>
                      <div className="space-y-1.5 flex flex-col">
                         <label className="text-[9px] font-semibold text-stone-400 ml-1">New Password</label>
-                        <input type="password" placeholder="••••••••" className="w-full bg-stone-800/50 hover:bg-stone-800 border border-stone-700 focus:border-amber-500/50 outline-none rounded-xl p-4 text-sm font-bold text-white transition-all placeholder-stone-600" />
+                        <input 
+                           type="password" 
+                           name="newPassword"
+                           value={passwords.newPassword}
+                           onChange={handlePasswordChange}
+                           placeholder="••••••••" 
+                           className="w-full bg-stone-800/50 hover:bg-stone-800 border border-stone-700 focus:border-amber-500/50 outline-none rounded-xl p-4 text-sm font-bold text-white transition-all placeholder-stone-600" 
+                        />
                      </div>
 
                      <div className="pt-4 border-t border-stone-800">
@@ -107,7 +283,12 @@ export default function Settings() {
                      </div>
                   </div>
                   <div className="mt-8">
-                     <button className="w-full sm:w-auto bg-amber-500 text-stone-900 px-8 py-4 rounded-xl font-semibold text-[10px] hover:bg-white transition-all active:scale-95">Update Security</button>
+                     <button 
+                        onClick={handleUpdateSecurity}
+                        className="w-full sm:w-auto bg-amber-500 text-stone-900 px-8 py-4 rounded-xl font-semibold text-[10px] hover:bg-white transition-all active:scale-95"
+                     >
+                        Update Security
+                     </button>
                   </div>
                </div>
             </motion.div>
@@ -132,15 +313,93 @@ export default function Settings() {
                   <div className="space-y-6 flex-1">
                      <div className="space-y-1.5 flex flex-col">
                         <label className="text-[9px] font-semibold text-stone-500 ml-1">Store Name</label>
-                        <input type="text" className="w-full bg-stone-50/50 hover:bg-stone-50 border border-stone-100 focus:border-amber-500/50 outline-none rounded-xl p-4 text-sm font-bold text-stone-900 transition-all focus:shadow-[0_0_15px_rgba(245,158,11,0.1)]" placeholder="ElectroSeller Official" />
+                        <input 
+                           type="text" 
+                           name="storeName"
+                           value={seller.storeName || ""}
+                           onChange={handleChange}
+                           className="w-full bg-stone-50/50 hover:bg-stone-50 border border-stone-100 focus:border-amber-500/50 outline-none rounded-xl p-4 text-sm font-bold text-stone-900 transition-all focus:shadow-[0_0_15px_rgba(245,158,11,0.1)]" 
+                           placeholder="Store Name" 
+                        />
                      </div>
                      <div className="space-y-1.5 flex flex-col">
-                        <label className="text-[9px] font-semibold text-stone-500 ml-1">Store Address</label>
-                        <textarea rows="4" className="w-full bg-stone-50/50 hover:bg-stone-50 border border-stone-100 focus:border-amber-500/50 outline-none rounded-xl p-4 text-sm font-bold text-stone-900 transition-all resize-none focus:shadow-[0_0_15px_rgba(245,158,11,0.1)]" placeholder="Neo Tokyo Cyber Hub, Sector 4..." />
+                        <label className="text-[9px] font-semibold text-stone-500 ml-1">Address Line 1</label>
+                        <input 
+                           type="text" 
+                           name="address1"
+                           value={address.address1 || ""}
+                           onChange={handleAddressChange}
+                           className="w-full bg-stone-50/50 hover:bg-stone-50 border border-stone-100 focus:border-amber-500/50 outline-none rounded-xl p-4 text-sm font-bold text-stone-900 transition-all focus:shadow-[0_0_15px_rgba(245,158,11,0.1)]" 
+                           placeholder="Street, building, etc." 
+                        />
+                     </div>
+                     <div className="space-y-1.5 flex flex-col">
+                        <label className="text-[9px] font-semibold text-stone-500 ml-1">Address Line 2 (Optional)</label>
+                        <input 
+                           type="text" 
+                           name="address2"
+                           value={address.address2 || ""}
+                           onChange={handleAddressChange}
+                           className="w-full bg-stone-50/50 hover:bg-stone-50 border border-stone-100 focus:border-amber-500/50 outline-none rounded-xl p-4 text-sm font-bold text-stone-900 transition-all focus:shadow-[0_0_15px_rgba(245,158,11,0.1)]" 
+                           placeholder="Floor, suite, etc." 
+                        />
+                     </div>
+                     <div className="grid grid-cols-2 gap-4">
+                        <div className="space-y-1.5 flex flex-col">
+                           <label className="text-[9px] font-semibold text-stone-500 ml-1">City</label>
+                           <input 
+                              type="text" 
+                              name="city"
+                              value={address.city || ""}
+                              onChange={handleAddressChange}
+                              className="w-full bg-stone-50/50 hover:bg-stone-50 border border-stone-100 focus:border-amber-500/50 outline-none rounded-xl p-4 text-sm font-bold text-stone-900 transition-all focus:shadow-[0_0_15px_rgba(245,158,11,0.1)]" 
+                              placeholder="City" 
+                           />
+                        </div>
+                        <div className="space-y-1.5 flex flex-col">
+                           <label className="text-[9px] font-semibold text-stone-500 ml-1">Pincode</label>
+                           <input 
+                              type="text" 
+                              name="pincode"
+                              value={address.pincode || ""}
+                              onChange={handleAddressChange}
+                              className="w-full bg-stone-50/50 hover:bg-stone-50 border border-stone-100 focus:border-amber-500/50 outline-none rounded-xl p-4 text-sm font-bold text-stone-900 transition-all focus:shadow-[0_0_15px_rgba(245,158,11,0.1)]" 
+                              placeholder="Pincode" 
+                           />
+                        </div>
+                     </div>
+                     <div className="grid grid-cols-2 gap-4">
+                        <div className="space-y-1.5 flex flex-col">
+                           <label className="text-[9px] font-semibold text-stone-500 ml-1">State</label>
+                           <input 
+                              type="text" 
+                              name="state"
+                              value={address.state || ""}
+                              onChange={handleAddressChange}
+                              className="w-full bg-stone-50/50 hover:bg-stone-50 border border-stone-100 focus:border-amber-500/50 outline-none rounded-xl p-4 text-sm font-bold text-stone-900 transition-all focus:shadow-[0_0_15px_rgba(245,158,11,0.1)]" 
+                              placeholder="State" 
+                           />
+                        </div>
+                        <div className="space-y-1.5 flex flex-col">
+                           <label className="text-[9px] font-semibold text-stone-500 ml-1">Country</label>
+                           <input 
+                              type="text" 
+                              name="country"
+                              value={address.country || "India"}
+                              onChange={handleAddressChange}
+                              className="w-full bg-stone-50/50 hover:bg-stone-50 border border-stone-100 focus:border-amber-500/50 outline-none rounded-xl p-4 text-sm font-bold text-stone-900 transition-all focus:shadow-[0_0_15px_rgba(245,158,11,0.1)]" 
+                              placeholder="Country" 
+                           />
+                        </div>
                      </div>
                   </div>
                   <div className="mt-8">
-                     <button className="w-full sm:w-auto bg-stone-900 text-white px-8 py-4 rounded-xl font-semibold text-[10px] hover:bg-amber-500 hover:text-stone-900 transition-all shadow-lg shadow-stone-900/10 active:scale-95">Save Store Details</button>
+                     <button 
+                        onClick={handleSaveProfile}
+                        className="w-full sm:w-auto bg-stone-900 text-white px-8 py-4 rounded-xl font-semibold text-[10px] hover:bg-amber-500 hover:text-stone-900 transition-all shadow-lg shadow-stone-900/10 active:scale-95"
+                     >
+                        Save Store Details
+                     </button>
                   </div>
                </div>
             </motion.div>
@@ -204,20 +463,6 @@ export default function Settings() {
                   <div>
                      <h3 className="font-semibold text-red-900 text-sm mb-1">Destructive Protocol</h3>
                      <p className="text-[9px] font-bold text-red-500">Execute complete neural override</p>
-                  </div>
-                  <div className="hidden sm:block w-px h-12 bg-stone-100" />
-                  <div className="flex flex-col sm:flex-row items-start sm:items-center gap-6">
-                     <div>
-                        <span className="text-[8px] font-semibold text-stone-400 block mb-1">Entity ID</span>
-                        <span className="text-xs font-semibold text-stone-900">#SLR-892-DHN</span>
-                     </div>
-                     <div>
-                        <span className="text-[8px] font-semibold text-stone-400 block mb-1">Network Status</span>
-                        <div className="flex items-center gap-2">
-                           <div className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse" />
-                           <span className="text-[10px] font-semibold text-stone-900">Operational Verified</span>
-                        </div>
-                     </div>
                   </div>
                </div>
 

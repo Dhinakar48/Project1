@@ -19,6 +19,8 @@ import Customers from "./Customers";
 import Analytics from "./Analytics";
 import Reviews from "./Reviews";
 import Settings from "./Settings";
+import Notifications from "./Notifications";
+import { FaWallet } from "react-icons/fa";
 
 
 export default function SellerDashboard() {
@@ -29,7 +31,7 @@ export default function SellerDashboard() {
 
   const [seller, setSeller] = useState(() => {
     const saved = localStorage.getItem('sellerUser');
-    return saved ? JSON.parse(saved) : { name: 'Seller', email: 'merchant@electroshop.com' };
+    return saved ? JSON.parse(saved) : { name: 'Seller', email: 'merchant@electroshop.com', phone: '' };
   });
 
   useEffect(() => {
@@ -63,31 +65,7 @@ export default function SellerDashboard() {
     { id: 4, name: 'Total Products', value: '0', icon: FaBox, trend: '0%', color: 'stone', tab: 'Products' },
   ]);
 
-  useEffect(() => {
-    if (seller?.seller_id) {
-      fetchProducts();
-      fetchStats();
-    }
-  }, [seller]);
-
-  const fetchStats = async () => {
-    try {
-      const res = await axios.get(`http://localhost:5000/seller-stats/${seller.seller_id}`);
-      const data = res.data;
-      setRealStats([
-        { id: 1, name: 'Total Revenue', value: `₹${parseFloat(data.totalRevenue).toLocaleString()}`, icon: FaChartLine, trend: '+0%', color: 'amber', tab: 'Analytics' },
-        { id: 2, name: 'Total Orders', value: data.totalOrders.toString(), icon: FaClipboardList, trend: '+0%', color: 'stone', tab: 'Orders' },
-        { id: 3, name: 'Active Listings', value: data.activeProducts.toString(), icon: FaBox, trend: '+0%', color: 'amber', tab: 'Products' },
-        { id: 4, name: 'Total Products', value: data.totalProducts.toString(), icon: FaPlus, trend: '+0%', color: 'stone', tab: 'Products' },
-      ]);
-    } catch (err) {
-      console.error("Error fetching stats:", err);
-    }
-  };
-
-  useEffect(() => {
-    localStorage.setItem('sellerActiveTab', activeTab);
-  }, [activeTab]);
+  const [notifications, setNotifications] = useState([]);
   const [selectedCategory, setSelectedCategory] = useState('All');
   const [timeRange, setTimeRange] = useState('Today');
   const [globalSearch, setGlobalSearch] = useState("");
@@ -95,16 +73,76 @@ export default function SellerDashboard() {
   const [showProfileMenu, setShowProfileMenu] = useState(false);
   const [viewedCustomer, setViewedCustomer] = useState(null);
   const [inventoryProducts, setInventoryProducts] = useState([]);
+  const [recentOrders, setRecentOrders] = useState([]);
 
+  const fetchStats = async () => {
+    try {
+      const res = await axios.get(`http://127.0.0.1:5000/seller-stats/${seller.seller_id}`);
+      const data = res.data;
+      setRealStats([
+        { id: 1, name: 'Total Revenue', value: `₹${parseFloat(data.totalRevenue).toLocaleString()}`, icon: FaChartLine, trend: '+0%', color: 'amber', tab: 'Analytics' },
+        { id: 2, name: 'Total Orders', value: data.totalOrders.toString(), icon: FaClipboardList, trend: '+0%', color: 'stone', tab: 'Orders' },
+        { id: 3, name: 'Active Customers', value: (data.totalCustomers || 0).toString(), icon: FaUsers, trend: '+0%', color: 'amber', tab: 'Customers' },
+        { id: 4, name: 'Total Products', value: (data.totalProducts || 0).toString(), icon: FaBox, trend: '+0%', color: 'stone', tab: 'Products' },
+      ]);
+    } catch (err) {
+      console.error("Error fetching stats:", err);
+    }
+  };
 
   const fetchProducts = async () => {
     try {
-      const res = await axios.get(`http://localhost:5000/seller-products/${seller.seller_id}`);
+      const res = await axios.get(`http://127.0.0.1:5000/seller-products/${seller.seller_id}`);
       setInventoryProducts(res.data);
     } catch (err) {
       console.error("Error fetching products:", err);
     }
   };
+
+  const fetchNotifications = async () => {
+    try {
+      const res = await axios.get(`http://127.0.0.1:5000/notifications/seller/${seller.seller_id}`);
+      setNotifications(res.data);
+    } catch (err) {
+      console.error("Error fetching notifications:", err);
+    }
+  };
+
+  const fetchRecentOrders = async () => {
+    try {
+      const res = await axios.get(`http://127.0.0.1:5000/api/seller-orders/${seller.seller_id}`);
+      setRecentOrders(res.data.slice(0, 5));
+    } catch (err) {
+      console.error("Error fetching recent orders:", err);
+    }
+  };
+
+
+  useEffect(() => {
+    console.log("Current Seller Context:", seller);
+    if (seller?.seller_id) {
+       fetchProducts();
+       fetchStats();
+       fetchNotifications();
+       fetchRecentOrders();
+    } else {
+       console.warn("No seller_id found. Data fetching skipped.");
+    }
+  }, [seller]);
+
+  useEffect(() => {
+    localStorage.setItem('sellerActiveTab', activeTab);
+  }, [activeTab]);
+
+  const markAsRead = async (id) => {
+    try {
+      await axios.patch(`http://localhost:5000/notifications/${id}/read`);
+      fetchNotifications();
+    } catch (err) {
+      console.error("Error marking as read:", err);
+    }
+  };
+
 
 
 
@@ -144,6 +182,7 @@ export default function SellerDashboard() {
             { name: 'Analytics', icon: FaChartLine },
             { name: 'Customers', icon: FaUsers },
             { name: 'Reviews', icon: FaStar },
+            { name: 'Notifications', icon: FaBell },
             { name: 'Settings', icon: FaGear },
           ].map((item) => (
             <button
@@ -190,6 +229,7 @@ export default function SellerDashboard() {
           <div className="w-1/3">
              <h2 className="text-xl font-semibold text-stone-900 tracking-tight hidden sm:block">
                {seller.storeName || 'Merchant'} <span className="text-amber-600">Dashboard</span>
+               <span className="text-[10px] ml-2 px-2 py-1 bg-stone-100 rounded-md text-stone-400">ID: {seller.seller_id || 'Missing'}</span>
              </h2>
           </div>
 
@@ -202,32 +242,47 @@ export default function SellerDashboard() {
                 className={`relative w-10 h-10 flex items-center justify-center rounded-xl transition-all duration-300 group ${showNotifications ? 'bg-amber-100 text-amber-600' : 'text-stone-400 hover:text-amber-600 hover:bg-amber-50'}`}
               >
                 <FaBell size={18} className={`${showNotifications ? '' : 'group-hover:rotate-[15deg]'} transition-transform`} />
-                <span className="absolute top-2.5 right-2.5 w-2 h-2 bg-amber-600 rounded-full border-2 border-white animate-pulse"></span>
+                {notifications.some(n => !n.is_read) && (
+                  <span className="absolute top-2.5 right-2.5 w-2 h-2 bg-amber-600 rounded-full border-2 border-white animate-pulse"></span>
+                )}
               </button>
 
               {showNotifications && (
                 <div className="absolute right-0 mt-4 w-80 bg-white rounded-[2rem] shadow-2xl border border-stone-100 overflow-hidden z-[60] animate-in fade-in slide-in-from-top-4 duration-300">
                   <div className="p-6 border-b border-stone-100 flex items-center justify-between">
                     <h4 className="font-semibold text-stone-900 text-[10px]">Real-time Alerts</h4>
-                    <span className="text-[10px] font-semibold text-amber-600">3 New</span>
+                    <span className="text-[10px] font-semibold text-amber-600">{notifications.filter(n => !n.is_read).length} New</span>
                   </div>
                   <div className="divide-y divide-stone-200 max-h-[350px] overflow-y-auto">
-                    {[
-                      { title: 'New Order Received', desc: 'Order #ORD-882 awaits processing', time: '2m ago', icon: '📦' },
-                      { title: 'Inventory Alert', desc: 'Sonic Buds Pro stock is critical (2 units)', time: '14m ago', icon: '⚠️' },
-                      { title: 'Payment Settled', desc: 'Payout of ₹84,200 cleared', time: '2h ago', icon: '💰' },
-                    ].map((n, i) => (
-                      <div key={i} className="p-5 hover:bg-stone-50 transition-colors cursor-pointer group">
-                        <div className="flex gap-4">
-                          <div className="w-10 h-10 bg-stone-100 rounded-xl flex items-center justify-center text-lg">{n.icon}</div>
-                          <div className="flex-1">
-                            <h5 className="font-semibold text-stone-900 text-[11px] mb-0.5">{n.title}</h5>
-                            <p className="text-[10px] font-bold text-stone-400 leading-tight">{n.desc}</p>
-                            <span className="text-[8px] font-semibold text-stone-300 mt-2 block">{n.time}</span>
+                    {notifications.length === 0 ? (
+                      <div className="p-10 text-center text-stone-400 text-[10px] font-bold uppercase tracking-widest">
+                        No new alerts
+                      </div>
+                    ) : (
+                      notifications.map((n) => (
+                        <div 
+                          key={n.notification_id} 
+                          onClick={() => markAsRead(n.notification_id)}
+                          className={`p-5 hover:bg-stone-50 transition-colors cursor-pointer group ${!n.is_read ? 'bg-amber-50/30' : ''}`}
+                        >
+                          <div className="flex gap-4">
+                            <div className="w-10 h-10 bg-stone-100 rounded-xl flex items-center justify-center text-lg">
+                              {n.type === 'New Order' ? '📦' : '🔔'}
+                            </div>
+                            <div className="flex-1">
+                              <div className="flex justify-between items-start">
+                                <h5 className="font-semibold text-stone-900 text-[11px] mb-0.5">{n.type}</h5>
+                                {!n.is_read && <span className="w-1.5 h-1.5 bg-amber-600 rounded-full animate-pulse"></span>}
+                              </div>
+                              <p className="text-[10px] font-bold text-stone-400 leading-tight">{n.message}</p>
+                              <span className="text-[8px] font-semibold text-stone-300 mt-2 block">
+                                {new Date(n.created_at).toLocaleTimeString()}
+                              </span>
+                            </div>
                           </div>
                         </div>
-                      </div>
-                    ))}
+                      ))
+                    )}
                   </div>
                   <button onClick={() => setShowNotifications(false)} className="w-full p-4 text-[9px] font-semibold text-stone-400 hover:bg-stone-50 transition-colors border-t border-stone-50">Close Feed</button>
                 </div>
@@ -331,7 +386,7 @@ export default function SellerDashboard() {
 
         {/* Dash Content */}
         <div className="p-6 space-y-8">
-          {activeTab === 'Overview' && <Overview setActiveTab={setActiveTab} stats={realStats} />}
+          {activeTab === 'Overview' && <Overview setActiveTab={setActiveTab} stats={realStats} notifications={notifications} recentOrders={recentOrders} inventoryProducts={inventoryProducts} sellerName={seller.name} />}
 
           {activeTab === 'Products' && (
             <Products 
@@ -347,13 +402,13 @@ export default function SellerDashboard() {
 
           {activeTab === 'Orders' && <Orders globalSearch={globalSearch} />}
 
-          {activeTab === 'Customers' && <Customers globalSearch={globalSearch} setViewedCustomer={setViewedCustomer} />}
+          {activeTab === 'Customers' && <Customers globalSearch={globalSearch} setViewedCustomer={setViewedCustomer} sellerId={seller.seller_id} />}
 
-          {activeTab === 'Analytics' && <Analytics timeRange={timeRange} setTimeRange={setTimeRange} setActiveTab={setActiveTab} />}
-
-          {activeTab === 'Reviews' && <Reviews />}
+          {activeTab === 'Analytics' && <Analytics timeRange={timeRange} setTimeRange={setTimeRange} setActiveTab={setActiveTab} sellerId={seller.seller_id} />}
+          {activeTab === 'Reviews' && <Reviews sellerId={seller.seller_id} />}
 
           {activeTab === 'Settings' && <Settings />}
+          {activeTab === 'Notifications' && <Notifications notifications={notifications} markAsRead={markAsRead} />}
         </div>
       </main>
     </div>

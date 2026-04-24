@@ -26,9 +26,16 @@ export default function SellerLogin() {
 
       // Check default admin as well just in case
       if (email === "electroshop@gmail.com" && password === "3616") {
+         const adminSeller = { 
+            seller_id: 'SEL001', 
+            name: "Dhinakar", 
+            email: email, 
+            storeName: "ElectroShop Premium" 
+         };
+         localStorage.setItem('sellerUser', JSON.stringify(adminSeller));
          localStorage.setItem('sellerActiveTab', 'Overview');
          localStorage.setItem('isSellerAuthenticated', 'true');
-         localStorage.setItem('user', JSON.stringify({ email, name: "Admin Seller" })); // for global tracking
+         localStorage.setItem('user', JSON.stringify({ email, name: "Admin Seller" })); 
          navigate("/seller-dashboard", { replace: true });
          return;
       }

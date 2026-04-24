@@ -1,19 +1,45 @@
-import React from "react";
+import React, { useState, useEffect } from "react";
 import { motion } from "framer-motion";
-import { FaStar, FaRegStar, FaStarHalfAlt, FaQuoteLeft, FaReply } from "react-icons/fa";
+import { FaStar, FaRegStar, FaStarHalfAlt, FaQuoteLeft, FaReply, FaUser } from "react-icons/fa";
+import axios from "axios";
 
-export default function Reviews() {
-  const reviews = [
-    { user: 'Marcus Aurelius', rating: 5, comment: 'Exceptional build quality on the Vertex Pro 16. The thermal performance is industry-leading. Everything functions beautifully straight out of the box. Highly recommended for power users.', date: '2h ago', product: 'Vertex Pro 16', img: '/laptop.jpg', status: 'Verified Purchase' },
-    { user: 'Sophia Loren', rating: 4, comment: 'Quantum Watch X is beautiful, but the battery synchronization could be tighter. Other than that, the metrics tracking is impeccable.', date: '5h ago', product: 'Pulse Watch X', img: '/featured/watch1.avif', status: 'Verified Purchase' },
-    { user: 'Elena Gilbert', rating: 5, comment: 'The Sonic Buds Pro offer unparalleled noise cancellation protocol. I use them daily on my commute and the battery life lasts for weeks.', date: '1d ago', product: 'Sonic Buds Pro', img: '/featured/buds1.avif', status: 'Verified Purchase' },
-  ];
+export default function Reviews({ sellerId }) {
+  const [reviews, setReviews] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchReviews = async () => {
+      if (!sellerId) return;
+      try {
+        const res = await axios.get(`http://localhost:5000/seller-reviews/${sellerId}`);
+        const formatted = res.data.map(r => ({
+          id: r.review_id,
+          user: r.customer_name || 'Anonymous',
+          rating: parseInt(r.rating) || 5,
+          comment: r.body || '',
+          date: new Date(r.created_at).toLocaleDateString(),
+          product: r.product_name || 'Unknown Product',
+          img: r.image_url || null,
+          status: 'Verified Purchase'
+        }));
+        setReviews(formatted);
+      } catch (err) {
+        console.error("Error fetching seller reviews:", err);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchReviews();
+  }, [sellerId]);
 
   const renderStars = (rating) => {
     return [...Array(5)].map((_, i) => (
        <FaStar key={i} className={i < rating ? "text-amber-500" : "text-stone-200"} size={12} />
     ));
   };
+
+  const avgRating = reviews.length > 0 ? (reviews.reduce((acc, r) => acc + r.rating, 0) / reviews.length).toFixed(1) : '0.0';
+  const positiveSentiment = reviews.length > 0 ? Math.round((reviews.filter(r => r.rating >= 4).length / reviews.length) * 100) : 0;
 
   return (
     <div className="space-y-8 animate-in fade-in zoom-in-95 duration-1000">
@@ -33,35 +59,39 @@ export default function Reviews() {
       {/* STATS AGGREGATE */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         <div className="bg-white p-8 rounded-[2.5rem] border border-stone-100 shadow-xl shadow-stone-200/20 flex flex-col items-center justify-center text-center relative overflow-hidden group hover:-translate-y-1 transition-all duration-300">
-          <div className="absolute top-0 right-0 w-32 h-32 blur-[40px transition-colors" />
-          <span className="text-6xl font-semibold text-stone-900 mb-3 z-10">4.8</span>
+          <div className="absolute top-0 right-0 w-32 h-32 blur-[40px] transition-colors" />
+          <span className="text-6xl font-semibold text-stone-900 mb-3 z-10">{avgRating}</span>
           <div className="flex gap-1.5 mb-4 z-10">
-            {[...Array(5)].map((_, j) => <FaStar key={j} className="text-amber-500 drop-shadow-sm" size={18} />)}
+            {renderStars(Math.round(parseFloat(avgRating)))}
           </div>
           <span className="text-[10px] font-semibold text-stone-400 z-10">Global Average Rating</span>
         </div>
 
         <div className="bg-stone-900 p-8 rounded-[2.5rem] shadow-xl flex flex-col items-center justify-center text-center relative overflow-hidden group hover:-translate-y-1 transition-all duration-300">
           <div className="absolute top-0 left-0 w-32 h-32 blur-[40px] transition-colors" />
-          <span className="text-6xl font-semibold text-amber-500 mb-3 z-10">92%</span>
+          <span className="text-6xl font-semibold text-amber-500 mb-3 z-10">{positiveSentiment}%</span>
           <div className="h-2 w-32 bg-stone-800 rounded-full mb-4 overflow-hidden z-10">
-             <motion.div initial={{ width: 0 }} animate={{ width: '92%' }} transition={{ duration: 1.5 }} className="h-full bg-amber-500 rounded-full" />
+             <motion.div initial={{ width: 0 }} animate={{ width: `${positiveSentiment}%` }} transition={{ duration: 1.5 }} className="h-full bg-amber-500 rounded-full" />
           </div>
           <span className="text-[10px] font-semibold text-stone-300 z-10">Positive Sentiment Vector</span>
         </div>
 
         <div className="bg-white p-8 rounded-[2.5rem] border border-stone-100 shadow-xl shadow-stone-200/20 flex flex-col items-center justify-center text-center relative overflow-hidden group hover:-translate-y-1 transition-all duration-300">
           <div className="absolute bottom-0 right-0 w-32 h-32 blur-[40px] transition-colors" />
-          <span className="text-6xl font-semibold text-stone-900 mb-3 z-10">842</span>
+          <span className="text-6xl font-semibold text-stone-900 mb-3 z-10">{reviews.length}</span>
           <div className="flex items-center gap-2 mb-4 text-emerald-500 z-10">
              <FaQuoteLeft size={16} />
-             <span className="text-[10px] font-semibold">+12 this week</span>
+             <span className="text-[10px] font-semibold">Total verified</span>
           </div>
           <span className="text-[10px] font-semibold text-stone-400 z-10">Verified Datapoints</span>
         </div>
       </div>
 
-      {/* FEED LIST */}
+      {loading ? (
+        <div className="flex justify-center p-12">
+          <span className="w-8 h-8 border-4 border-stone-200 border-t-amber-500 rounded-full animate-spin"></span>
+        </div>
+      ) : (
       <div className="bg-white rounded-[2.5rem] border border-stone-100 shadow-2xl shadow-stone-200/40 relative">
         <div className="p-8 border-b border-stone-100 flex items-center justify-between">
           <div>
@@ -82,12 +112,17 @@ export default function Reviews() {
                transition={{ delay: i * 0.1 }}
                className="p-8 hover:bg-stone-50/50 transition-colors flex flex-col md:flex-row gap-6 lg:gap-10 group"
             >
-              {/* Product Insight */}
+              {/* Reviewer Image Insight */}
               <div className="w-full md:w-48 flex-shrink-0">
-                 <div className="bg-white rounded-[1.0rem] border border-stone-100 p-3 shadow-sm h-32 w-full flex items-center justify-center overflow-hidden mb-3 transition-all">
-                    <img src={rev.img} alt={rev.product} className="w-full h-full object-contain mix-blend-multiply group-hover:scale-105 transition-transform duration-700" />
+                 <div className="bg-stone-50 rounded-[1.0rem] border border-stone-100 p-2 shadow-sm h-32 w-full flex items-center justify-center overflow-hidden mb-3 transition-all">
+                    {rev.img ? (
+                      <img src={rev.img} alt="Review attachment" className="w-full h-full object-cover rounded-lg group-hover:scale-105 transition-transform duration-700" />
+                    ) : (
+                      <div className="w-full h-full bg-white rounded-lg flex items-center justify-center text-stone-200 border border-stone-100 border-dashed">
+                        <FaUser size={40} />
+                      </div>
+                    )}
                  </div>
-                 <span className="text-[10px] font-semibold text-stone-900 block text-center truncate">{rev.product}</span>
               </div>
 
               {/* Review Content */}
@@ -124,6 +159,7 @@ export default function Reviews() {
           ))}
         </div>
       </div>
+      )}
     </div>
   );
 }

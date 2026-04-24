@@ -1,7 +1,60 @@
-import React from "react";
+import React, { useState, useEffect } from "react";
 import { motion } from "framer-motion";
+import axios from "axios";
+import { FaWallet, FaChartLine, FaArrowUp, FaArrowDown } from "react-icons/fa";
 
-export default function Analytics({ timeRange, setTimeRange, setActiveTab }) {
+export default function Analytics({ timeRange, setTimeRange, setActiveTab, sellerId }) {
+   const [finances, setFinances] = useState([]);
+   const [loading, setLoading] = useState(true);
+   const [selectedHalf, setSelectedHalf] = useState(1);
+
+   useEffect(() => {
+      const fetchFinances = async () => {
+         if (!sellerId) return;
+         setLoading(true);
+         try {
+            let type = 'daily';
+            if (timeRange === 'Weekly') type = 'weekly';
+            if (timeRange === 'Monthly') type = 'monthly';
+            if (timeRange === 'Quarterly') type = 'quarterly';
+            if (timeRange === 'Yearly') type = 'half-yearly';
+            
+            const res = await axios.get(`http://localhost:5000/api/seller/finances/${type}/${sellerId}`);
+            setFinances(res.data);
+         } catch (err) {
+            console.error("Error fetching finances:", err);
+         } finally {
+            setLoading(false);
+         }
+      };
+      fetchFinances();
+   }, [sellerId, timeRange]);
+
+   const currentRevenue = finances.reduce((acc, curr) => acc + parseFloat(curr.total_revenue || 0), 0);
+   const currentNet = finances.reduce((acc, curr) => acc + parseFloat(curr.net_seller_earnings || 0), 0);
+   const currentCommissions = finances.reduce((acc, curr) => acc + parseFloat(curr.platform_commission || 0), 0);
+
+   if (loading) return (
+      <div className="h-96 flex items-center justify-center">
+         <div className="w-8 h-8 border-4 border-amber-500 border-t-transparent rounded-full animate-spin" />
+      </div>
+   );
+
+   const getBarLabel = (row) => {
+      if (timeRange === 'Daily') {
+         return new Date(row.finance_date).toLocaleDateString('en-IN', { day: '2-digit', month: 'short' });
+      } else if (timeRange === 'Weekly') {
+         return `Week ${row.week_number}`;
+      } else if (timeRange === 'Monthly') {
+         const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+         return months[row.month_number - 1] || `M${row.month_number}`;
+      } else if (timeRange === 'Quarterly') {
+         return `Q${row.quarter_number} (${row.year})`;
+      } else if (timeRange === 'Yearly') {
+         return `${row.year}`;
+      }
+   };
+
    return (
       <div className="space-y-12 animate-in fade-in zoom-in-95 duration-1000">
          {/* Top Header */}
@@ -17,19 +70,41 @@ export default function Analytics({ timeRange, setTimeRange, setActiveTab }) {
             </div>
 
             {/* High-End Time Range Toggle */}
-            <div className="flex items-center gap-2 bg-stone-100/50 p-1.5 rounded-[2rem] border border-stone-200/50 backdrop-blur-sm">
-               {['Today', 'Monthly', 'Yearly'].map((range) => (
-                  <button
-                     key={range}
-                     onClick={() => setTimeRange(range)}
-                     className={`px-6 py-2.5 rounded-xl text-[10px] font-semibold   transition-all ${timeRange === range
-                        ? 'bg-stone-900 text-amber-500 shadow-xl shadow-stone-900/20'
-                        : 'text-stone-400 hover:text-stone-900 hover:bg-white'
-                        }`}
-                  >
-                     {range}
-                  </button>
-               ))}
+            <div className="flex flex-col items-end gap-4">
+               <div className="flex items-center gap-2 bg-stone-100/50 p-1.5 rounded-[2rem] border border-stone-200/50 backdrop-blur-sm">
+                  {['Daily', 'Weekly', 'Monthly', 'Quarterly', 'Yearly'].map((range) => (
+                     <button
+                        key={range}
+                        onClick={() => setTimeRange(range)}
+                        className={`px-4 py-2.5 rounded-xl text-[10px] font-semibold   transition-all ${timeRange === range
+                           ? 'bg-stone-900 text-amber-500 shadow-xl shadow-stone-900/20'
+                           : 'text-stone-400 hover:text-stone-900 hover:bg-white'
+                           }`}
+                     >
+                        {range}
+                     </button>
+                  ))}
+               </div>
+
+               {timeRange === 'Yearly' && (
+                  <div className="flex items-center gap-2 bg-amber-500/5 p-1 rounded-2xl border border-amber-500/10 animate-in fade-in slide-in-from-right-4 duration-500">
+                     {[
+                        { label: 'Jan to June', val: 1 },
+                        { label: 'July to Dec', val: 2 }
+                     ].map((half) => (
+                        <button
+                           key={half.val}
+                           onClick={() => setSelectedHalf(half.val)}
+                           className={`px-4 py-2 rounded-xl text-[9px] font-bold uppercase tracking-wider transition-all ${selectedHalf === half.val
+                              ? 'bg-amber-500 text-stone-900 shadow-md'
+                              : 'text-amber-600/50 hover:text-amber-600 hover:bg-amber-500/10'
+                              }`}
+                        >
+                           {half.label}
+                        </button>
+                     ))}
+                  </div>
+               )}
             </div>
          </div>
 
@@ -47,66 +122,81 @@ export default function Analytics({ timeRange, setTimeRange, setActiveTab }) {
                         <div className="w-1.5 h-1.5 rounded-full bg-amber-500 shadow-[0_0_4px_#f59e0b]" />
                         <span className="text-[9px] font-semibold text-stone-500">Gross</span>
                      </div>
-
+                     <div className="flex items-center gap-2 bg-stone-50 px-3 py-1.5 rounded-lg border border-stone-100">
+                        <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 shadow-[0_0_4px_#10b981]" />
+                        <span className="text-[9px] font-semibold text-stone-500">Net Earnings</span>
+                     </div>
                   </div>
                </div>
                <div className="text-right">
                   <span className="text-[9px] font-semibold text-stone-400 block mb-1">Total Accumulated</span>
                   <span className="text-4xl font-semibold text-stone-900 drop-shadow-sm">
-                     {timeRange === 'Today' ? '₹84,200' : timeRange === 'Monthly' ? '₹24.5L' : '₹3.8Cr'}
+                     ₹{currentRevenue.toLocaleString()}
                   </span>
                   <p className="text-[10px] font-semibold text-green-500 mt-1 flex items-center justify-end gap-1">
-                     <motion.span initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.5 }}>+14.2% Growth</motion.span>
+                     <motion.span initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.5 }}>₹{currentNet.toLocaleString()} Net Profit</motion.span>
                   </p>
                </div>
             </div>
 
             {/* SLEEK BAR GRAPH AREA */}
-            <div className="relative h-[180px] w-full flex items-end justify-between gap-2 sm:gap-4 mt-6 z-10">
-               {/* Background horizontal grid lines */}
+            <div className="relative h-[300px] w-full flex items-end justify-between gap-2 sm:gap-6 mt-6 z-10">
                <div className="absolute inset-x-0 bottom-0 top-0 flex flex-col justify-between pointer-events-none">
                   {[0, 1, 2, 3].map(i => (
                      <div key={i} className="w-full h-px bg-stone-100" />
                   ))}
                </div>
 
-               {/* Dynamic Bars */}
                {(() => {
-                  const data = timeRange === 'Today'
-                     ? [40, 65, 30, 85, 50, 95]
-                     : timeRange === 'Monthly'
-                        ? [50, 70, 85, 45, 90, 60, 100, 75]
-                        : [60, 80, 40, 100];
-                  const labels = timeRange === 'Today'
-                     ? ['00:00', '04:00', '08:00', '12:00', '16:00', '20:00']
-                     : timeRange === 'Monthly'
-                        ? ['W1', 'W2', 'W3', 'W4', 'W5', 'W6', 'W7', 'W8']
-                        : ['Q1', 'Q2', 'Q3', 'Q4'];
-
-                  return data.map((val, i) => (
-                     <div key={i} className="flex-1 flex flex-col items-center gap-2 h-full justify-end group/bar cursor-pointer">
-                        <div className="w-full relative flex items-end justify-center h-[85%]">
-                           {/* Gross Bar (taller behind) */}
-                           <motion.div
-                              initial={{ height: 0 }}
-                              animate={{ height: `${val}%` }}
-                              transition={{ duration: 1.2, delay: i * 0.1, type: "spring", bounce: 0.3 }}
-                              className="absolute bottom-0 w-[90%] max-w-[65px] bg-amber-500 rounded-t-md transition-colors group-hover/bar:bg-amber-400"
-                           />
-
-
-                           {/* Hover Tooltip/Value */}
-                           <div className="absolute -top-8 opacity-0 group-hover/bar:opacity-100 transition-opacity whitespace-nowrap z-20">
-                              <span className="bg-stone-900 text-white text-[9px] font-semibold px-2 py-1 rounded shadow-md">
-                                 {val * 10}k
-                              </span>
-                           </div>
+                  let dataToShow = [...finances].reverse();
+                  if (timeRange === 'Yearly') {
+                     dataToShow = dataToShow.filter(row => row.half_number === selectedHalf);
+                  }
+                  
+                  if (dataToShow.length === 0) {
+                     return (
+                        <div className="w-full h-full flex items-center justify-center text-stone-400 text-[10px] font-bold uppercase tracking-widest">
+                           Inbound Finance Stream Pending...
                         </div>
-                        <span className="text-[8px] font-semibold text-stone-400 group-hover/bar:text-amber-500 transition-colors mt-1">
-                           {labels[i]}
-                        </span>
-                     </div>
-                  ));
+                     );
+                  }
+
+                  return dataToShow.slice(-10).map((row, i) => {
+                     const maxVal = Math.max(...finances.map(f => parseFloat(f.total_revenue) || 1));
+                     const grossHeight = (parseFloat(row.total_revenue) / maxVal) * 100;
+                     const netHeight = (parseFloat(row.net_seller_earnings) / maxVal) * 100;
+
+                     return (
+                        <div key={i} className="flex-1 flex flex-col items-center gap-2 h-full justify-end group/bar cursor-pointer">
+                           <div className="w-full relative flex items-end justify-center h-[85%]">
+                              <motion.div
+                                 initial={{ height: 0 }} animate={{ height: `${grossHeight}%` }}
+                                 className="absolute bottom-0 w-[95%] max-w-[100px] bg-amber-500/10 rounded-t-[1rem] group-hover/bar:bg-amber-500/20 transition-colors"
+                              />
+                              <motion.div
+                                 initial={{ height: 0 }} animate={{ height: `${netHeight}%` }}
+                                 className="absolute bottom-0 w-[70%] max-w-[70px] bg-amber-500 rounded-t-[1rem] group-hover/bar:bg-amber-500 transition-colors shadow-[0_-8px_20px_rgba(245,158,11,0.3)]"
+                              />
+
+                              <div className="absolute -top-12 opacity-0 group-hover/bar:opacity-100 transition-opacity whitespace-nowrap z-20">
+                                 <div className="bg-stone-900 text-white text-[8px] font-bold p-2 rounded-lg shadow-xl border border-stone-800">
+                                    <div className="flex justify-between gap-4 mb-1">
+                                       <span className="text-stone-400 uppercase">Gross:</span>
+                                       <span>₹{parseFloat(row.total_revenue).toLocaleString()}</span>
+                                    </div>
+                                    <div className="flex justify-between gap-4">
+                                       <span className="text-emerald-400 uppercase">Net:</span>
+                                       <span className="text-emerald-400">₹{parseFloat(row.net_seller_earnings).toLocaleString()}</span>
+                                    </div>
+                                 </div>
+                              </div>
+                           </div>
+                           <span className="text-[8px] font-bold text-stone-400 group-hover/bar:text-amber-500 transition-colors mt-1">
+                              {getBarLabel(row)}
+                           </span>
+                        </div>
+                     );
+                  });
                })()}
             </div>
          </div>

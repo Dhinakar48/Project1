@@ -1,24 +1,59 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { FaUserShield, FaCrown, FaEnvelope, FaSearchDollar, FaArrowRight } from "react-icons/fa";
+import axios from "axios";
 
-export default function Customers({ globalSearch, setViewedCustomer }) {
+export default function Customers({ globalSearch, setViewedCustomer, sellerId }) {
   const [filter, setFilter] = useState("All");
+  const [customers, setCustomers] = useState([]);
+  const [loading, setLoading] = useState(true);
 
-  const customers = [
-    { name: 'Alexandar Graham', email: 'alex@example.com', order: 'Vertex Laptop 16', spend: '₹2,45,000', id: 'AG', color: 'bg-emerald-100 text-emerald-600 border-emerald-200', tier: 'Platinum' },
-    { name: 'Sophia Loren', email: 'sophia@example.com', order: 'Pulse Watch X', spend: '₹34,000', id: 'SL', color: 'bg-blue-100 text-blue-600 border-blue-200', tier: 'Silver' },
-    { name: 'Marcus Aurelius', email: 'marcus@example.com', order: 'Sonic Buds Pro', spend: '₹18,499', id: 'MA', color: 'bg-amber-100 text-amber-600 border-amber-200', tier: 'Gold' },
-    { name: 'Elena Gilbert', email: 'elena@example.com', order: 'Aura Headphones', spend: '₹35,000', id: 'EG', color: 'bg-purple-100 text-purple-600 border-purple-200', tier: 'Silver' },
-    { name: 'David Wallace', email: 'david@dm.com', order: 'Quantum Keyboard', spend: '₹1,55,000', id: 'DW', color: 'bg-rose-100 text-rose-600 border-rose-200', tier: 'Platinum' },
-    { name: 'Michael Scott', email: 'michael@dunder.com', order: 'Plasma TV 65"', spend: '₹85,000', id: 'MS', color: 'bg-stone-100 text-stone-600 border-stone-200', tier: 'Gold' },
-  ];
+  useEffect(() => {
+    const fetchCustomers = async () => {
+      if (!sellerId) return;
+      try {
+        const res = await axios.get(`http://localhost:5000/seller-customers/${sellerId}`);
+        const formatted = res.data.map(c => {
+          const spendAmt = parseFloat(c.total_spend) || 0;
+          let tier = 'Silver';
+          let color = 'bg-blue-100 text-blue-600 border-blue-200';
+          if (spendAmt > 100000) {
+            tier = 'Platinum';
+            color = 'bg-amber-100 text-amber-600 border-amber-200';
+          } else if (spendAmt > 50000) {
+            tier = 'Gold';
+            color = 'bg-stone-100 text-stone-600 border-stone-200';
+          } else if (spendAmt > 20000) {
+            color = 'bg-emerald-100 text-emerald-600 border-emerald-200';
+          } else {
+            color = 'bg-purple-100 text-purple-600 border-purple-200';
+          }
+
+          return {
+            name: c.name || 'Anonymous User',
+            email: c.email || 'No Email',
+            order: c.latest_product || 'Multiple Items',
+            spend: `₹${spendAmt.toLocaleString('en-IN')}`,
+            id: c.customer_id ? c.customer_id.substring(0, 3).toUpperCase() : 'CUS',
+            color,
+            tier
+          };
+        });
+        setCustomers(formatted);
+      } catch (err) {
+        console.error("Error fetching customers:", err);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchCustomers();
+  }, [sellerId]);
 
   const filteredCustomers = customers
     .filter(c => filter === "All" ? true : c.tier === filter)
     .filter(c => 
-      c.name.toLowerCase().includes(globalSearch.toLowerCase()) || 
-      c.email.toLowerCase().includes(globalSearch.toLowerCase())
+      c.name.toLowerCase().includes((globalSearch || "").toLowerCase()) || 
+      c.email.toLowerCase().includes((globalSearch || "").toLowerCase())
     );
 
   const getTierIcon = (tier) => {

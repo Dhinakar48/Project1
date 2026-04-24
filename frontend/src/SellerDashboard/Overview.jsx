@@ -1,8 +1,8 @@
 import React from "react";
 import { motion } from "framer-motion";
-import { FaClipboardList, FaBox, FaChartLine } from "react-icons/fa6";
+import { FaClipboardList, FaBox, FaChartLine, FaBell } from "react-icons/fa6";
 
-export default function Overview({ setActiveTab, stats }) {
+export default function Overview({ setActiveTab, stats, notifications, recentOrders, inventoryProducts, sellerName }) {
   return (
     <>
       <div className="flex flex-col lg:flex-row lg:items-end justify-between gap-6 overflow-hidden">
@@ -10,12 +10,21 @@ export default function Overview({ setActiveTab, stats }) {
           <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-amber-500/10 text-amber-600">
              <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse" />
              <span className="text-[9px] font-semibold">Live Dashboard</span>
+             <button onClick={() => window.location.reload()} className="ml-4 px-2 py-1 bg-white border border-stone-200 text-stone-900 rounded-md text-[9px] font-bold hover:bg-stone-100">
+               Force Reload
+             </button>
           </div>
+          {/* Debug Block */}
+          {stats && stats.length > 0 && stats[0].value === '₹0' && (
+             <div className="text-[10px] text-red-500 font-mono mt-2">
+               DEBUG: Stats are still showing default zeros. Please click "Force Reload".
+             </div>
+          )}
           <h1 className="text-4xl font-semibold text-stone-900">
             Overview
           </h1>
           <p className="text-stone-400 text-[10px] font-semibold mt-1">
-             Welcome Back, Dhinakar <span className="mx-2 text-stone-200">|</span> Here's your store's status
+             Welcome Back, {sellerName || 'Seller'} <span className="mx-2 text-stone-200">|</span> Here's your store's status
           </p>
         </div>
       </div>
@@ -124,66 +133,108 @@ export default function Overview({ setActiveTab, stats }) {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-stone-50">
-                  {[
-                    { id: '#ORD-101', name: 'Sophia Loren', amount: '₹34,000', status: 'Shipped', color: 'bg-blue-50 text-blue-600 border-blue-100' },
-                    { id: '#ORD-102', name: 'Marcus Aurelius', amount: '₹18,499', status: 'Delivered', color: 'bg-green-50 text-green-600 border-green-100' },
-                    { id: '#ORD-103', name: 'Elena Gilbert', amount: '₹34,999', status: 'Pending', color: 'bg-stone-50 text-stone-600 border-stone-200' },
-                    { id: '#ORD-104', name: 'Alexandar Graham', amount: '₹1,89,999', status: 'Processing', color: 'bg-amber-50 text-amber-600 border-amber-100' },
-                    { id: '#ORD-105', name: 'Liam Neeson', amount: '₹42,999', status: 'Delivered', color: 'bg-green-50 text-green-600 border-green-100' },
-                  ].map((order, i) => (
-                    <tr key={i} className="hover:bg-stone-50/80 transition-colors cursor-default group">
-                      <td className="px-8 py-5 font-semibold text-stone-900 text-xs tracking-tight">
-                         <span className="bg-stone-100 px-2.5 py-1 rounded-md">{order.id}</span>
-                      </td>
-                      <td className="px-8 py-5 font-bold text-stone-600 text-xs tracking-tight group-hover:text-amber-600 transition-colors">{order.name}</td>
-                      <td className="px-8 py-5 font-semibold text-stone-900 text-sm">{order.amount}</td>
-                      <td className="px-8 py-5 text-right">
-                        <span className={`px-3 py-1.5 rounded-lg text-[9px] font-semibold border ${order.color}`}>{order.status}</span>
+                  {(!recentOrders || recentOrders.length === 0) ? (
+                    <tr>
+                      <td colSpan="4" className="px-8 py-10 text-center text-[10px] font-bold text-stone-400 uppercase tracking-widest">
+                        No recent orders found
                       </td>
                     </tr>
-                  ))}
+                  ) : (
+                    recentOrders.map((order, i) => {
+                      let color = 'bg-stone-50 text-stone-600 border-stone-200';
+                      if (order.order_status === 'Delivered') color = 'bg-green-50 text-green-600 border-green-100';
+                      else if (order.order_status === 'Shipped') color = 'bg-blue-50 text-blue-600 border-blue-100';
+                      else if (order.order_status === 'Processing') color = 'bg-amber-50 text-amber-600 border-amber-100';
+
+                      return (
+                        <tr key={i} className="hover:bg-stone-50/80 transition-colors cursor-default group">
+                          <td className="px-8 py-5 font-semibold text-stone-900 text-xs tracking-tight">
+                             <span className="bg-stone-100 px-2.5 py-1 rounded-md">{order.order_id}</span>
+                          </td>
+                          <td className="px-8 py-5 font-bold text-stone-600 text-xs tracking-tight group-hover:text-amber-600 transition-colors">{order.customer_name || 'Anonymous'}</td>
+                          <td className="px-8 py-5 font-semibold text-stone-900 text-sm">₹{parseFloat(order.total_amount).toLocaleString('en-IN')}</td>
+                          <td className="px-8 py-5 text-right">
+                            <span className={`px-3 py-1.5 rounded-lg text-[9px] font-semibold border ${color}`}>{order.order_status || 'Pending'}</span>
+                          </td>
+                        </tr>
+                      );
+                    })
+                  )}
                 </tbody>
               </table>
             </div>
           </div>
         </div>
 
-        {/* Right Column: Top Selling Products */}
-        <div className="bg-white rounded-3xl border border-stone-100 shadow-sm p-8 flex flex-col relative overflow-hidden">
-          <div className="absolute top-0 right-0 w-48 h-48 bg-stone-900/5 rounded-full blur-3xl -mr-24 -mt-24 pointer-events-none" />
-          <div className="flex items-center justify-between mb-8 relative z-10">
-            <div className="space-y-1">
-               <h3 className="font-semibold text-stone-900 text-sm">Top Rated Assets</h3>
-               <p className="text-[9px] font-bold text-stone-400">Highest converting limits</p>
+        {/* Right Column: Top Selling Products & Notifications */}
+        <div className="space-y-6">
+          <div className="bg-white rounded-3xl border border-stone-100 shadow-sm p-8 flex flex-col relative overflow-hidden">
+            <div className="absolute top-0 right-0 w-48 h-48 bg-stone-900/5 rounded-full blur-3xl -mr-24 -mt-24 pointer-events-none" />
+            <div className="flex items-center justify-between mb-8 relative z-10">
+              <div className="space-y-1">
+                 <h3 className="font-semibold text-stone-900 text-sm">Top Rated Assets</h3>
+                 <p className="text-[9px] font-bold text-stone-400">Highest converting limits</p>
+              </div>
+              <button onClick={() => setActiveTab('Products')} className="w-8 h-8 rounded-full bg-stone-50 flex items-center justify-center text-stone-400 hover:bg-stone-900 hover:text-white transition-all">
+                 <span className="text-xl leading-none -mt-1">›</span>
+              </button>
             </div>
-            <button onClick={() => setActiveTab('Products')} className="w-8 h-8 rounded-full bg-stone-50 flex items-center justify-center text-stone-400 hover:bg-stone-900 hover:text-white transition-all">
-               <span className="text-xl leading-none -mt-1">›</span>
-            </button>
+            <div className="space-y-4 flex-1 relative z-10">
+              {(!inventoryProducts || inventoryProducts.length === 0) ? (
+                <div className="py-10 text-center text-[10px] font-bold text-stone-400 uppercase tracking-widest">
+                  No products available
+                </div>
+              ) : (
+                inventoryProducts.slice(0, 5).map((prod, i) => (
+                  <div key={prod.product_id || i} className="group p-3 rounded-2xl border border-transparent hover:border-stone-100 hover:bg-stone-50/50 flex items-center justify-between transition-all cursor-pointer">
+                    <div className="flex items-center gap-4">
+                      <div className="w-12 h-12 bg-stone-100 rounded-xl overflow-hidden p-2 group-hover:scale-105 transition-transform border border-stone-200/50">
+                         <img src={prod.main_image || '/placeholder-product.png'} alt={prod.name} className="w-full h-full object-contain" />
+                      </div>
+                      <div className="space-y-1">
+                        <span className="text-xs font-semibold text-stone-900 tracking-tight block truncate max-w-[120px]">{prod.name}</span>
+                        <span className="text-[10px] font-bold text-stone-400 block">₹{parseFloat(String(prod.price).replace(/[^\d.]/g, '')).toLocaleString('en-IN')}</span>
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <span className={`text-sm font-semibold block ${prod.stock_quantity > 0 ? 'text-green-500' : 'text-red-500'}`}>{prod.stock_quantity}</span>
+                      <span className="text-[8px] font-semibold text-stone-400">In Stock</span>
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
           </div>
-          <div className="space-y-4 flex-1 relative z-10">
-            {[
-              { name: 'Quantum Watch X', price: '₹42,999', sales: 342, img: '/wearables/watch1.jpg' },
-              { name: 'Aura Headphones', price: '₹34,999', sales: 215, img: '/audios/headphone1.jpg' },
-              { name: 'Vertex Pro 16', price: '₹1,49,900', sales: 89, img: '/computing/laptop1.jpg' },
-              { name: 'Sonic Buds Pro', price: '₹18,499', sales: 450, img: '/audios/buds1.webp' },
-              { name: 'MagSafe Dock', price: '₹8,499', sales: 120, img: '/accessories/charger1.jpg' },
-            ].map((prod, i) => (
-              <div key={i} className="group p-3 rounded-2xl border border-transparent hover:border-stone-100 hover:bg-stone-50/50 flex items-center justify-between transition-all cursor-pointer">
-                <div className="flex items-center gap-4">
-                  <div className="w-12 h-12 bg-stone-100 rounded-xl overflow-hidden p-2 group-hover:scale-105 transition-transform border border-stone-200/50">
-                     <img src={prod.img} alt={prod.name} className="w-full h-full object-contain" />
+
+          {/* Recent Notifications Section */}
+          <div className="bg-white rounded-3xl border border-stone-100 shadow-sm p-8 flex flex-col relative overflow-hidden">
+            <div className="absolute top-0 right-0 w-48 h-48 bg-amber-500/5 rounded-full blur-3xl -mr-24 -mt-24 pointer-events-none" />
+            <div className="flex items-center justify-between mb-8 relative z-10">
+              <div className="space-y-1">
+                 <h3 className="font-semibold text-stone-900 text-sm">Recent Notifications</h3>
+                 <p className="text-[9px] font-bold text-stone-400">Latest updates for you</p>
+              </div>
+              <button onClick={() => setActiveTab('Notifications')} className="text-[10px] font-semibold text-amber-600 hover:underline transition-all">View All</button>
+            </div>
+            <div className="space-y-4 flex-1 relative z-10">
+              {notifications.slice(0, 3).map((n) => (
+                <div key={n.notification_id} className="flex items-start gap-4 p-4 rounded-2xl bg-stone-50/50 border border-transparent hover:border-stone-100 hover:bg-white transition-all cursor-default group">
+                  <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 shadow-sm transition-all group-hover:scale-110 ${!n.is_read ? 'bg-amber-500 text-white shadow-amber-200' : 'bg-stone-100 text-stone-400'}`}>
+                    <FaClipboardList size={14} />
                   </div>
                   <div className="space-y-1">
-                    <span className="text-xs font-semibold text-stone-900 tracking-tight block">{prod.name}</span>
-                    <span className="text-[10px] font-bold text-stone-400 block">{prod.price}</span>
+                    <p className={`text-[11px] font-semibold leading-tight ${!n.is_read ? 'text-stone-900' : 'text-stone-500'}`}>{n.message}</p>
+                    <p className="text-[9px] font-bold text-stone-300 uppercase tracking-tighter">{new Date(n.created_at).toLocaleTimeString()}</p>
                   </div>
                 </div>
-                <div className="text-right">
-                  <span className="text-sm font-semibold text-green-500 block">+{prod.sales}</span>
-                  <span className="text-[8px] font-semibold text-stone-400">Units Sold</span>
+              ))}
+              {notifications.length === 0 && (
+                <div className="py-10 text-center space-y-3">
+                  <FaBell className="mx-auto text-stone-100" size={32} />
+                  <p className="text-[9px] text-stone-400 font-bold uppercase tracking-widest">No recent alerts</p>
                 </div>
-              </div>
-            ))}
+              )}
+            </div>
           </div>
         </div>
       </div>
