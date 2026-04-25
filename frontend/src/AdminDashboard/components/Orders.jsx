@@ -13,7 +13,7 @@ export default function Orders() {
    const [orderHistory, setOrderHistory] = useState([]);
 
    const [currentPage, setCurrentPage] = useState(1);
-   const ordersPerPage = 8;
+   const ordersPerPage = 6;
 
    const fetchOrders = () => {
       setLoading(true);
@@ -75,6 +75,7 @@ export default function Orders() {
             items={orderItems} 
             history={orderHistory} 
             onBack={() => setView("list")} 
+            onStatusUpdate={fetchOrders}
          />
       );
    }

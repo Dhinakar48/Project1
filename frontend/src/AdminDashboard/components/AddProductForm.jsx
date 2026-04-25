@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import axios from "axios";
-import { FaArrowLeft, FaCheckCircle, FaTimes, FaImage } from "react-icons/fa";
+import { FaArrowLeft, FaCheckCircle, FaTimes, FaImage, FaPlus, FaTrash } from "react-icons/fa";
 
 export default function AddProductForm({ onBack, onComplete, initialData }) {
    const [categories, setCategories] = useState([]);
@@ -18,7 +18,15 @@ export default function AddProductForm({ onBack, onComplete, initialData }) {
       images: initialData?.images || [],
       discount: initialData?.discount || 0,
       is_featured: initialData?.is_featured || false,
-      is_active: initialData?.is_active !== undefined ? initialData.is_active : true
+      is_active: initialData?.is_active !== undefined ? initialData.is_active : true,
+      product_type: initialData?.product_type || "",
+      specifications: (() => {
+         const raw = initialData?.specifications;
+         if (!raw) return [{ key: "", value: "", price: "", stock: "", sku: "" }];
+         if (Array.isArray(raw)) return raw.length > 0 ? raw : [{ key: "", value: "", price: "", stock: "", sku: "" }];
+         try { const parsed = JSON.parse(raw); return Array.isArray(parsed) && parsed.length > 0 ? parsed : [{ key: "", value: "", price: "", stock: "", sku: "" }]; }
+         catch { return [{ key: "", value: "", price: "", stock: "", sku: "" }]; }
+      })()
    });
 
    useEffect(() => {
@@ -28,6 +36,26 @@ export default function AddProductForm({ onBack, onComplete, initialData }) {
          })
          .catch(err => console.error("Categories fetch error", err));
    }, []);
+
+   const handleSpecChange = (index, field, value) => {
+      const newSpecs = [...formData.specifications];
+      newSpecs[index][field] = value;
+      setFormData({...formData, specifications: newSpecs});
+   };
+
+   const addSpecification = () => {
+      setFormData({
+         ...formData, 
+         specifications: [...formData.specifications, { key: "", value: "", price: "", stock: "", sku: "" }]
+      });
+   };
+
+   const removeSpecification = (index) => {
+      setFormData({
+         ...formData, 
+         specifications: formData.specifications.filter((_, i) => i !== index)
+      });
+   };
 
    const handleSubmit = async (e) => {
       e.preventDefault();
@@ -161,6 +189,70 @@ export default function AddProductForm({ onBack, onComplete, initialData }) {
                      </div>
                   </div>
                </section>
+
+               <section className="bg-white p-8 rounded-[2.5rem] border border-stone-100 shadow-sm space-y-6">
+                  <div className="flex items-center justify-between border-b border-stone-50 pb-4">
+                     <h4 className="text-sm font-bold text-stone-900 tracking-tight">Specifications & Variants</h4>
+                     <button 
+                        type="button"
+                        onClick={addSpecification}
+                        className="text-[10px] font-bold text-indigo-600 bg-indigo-50 px-4 py-2 rounded-xl flex items-center gap-2 hover:bg-indigo-100 transition-all uppercase tracking-widest shadow-sm"
+                     >
+                        <FaPlus size={8} /> Add Variation
+                     </button>
+                  </div>
+                  
+                  <div className="space-y-4">
+                     {formData.specifications.map((spec, index) => (
+                        <div key={index} className="flex flex-wrap md:flex-nowrap items-end gap-3 p-5 bg-stone-50/50 border border-stone-200 rounded-[2rem] group transition-all hover:bg-white hover:shadow-xl hover:shadow-stone-200/20 relative">
+                           <div className="flex-[2] min-w-[120px]">
+                              <label className="text-[9px] font-black text-stone-400 uppercase tracking-widest ml-1 mb-1 block">Key (e.g. Color)</label>
+                              <input 
+                                 type="text" placeholder="Attribute" 
+                                 value={spec.key} onChange={(e) => handleSpecChange(index, "key", e.target.value)}
+                                 className="w-full p-3 bg-white border border-stone-100 rounded-xl focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/5 outline-none transition-all text-sm font-bold shadow-sm"
+                              />
+                           </div>
+                           <div className="flex-[2] min-w-[120px]">
+                              <label className="text-[9px] font-black text-stone-400 uppercase tracking-widest ml-1 mb-1 block">Value</label>
+                              <input 
+                                 type="text" placeholder="Value" 
+                                 value={spec.value} onChange={(e) => handleSpecChange(index, "value", e.target.value)}
+                                 className="w-full p-3 bg-white border border-stone-100 rounded-xl focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/5 outline-none transition-all text-sm font-bold shadow-sm"
+                              />
+                           </div>
+                           <div className="flex-1 min-w-[90px]">
+                              <label className="text-[9px] font-black text-stone-400 uppercase tracking-widest ml-1 mb-1 block">Price (₹)</label>
+                              <div className="relative">
+                                 <span className="absolute left-3 top-1/2 -translate-y-1/2 text-stone-400 font-bold text-xs">₹</span>
+                                 <input 
+                                    type="number" placeholder="0" 
+                                    value={spec.price} onChange={(e) => handleSpecChange(index, "price", e.target.value)}
+                                    className="w-full pl-7 pr-3 py-3 bg-white border border-stone-100 rounded-xl focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/5 outline-none transition-all text-sm font-bold shadow-sm"
+                                 />
+                              </div>
+                           </div>
+                           <div className="flex-1 min-w-[80px]">
+                              <label className="text-[9px] font-black text-stone-400 uppercase tracking-widest ml-1 mb-1 block">Stock</label>
+                              <input 
+                                 type="number" placeholder="Qty" 
+                                 value={spec.stock} onChange={(e) => handleSpecChange(index, "stock", e.target.value)}
+                                 className="w-full p-3 bg-white border border-stone-100 rounded-xl focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/5 outline-none transition-all text-sm font-bold shadow-sm"
+                              />
+                           </div>
+                           
+                           {formData.specifications.length > 1 && (
+                              <button 
+                                 type="button" onClick={() => removeSpecification(index)}
+                                 className="w-11 h-11 bg-rose-50 text-rose-500 rounded-xl flex items-center justify-center hover:bg-rose-500 hover:text-white transition-all flex-shrink-0 shadow-sm border border-rose-100"
+                              >
+                                 <FaTrash size={12} />
+                              </button>
+                           )}
+                        </div>
+                     ))}
+                  </div>
+               </section>
             </div>
 
             <div className="space-y-8">
@@ -203,6 +295,16 @@ export default function AddProductForm({ onBack, onComplete, initialData }) {
                            placeholder="Sony, Apple, etc."
                            value={formData.brand}
                            onChange={(e) => setFormData({...formData, brand: e.target.value})}
+                        />
+                     </div>
+                     <div>
+                        <label className="text-[10px] font-bold text-stone-400 uppercase tracking-widest mb-2 block ml-1">Product Type</label>
+                        <input 
+                           type="text"
+                           className="w-full px-5 py-4 rounded-2xl border border-stone-200 bg-stone-50/30 text-sm focus:bg-white focus:ring-4 focus:ring-indigo-500/5 transition-all outline-none"
+                           placeholder="e.g. Wireless, Smart, Portable"
+                           value={formData.product_type}
+                           onChange={(e) => setFormData({...formData, product_type: e.target.value})}
                         />
                      </div>
                   </div>

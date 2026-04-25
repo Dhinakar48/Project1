@@ -1,18 +1,32 @@
 import React, { useState, useEffect } from "react";
 import axios from "axios";
-import { FaUserCircle, FaEnvelope, FaShieldAlt, FaKey, FaBell, FaCalendarAlt, FaCheckCircle } from "react-icons/fa";
+import { FaUserCircle, FaEnvelope, FaShieldAlt, FaKey, FaBell, FaCalendarAlt, FaCheckCircle, FaEdit, FaSave, FaTimes } from "react-icons/fa";
 
 export default function Profile() {
    const [profile, setProfile] = useState(null);
    const [loading, setLoading] = useState(true);
+   const [saving, setSaving] = useState(false);
+   const [editMode, setEditMode] = useState(false);
+   const [editName, setEditName] = useState("");
+   const [saveMsg, setSaveMsg] = useState("");
+
+   // Settings state — interactive toggles
+   const [settings, setSettings] = useState({
+      twoFactor: true,
+      sysNotifications: true,
+      auditLog: false,
+   });
 
    useEffect(() => {
-      // For demo, we'll use 'ADM001'. In a real app, this would come from the auth context.
-      const adminId = 'ADM001';
+      const admin = JSON.parse(localStorage.getItem('adminUser') || '{}');
+      const adminId = admin.id || 'ADM001';
       setLoading(true);
       axios.get(`http://localhost:5000/api/admin/profile/${adminId}`)
          .then(res => {
-            if (res.data.success) setProfile(res.data.profile);
+            if (res.data.success) {
+               setProfile(res.data.profile);
+               setEditName(res.data.profile.name);
+            }
             setLoading(false);
          })
          .catch(err => {
@@ -20,6 +34,28 @@ export default function Profile() {
             setLoading(false);
          });
    }, []);
+
+   const toggleSetting = (key) => {
+      setSettings(prev => ({ ...prev, [key]: !prev[key] }));
+   };
+
+   const handleSaveName = async () => {
+      if (!editName.trim() || editName === profile.name) {
+         setEditMode(false);
+         return;
+      }
+      setSaving(true);
+      try {
+         // Update locally — backend update can be wired if needed
+         setProfile(prev => ({ ...prev, name: editName.trim() }));
+         setSaveMsg("Profile updated successfully!");
+         setEditMode(false);
+         setTimeout(() => setSaveMsg(""), 3000);
+      } catch (err) {
+         console.error("Save error:", err);
+      }
+      setSaving(false);
+   };
 
    if (loading || !profile) return (
       <div className="flex flex-col items-center justify-center h-64 animate-pulse">
@@ -35,6 +71,13 @@ export default function Profile() {
             <p className="text-xs text-stone-500 font-medium">Manage your security credentials and personal platform preferences.</p>
          </div>
 
+         {/* Save Message */}
+         {saveMsg && (
+            <div className="bg-emerald-50 border border-emerald-200 text-emerald-700 px-5 py-3 rounded-2xl text-sm font-bold flex items-center gap-2">
+               <FaCheckCircle /> {saveMsg}
+            </div>
+         )}
+
          <div className="grid grid-cols-1 xl:grid-cols-3 gap-8">
             {/* Profile Overview */}
             <div className="xl:col-span-1 space-y-6">
@@ -47,7 +90,32 @@ export default function Profile() {
                         <FaCheckCircle />
                      </div>
                   </div>
-                  <h4 className="text-xl font-black text-stone-900 tracking-tight">{profile.name}</h4>
+
+                  {/* Editable Name */}
+                  {editMode ? (
+                     <div className="flex items-center gap-2 justify-center mb-2">
+                        <input
+                           value={editName}
+                           onChange={e => setEditName(e.target.value)}
+                           className="text-lg font-black text-stone-900 text-center border-b-2 border-indigo-400 outline-none bg-transparent w-40"
+                           autoFocus
+                        />
+                        <button onClick={handleSaveName} disabled={saving} className="text-emerald-500 hover:text-emerald-700 transition-colors">
+                           <FaSave size={15} />
+                        </button>
+                        <button onClick={() => { setEditMode(false); setEditName(profile.name); }} className="text-stone-400 hover:text-red-500 transition-colors">
+                           <FaTimes size={14} />
+                        </button>
+                     </div>
+                  ) : (
+                     <div className="flex items-center gap-2 justify-center mb-2">
+                        <h4 className="text-xl font-black text-stone-900 tracking-tight">{profile.name}</h4>
+                        <button onClick={() => setEditMode(true)} className="text-stone-300 hover:text-indigo-500 transition-colors">
+                           <FaEdit size={13} />
+                        </button>
+                     </div>
+                  )}
+
                   <p className="text-[10px] font-black uppercase tracking-widest text-indigo-500 mt-1">{profile.role}</p>
                   
                   <div className="mt-8 pt-8 border-t border-stone-50 space-y-4">
@@ -72,7 +140,11 @@ export default function Profile() {
                      </div>
                      <div className="flex justify-between items-center text-xs">
                         <span className="text-stone-400 font-bold uppercase tracking-widest">Last Login</span>
-                        <span className="font-bold">{new Date(profile.last_login_at).toLocaleString()}</span>
+                        <span className="font-bold">{profile.last_login_at ? new Date(profile.last_login_at).toLocaleString() : 'N/A'}</span>
+                     </div>
+                     <div className="flex justify-between items-center text-xs">
+                        <span className="text-stone-400 font-bold uppercase tracking-widest">Admin ID</span>
+                        <span className="font-bold text-indigo-400">{profile.admin_id}</span>
                      </div>
                   </div>
                </div>
@@ -87,26 +159,32 @@ export default function Profile() {
                      <SettingItem 
                         icon={FaKey} 
                         title="Two-Factor Authentication" 
-                        desc="Add an extra layer of security to your admin account." 
-                        active={true} 
+                        desc="Add an extra layer of security to your admin account."
+                        active={settings.twoFactor}
+                        onToggle={() => toggleSetting('twoFactor')}
                      />
                      <SettingItem 
                         icon={FaBell} 
                         title="System Notifications" 
-                        desc="Receive alerts for high-value orders and system anomalies." 
-                        active={true} 
+                        desc="Receive alerts for high-value orders and system anomalies."
+                        active={settings.sysNotifications}
+                        onToggle={() => toggleSetting('sysNotifications')}
                      />
                      <SettingItem 
                         icon={FaShieldAlt} 
                         title="Audit Log Visibility" 
-                        desc="Track all administrative actions performed on this platform." 
-                        active={false} 
+                        desc="Track all administrative actions performed on this platform."
+                        active={settings.auditLog}
+                        onToggle={() => toggleSetting('auditLog')}
                      />
                   </div>
                   
                   <div className="mt-10 flex gap-4">
-                     <button className="flex-1 py-3.5 bg-stone-900 text-white rounded-2xl text-sm font-bold hover:bg-stone-800 transition-all shadow-lg active:scale-95">
-                        Update Security Credentials
+                     <button 
+                        onClick={handleSaveName}
+                        className="flex-1 py-3.5 bg-stone-900 text-white rounded-2xl text-sm font-bold hover:bg-indigo-600 transition-all shadow-lg active:scale-95"
+                     >
+                        Save Changes
                      </button>
                      <button className="flex-1 py-3.5 bg-stone-50 text-stone-600 rounded-2xl text-sm font-bold hover:bg-stone-100 transition-all border border-stone-100">
                         View Access Logs
@@ -134,11 +212,11 @@ export default function Profile() {
    );
 }
 
-function SettingItem({ icon: Icon, title, desc, active }) {
+function SettingItem({ icon: Icon, title, desc, active, onToggle }) {
    return (
       <div className="flex items-center justify-between p-4 rounded-3xl hover:bg-stone-50 transition-colors group border border-transparent hover:border-stone-100">
          <div className="flex items-center gap-4">
-            <div className="w-10 h-10 bg-white rounded-xl flex items-center justify-center text-stone-400 group-hover:text-indigo-500 shadow-sm transition-colors border border-stone-50">
+            <div className={`w-10 h-10 rounded-xl flex items-center justify-center shadow-sm transition-colors border ${active ? 'bg-indigo-50 text-indigo-500 border-indigo-100' : 'bg-white text-stone-400 group-hover:text-indigo-500 border-stone-50'}`}>
                <Icon size={16} />
             </div>
             <div>
@@ -146,9 +224,14 @@ function SettingItem({ icon: Icon, title, desc, active }) {
                <p className="text-[10px] text-stone-400 font-medium">{desc}</p>
             </div>
          </div>
-         <div className={`w-12 h-6 rounded-full relative cursor-pointer transition-colors ${active ? 'bg-indigo-500' : 'bg-stone-200'}`}>
-            <div className={`absolute top-1 w-4 h-4 bg-white rounded-full transition-all ${active ? 'left-7' : 'left-1'}`} />
-         </div>
+         {/* Interactive Toggle */}
+         <button
+            onClick={onToggle}
+            className={`w-12 h-6 rounded-full relative transition-colors duration-300 focus:outline-none ${active ? 'bg-indigo-500' : 'bg-stone-200'}`}
+            aria-label={`Toggle ${title}`}
+         >
+            <span className={`absolute top-1 w-4 h-4 bg-white rounded-full shadow transition-all duration-300 ${active ? 'left-7' : 'left-1'}`} />
+         </button>
       </div>
    );
 }

@@ -32,7 +32,7 @@ export default function ProductDetails({ product, onBack, onEdit, onDeleteComple
                   <FaArrowLeft />
                </button>
                <div>
-                  <h3 className="text-2xl font-bold text-stone-900 tracking-tight">Product Dossier</h3>
+                  <h3 className="text-2xl font-bold text-stone-900 tracking-tight">Product Details</h3>
                   <p className="text-sm text-stone-500 font-medium">Detailed specifications and operational status for <span className="text-stone-900 font-bold">{product.product_id}</span></p>
                </div>
             </div>
@@ -41,13 +41,13 @@ export default function ProductDetails({ product, onBack, onEdit, onDeleteComple
                   onClick={() => onEdit(product)}
                   className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-white border border-stone-200 text-stone-600 font-bold text-sm hover:bg-stone-50 transition-all"
                >
-                  <FaEdit className="text-indigo-500" /> Edit Metadata
+                  <FaEdit className="text-indigo-500" /> Edit
                </button>
                <button 
                   onClick={handleDelete}
                   className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-rose-50 text-rose-600 font-bold text-sm hover:bg-rose-600 hover:text-white transition-all"
                >
-                  <FaTrashAlt /> Decommission
+                  <FaTrashAlt /> Delete
                </button>
             </div>
          </div>

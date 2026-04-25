@@ -1,14 +1,20 @@
-import React from 'react';
+import React, { useState } from 'react';
 import axios from 'axios';
-import { FaArrowLeft, FaBox, FaUser, FaMapMarkerAlt, FaTruck, FaCreditCard, FaHistory, FaChevronDown } from 'react-icons/fa';
+import { FaArrowLeft, FaBox, FaUser, FaMapMarkerAlt, FaTruck, FaCreditCard, FaHistory, FaChevronDown, FaCheckCircle } from 'react-icons/fa';
 
-export default function OrderDetailView({ order, items, history, onBack }) {
+export default function OrderDetailView({ order: initialOrder, items, history: initialHistory, onBack, onStatusUpdate }) {
+   const [order, setOrder] = useState(initialOrder);
+   const [history, setHistory] = useState(initialHistory);
+   const [updating, setUpdating] = useState(false);
+   const [successMsg, setSuccessMsg] = useState("");
+   
    if (!order) return null;
 
-   const [updating, setUpdating] = React.useState(false);
    const statuses = ['Confirmed', 'Shipped', 'Delivered', 'Cancelled', 'Returned'];
 
    const handleStatusUpdate = async (newStatus) => {
+      if (newStatus === order.order_status) return;
+      
       setUpdating(true);
       try {
          const res = await axios.patch('http://localhost:5000/api/order/status', {
@@ -17,12 +23,28 @@ export default function OrderDetailView({ order, items, history, onBack }) {
             changedBy: 'Administrator',
             notes: `Status manually updated to ${newStatus} by Admin.`
          });
+         
          if (res.data.success) {
-            // Ideally we should refresh the order details here
-            window.location.reload(); // Simple way for now
+            // Update local state instead of reloading
+            setOrder(prev => ({ ...prev, order_status: newStatus }));
+            
+            // Add to local history immediately
+            const newHistoryEntry = {
+               status: newStatus,
+               changed_at: new Date().toISOString(),
+               notes: `Status manually updated to ${newStatus} by Admin.`,
+               changed_by: 'Administrator'
+            };
+            setHistory(prev => [newHistoryEntry, ...prev]);
+            
+            if (onStatusUpdate) onStatusUpdate(); // Notify parent to refresh list
+            
+            setSuccessMsg(`Status updated to ${newStatus}`);
+            setTimeout(() => setSuccessMsg(""), 3000);
          }
       } catch (err) {
          console.error("Status update failed", err);
+         alert("Failed to update status. Please try again.");
       } finally {
          setUpdating(false);
       }
@@ -51,6 +73,13 @@ export default function OrderDetailView({ order, items, history, onBack }) {
                <h3 className="text-xl font-bold text-stone-900 tracking-tight">Order #{order.order_id}</h3>
                <p className="text-xs text-stone-500 font-medium">Placed on {new Date(order.placed_at).toLocaleString()}</p>
             </div>
+            
+            {successMsg && (
+               <div className="ml-4 px-4 py-2 bg-emerald-50 border border-emerald-100 text-emerald-600 text-[10px] font-black uppercase tracking-widest rounded-xl flex items-center gap-2 animate-in fade-in zoom-in duration-300">
+                  <FaCheckCircle /> {successMsg}
+               </div>
+            )}
+
             <div className="ml-auto flex items-center gap-4">
                <div className="flex items-center gap-2">
                   <span className="text-[10px] font-bold text-stone-400 uppercase tracking-widest">Update Status:</span>
@@ -128,7 +157,7 @@ export default function OrderDetailView({ order, items, history, onBack }) {
                </div>
 
                {/* History */}
-               <div className="bg-white rounded-[2.5rem] border border-stone-100 shadow-sm overflow-hidden p-8">
+               <div className="bg-white rounded-[2.5rem] border border-stone-100 shadow-sm overflow-hidden p-8 flex flex-col max-h-[400px]">
                   <div className="flex items-center gap-3 mb-6">
                      <div className="w-10 h-10 rounded-2xl bg-amber-50 flex items-center justify-center text-amber-600">
                         <FaHistory />
@@ -136,22 +165,24 @@ export default function OrderDetailView({ order, items, history, onBack }) {
                      <h4 className="text-lg font-bold text-stone-900">Status History</h4>
                   </div>
                   
-                  <div className="relative pl-8 space-y-8 before:absolute before:left-3.5 before:top-2 before:bottom-2 before:w-0.5 before:bg-stone-100">
-                     {history.map((log, idx) => (
-                        <div key={idx} className="relative">
-                           <div className="absolute -left-8 top-1.5 w-7 h-7 rounded-full bg-white border-2 border-stone-100 flex items-center justify-center z-10">
-                              <div className="w-2 h-2 rounded-full bg-stone-300" />
-                           </div>
-                           <div className="flex flex-col">
-                              <div className="flex items-center gap-3">
-                                 <span className="text-sm font-bold text-stone-900">{log.status}</span>
-                                 <span className="text-[10px] text-stone-400 font-bold uppercase tracking-widest">{new Date(log.changed_at).toLocaleString()}</span>
+                  <div className="overflow-y-auto pr-4 scrollbar-thin scrollbar-thumb-stone-200 scrollbar-track-transparent">
+                     <div className="relative pl-8 space-y-8 before:absolute before:left-3.5 before:top-2 before:bottom-2 before:w-0.5 before:bg-stone-100">
+                        {history.filter(log => log.status?.toLowerCase() === order.order_status?.toLowerCase()).map((log, idx) => (
+                           <div key={idx} className="relative">
+                              <div className="absolute -left-8 top-1.5 w-7 h-7 rounded-full bg-white border-2 border-stone-100 flex items-center justify-center z-10">
+                                 <div className="w-2 h-2 rounded-full bg-stone-300" />
                               </div>
-                              <p className="text-xs text-stone-500 mt-1 font-medium">{log.notes}</p>
-                              <div className="mt-1 text-[10px] font-bold text-indigo-600 uppercase tracking-widest">By {log.changed_by}</div>
+                              <div className="flex flex-col">
+                                 <div className="flex items-center gap-3">
+                                    <span className="text-sm font-bold text-stone-900">{log.status}</span>
+                                    <span className="text-[10px] text-stone-400 font-bold uppercase tracking-widest">{new Date(log.changed_at).toLocaleString()}</span>
+                                 </div>
+                                 <p className="text-xs text-stone-500 mt-1 font-medium">{log.notes}</p>
+                                 <div className="mt-1 text-[10px] font-bold text-indigo-600 uppercase tracking-widest">By {log.changed_by}</div>
+                              </div>
                            </div>
-                        </div>
-                     ))}
+                        ))}
+                     </div>
                   </div>
                </div>
             </div>
@@ -210,12 +241,6 @@ export default function OrderDetailView({ order, items, history, onBack }) {
                         <span className="text-stone-500 font-medium">Method</span>
                         <span className="text-stone-900 font-bold uppercase">{order.payment_method}</span>
                      </div>
-                     {/* {order.transaction_id && (
-                        <div className="pt-2 border-t border-stone-50">
-                           <div className="text-[10px] text-stone-400 font-bold uppercase tracking-widest">Transaction ID</div>
-                           <div className="text-[11px] text-stone-900 font-mono mt-0.5 break-all">{order.transaction_id}</div>
-                        </div>
-                     )} */}
                   </div>
                </div>
             </div>

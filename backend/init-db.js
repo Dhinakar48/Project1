@@ -91,10 +91,10 @@ async function setup() {
         bank_account_id SERIAL PRIMARY KEY,
         owner_id VARCHAR(50) NOT NULL,
         owner_type VARCHAR(20) NOT NULL,
-        account_number VARCHAR(30),
+        account_number TEXT,
         upi_id VARCHAR(100),
         bank_name VARCHAR(100),
-        ifsc_code VARCHAR(20),
+        ifsc_code TEXT,
         account_type VARCHAR(20),
         account_holder_name VARCHAR(100) NOT NULL,
         verification_status VARCHAR(20) DEFAULT 'pending',
@@ -148,12 +148,19 @@ async function setup() {
         width DECIMAL(10, 2),
         breadth DECIMAL(10, 2),
         is_active BOOLEAN DEFAULT TRUE,
+        product_type VARCHAR(100),
+        specifications JSONB DEFAULT '{}',
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         deleted_at TIMESTAMP
       );
     `);
     console.log("Table 'products' initialized successfully.");
+
+    await client1.query(`
+      ALTER TABLE products ADD COLUMN IF NOT EXISTS product_type VARCHAR(100);
+      ALTER TABLE products ADD COLUMN IF NOT EXISTS specifications JSONB DEFAULT '{}';
+    `);
 
     await client1.query(`
       CREATE TABLE IF NOT EXISTS product_variants (
@@ -683,19 +690,246 @@ async function setup() {
     `);
     console.log("Table 'seller_commissions' initialized successfully.");
 
+    // Finance Synchronization Function & Trigger
+    await client1.query(`
+      CREATE OR REPLACE FUNCTION sync_finances()
+      RETURNS TRIGGER AS $$
+      DECLARE
+          v_daily_id VARCHAR(20);
+          v_weekly_id VARCHAR(20);
+          v_monthly_id VARCHAR(20);
+          v_quarterly_id VARCHAR(20);
+          v_half_id VARCHAR(20);
+          v_annual_id VARCHAR(20);
+          v_date DATE := CURRENT_DATE;
+          v_week INT := EXTRACT(WEEK FROM CURRENT_DATE);
+          v_month INT := EXTRACT(MONTH FROM CURRENT_DATE);
+          v_quarter INT := EXTRACT(QUARTER FROM CURRENT_DATE);
+          v_half INT := CASE WHEN v_month <= 6 THEN 1 ELSE 2 END;
+          v_year INT := EXTRACT(YEAR FROM CURRENT_DATE);
+      BEGIN
+          -- 1. Sync Daily
+          SELECT daily_finance_id INTO v_daily_id FROM daily_finances 
+          WHERE seller_id = NEW.seller_id AND finance_date = v_date;
+
+          IF v_daily_id IS NULL THEN
+              INSERT INTO daily_finances (seller_id, finance_date, total_revenue, platform_commissions, net_seller_earnings)
+              VALUES (NEW.seller_id, v_date, NEW.sale_amount, NEW.commission_amount, NEW.seller_earnings)
+              RETURNING daily_finance_id INTO v_daily_id;
+          ELSE
+              UPDATE daily_finances 
+              SET total_revenue = total_revenue + NEW.sale_amount,
+                  platform_commissions = platform_commissions + NEW.commission_amount,
+                  net_seller_earnings = net_seller_earnings + NEW.seller_earnings
+              WHERE daily_finance_id = v_daily_id;
+          END IF;
+
+          -- 2. Sync Monthly
+          SELECT monthly_finance_id INTO v_monthly_id FROM monthly_finances 
+          WHERE seller_id = NEW.seller_id AND month_number = v_month AND year = v_year;
+
+          IF v_monthly_id IS NULL THEN
+              INSERT INTO monthly_finances (seller_id, month_number, year, total_revenue, platform_commission, net_seller_earnings)
+              VALUES (NEW.seller_id, v_month, v_year, NEW.sale_amount, NEW.commission_amount, NEW.seller_earnings)
+              RETURNING monthly_finance_id INTO v_monthly_id;
+          ELSE
+              UPDATE monthly_finances 
+              SET total_revenue = total_revenue + NEW.sale_amount,
+                  platform_commission = platform_commission + NEW.commission_amount,
+                  net_seller_earnings = net_seller_earnings + NEW.seller_earnings
+              WHERE monthly_finance_id = v_monthly_id;
+          END IF;
+
+          -- Link Daily to Monthly
+          UPDATE daily_finances SET monthly_finance_id = v_monthly_id WHERE daily_finance_id = v_daily_id;
+
+          -- 3. Sync Weekly
+          SELECT weekly_finance_id INTO v_weekly_id FROM weekly_finances 
+          WHERE seller_id = NEW.seller_id AND week_number = v_week AND year = v_year;
+
+          IF v_weekly_id IS NULL THEN
+              INSERT INTO weekly_finances (seller_id, week_number, year, total_revenue, platform_commission, net_seller_earnings, daily_finance_id)
+              VALUES (NEW.seller_id, v_week, v_year, NEW.sale_amount, NEW.commission_amount, NEW.seller_earnings, v_daily_id)
+              RETURNING weekly_finance_id INTO v_weekly_id;
+          ELSE
+              UPDATE weekly_finances 
+              SET total_revenue = total_revenue + NEW.sale_amount,
+                  platform_commission = platform_commission + NEW.commission_amount,
+                  net_seller_earnings = net_seller_earnings + NEW.seller_earnings
+              WHERE weekly_finance_id = v_weekly_id;
+          END IF;
+
+          -- Link Daily to Weekly
+          UPDATE daily_finances SET weekly_finance_id = v_weekly_id WHERE daily_finance_id = v_daily_id;
+
+          -- 4. Sync Quarterly
+          SELECT quarterly_finance_id INTO v_quarterly_id FROM quarterly_finances 
+          WHERE seller_id = NEW.seller_id AND quarter_number = v_quarter AND year = v_year;
+
+          IF v_quarterly_id IS NULL THEN
+              INSERT INTO quarterly_finances (seller_id, quarter_number, year, total_revenue, platform_commission, net_seller_earnings, monthly_finance_id)
+              VALUES (NEW.seller_id, v_quarter, v_year, NEW.sale_amount, NEW.commission_amount, NEW.seller_earnings, v_monthly_id)
+              RETURNING quarterly_finance_id INTO v_quarterly_id;
+          ELSE
+              UPDATE quarterly_finances 
+              SET total_revenue = total_revenue + NEW.sale_amount,
+                  platform_commission = platform_commission + NEW.commission_amount,
+                  net_seller_earnings = net_seller_earnings + NEW.seller_earnings
+              WHERE quarterly_finance_id = v_quarterly_id;
+          END IF;
+
+          -- 5. Sync Half-Yearly
+          SELECT half_yearly_finances_id INTO v_half_id FROM half_yearly_finances 
+          WHERE seller_id = NEW.seller_id AND half_number = v_half AND year = v_year;
+
+          IF v_half_id IS NULL THEN
+              INSERT INTO half_yearly_finances (seller_id, half_number, year, total_revenue, platform_commission, net_seller_earnings)
+              VALUES (NEW.seller_id, v_half, v_year, NEW.sale_amount, NEW.commission_amount, NEW.seller_earnings)
+              RETURNING half_yearly_finances_id INTO v_half_id;
+          ELSE
+              UPDATE half_yearly_finances 
+              SET total_revenue = total_revenue + NEW.sale_amount,
+                  platform_commission = platform_commission + NEW.commission_amount,
+                  net_seller_earnings = net_seller_earnings + NEW.seller_earnings
+              WHERE half_yearly_finances_id = v_half_id;
+          END IF;
+
+          -- 6. Sync Annual
+          SELECT annual_finance_id INTO v_annual_id FROM annual_finances 
+          WHERE seller_id = NEW.seller_id AND year = v_year;
+
+          IF v_annual_id IS NULL THEN
+              INSERT INTO annual_finances (seller_id, year, total_revenue, platform_commission, net_seller_earnings)
+              VALUES (NEW.seller_id, v_year, NEW.sale_amount, NEW.commission_amount, NEW.seller_earnings)
+              RETURNING annual_finance_id INTO v_annual_id;
+          ELSE
+              UPDATE annual_finances 
+              SET total_revenue = total_revenue + NEW.sale_amount,
+                  platform_commission = platform_commission + NEW.commission_amount,
+                  net_seller_earnings = net_seller_earnings + NEW.seller_earnings
+              WHERE annual_finance_id = v_annual_id;
+          END IF;
+
+          -- Link Monthly to Quarterly
+          UPDATE monthly_finances SET quarterly_finance_id = v_quarterly_id WHERE monthly_finance_id = v_monthly_id;
+          -- Link Quarterly to Half-Yearly
+          UPDATE quarterly_finances SET half_yearly_finances_id = v_half_id WHERE quarterly_finance_id = v_quarterly_id;
+          -- Link Half-Yearly to Annual
+          UPDATE half_yearly_finances SET annual_finance_id = v_annual_id WHERE half_yearly_finances_id = v_half_id;
+          -- Link Annual to Half-Yearly
+          UPDATE annual_finances SET half_yearly_finances_id = v_half_id WHERE annual_finance_id = v_annual_id;
+
+          -- 7. Record in Finance Transactions
+          INSERT INTO finance_transactions (daily_finance_id, order_id, payment_id, transaction_type, amount)
+          SELECT v_daily_id, NEW.order_id, payment_id, 'Sale', NEW.sale_amount
+          FROM payments WHERE order_id = NEW.order_id LIMIT 1;
+
+          RETURN NEW;
+      END;
+      $$ LANGUAGE plpgsql;
+    `);
+    await client1.query(`
+      DROP TRIGGER IF EXISTS trigger_sync_finances ON seller_commissions;
+      CREATE TRIGGER trigger_sync_finances
+      AFTER INSERT ON seller_commissions
+      FOR EACH ROW
+      EXECUTE FUNCTION sync_finances();
+    `);
+
+    console.log("Finance synchronization triggers initialized successfully.");
+
+
+
+    await client1.query(`CREATE SEQUENCE IF NOT EXISTS payout_id_seq START 1;`);
+    await client1.query(`
+      CREATE TABLE IF NOT EXISTS seller_payouts (
+        payout_id VARCHAR(20) PRIMARY KEY,
+        seller_id VARCHAR(20) REFERENCES sellers(seller_id) ON DELETE CASCADE,
+        initiated_by_admin_id VARCHAR(20) REFERENCES admins(admin_id) ON DELETE SET NULL,
+        amount DECIMAL(15, 2) NOT NULL,
+        payment_method VARCHAR(50),
+        transaction_ref VARCHAR(100),
+        payout_period_start DATE,
+        payout_period_end DATE,
+        status VARCHAR(50) DEFAULT 'Pending',
+        notes TEXT,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        completed_at TIMESTAMP
+      );
+    `);
+    await client1.query(`
+      CREATE OR REPLACE FUNCTION generate_payout_id()
+      RETURNS TRIGGER AS $$
+      BEGIN
+          IF NEW.payout_id IS NULL THEN
+            NEW.payout_id := 'PAY-' || LPAD(nextval('payout_id_seq')::text, 4, '0');
+          END IF;
+          RETURN NEW;
+      END;
+      $$ LANGUAGE plpgsql;
+    `);
+    await client1.query(`
+      DROP TRIGGER IF EXISTS trigger_generate_payout_id ON seller_payouts;
+      CREATE TRIGGER trigger_generate_payout_id
+      BEFORE INSERT ON seller_payouts
+      FOR EACH ROW
+      EXECUTE FUNCTION generate_payout_id();
+    `);
+    console.log("Table 'seller_payouts' initialized successfully.");
+
     // Finance Transactions table
+    await client1.query(`CREATE SEQUENCE IF NOT EXISTS finance_transaction_id_seq START 1;`);
     await client1.query(`
       CREATE TABLE IF NOT EXISTS finance_transactions (
         finance_transaction_id VARCHAR(30) PRIMARY KEY,
         daily_finance_id VARCHAR(30) REFERENCES daily_finances(daily_finance_id) ON DELETE SET NULL,
         order_id VARCHAR(20) REFERENCES orders(order_id) ON DELETE SET NULL,
         payment_id VARCHAR(30),
-        seller_payout_id VARCHAR(30),
+        seller_payout_id VARCHAR(30) REFERENCES seller_payouts(payout_id) ON DELETE SET NULL,
         transaction_type VARCHAR(50) NOT NULL,
         amount DECIMAL(15, 2) NOT NULL,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       );
     `);
+    await client1.query(`
+      CREATE OR REPLACE FUNCTION generate_finance_transaction_id()
+      RETURNS TRIGGER AS $$
+      BEGIN
+          IF NEW.finance_transaction_id IS NULL THEN
+            NEW.finance_transaction_id := 'TXN-' || LPAD(nextval('finance_transaction_id_seq')::text, 5, '0');
+          END IF;
+          RETURN NEW;
+      END;
+      $$ LANGUAGE plpgsql;
+    `);
+    await client1.query(`
+      DROP TRIGGER IF EXISTS trigger_generate_finance_transaction_id ON finance_transactions;
+      CREATE TRIGGER trigger_generate_finance_transaction_id
+      BEFORE INSERT ON finance_transactions
+      FOR EACH ROW
+      EXECUTE FUNCTION generate_finance_transaction_id();
+    `);
+    await client1.query(`
+      CREATE OR REPLACE FUNCTION log_payout_transaction()
+      RETURNS TRIGGER AS $$
+      BEGIN
+          -- Only log when status changes to 'Completed'
+          IF (OLD.status != 'Completed' AND NEW.status = 'Completed') THEN
+              INSERT INTO finance_transactions (seller_payout_id, transaction_type, amount, created_at)
+              VALUES (NEW.payout_id, 'Payout', NEW.amount, CURRENT_TIMESTAMP);
+          END IF;
+          RETURN NEW;
+      END;
+      $$ LANGUAGE plpgsql;
+    `);
+    await client1.query(`
+      DROP TRIGGER IF EXISTS trigger_log_payout_transaction ON seller_payouts;
+      CREATE TRIGGER trigger_log_payout_transaction
+      AFTER UPDATE ON seller_payouts
+      FOR EACH ROW
+      EXECUTE FUNCTION log_payout_transaction();
+    `);
+
     await client1.query(`
       CREATE TABLE IF NOT EXISTS admins (
         admin_id VARCHAR(20) PRIMARY KEY,
@@ -712,10 +946,84 @@ async function setup() {
     `);
     await client1.query(`
       INSERT INTO admins (admin_id, name, email, password_hash, role)
-      VALUES ('ADM001', 'System Administrator', 'admin@electroshop.com', 'admin123', 'SuperAdmin')
+      VALUES ('ADM001', 'System Administrator', 'admin@electroshop.com', '$2b$10$wHQR09SUw5uO1I/IQu7wVuPovI/emfZQi3pjh0SKebVLYAxmjp8iy', 'SuperAdmin')
       ON CONFLICT (email) DO NOTHING;
     `);
     console.log("Table 'admins' initialized successfully.");
+
+    await client1.query(`
+      CREATE TABLE IF NOT EXISTS audit_logs (
+        audit_id SERIAL PRIMARY KEY,
+        admin_id VARCHAR(20) REFERENCES admins(admin_id) ON DELETE SET NULL,
+        table_name VARCHAR(100) NOT NULL,
+        record_id VARCHAR(50) NOT NULL,
+        action VARCHAR(50) NOT NULL,
+        old_values JSONB,
+        new_values JSONB,
+        ip_address VARCHAR(45),
+        user_agent TEXT,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      );
+    `);
+    console.log("Table 'audit_logs' initialized successfully.");
+
+    await client1.query(`
+      CREATE TABLE IF NOT EXISTS coupons (
+        coupon_id VARCHAR(50) PRIMARY KEY,
+        admin_id VARCHAR(20) REFERENCES admins(admin_id) ON DELETE SET NULL,
+        seller_id VARCHAR(20) REFERENCES sellers(seller_id) ON DELETE CASCADE,
+        title VARCHAR(255),
+        description TEXT,
+        code VARCHAR(50) UNIQUE NOT NULL,
+        type VARCHAR(50),
+        discount_percent DECIMAL(5, 2),
+        max_discount DECIMAL(10, 2),
+        min_order_value DECIMAL(10, 2) DEFAULT 0,
+        used_count INT DEFAULT 0,
+        max_usage INT,
+        is_active BOOLEAN DEFAULT TRUE,
+        valid_until TIMESTAMP,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      );
+    `);
+    console.log("Table 'coupons' initialized successfully.");
+
+    await client1.query(`
+      CREATE TABLE IF NOT EXISTS order_coupons (
+        order_coupon_id SERIAL PRIMARY KEY,
+        order_id VARCHAR(20) REFERENCES orders(order_id) ON DELETE CASCADE,
+        coupon_id VARCHAR(50) REFERENCES coupons(coupon_id) ON DELETE RESTRICT,
+        discount_amount DECIMAL(10, 2) NOT NULL,
+        applied_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      );
+    `);
+    console.log("Table 'order_coupons' initialized successfully.");
+
+    await client1.query(`
+      CREATE TABLE IF NOT EXISTS coupon_usage (
+        usage_id SERIAL PRIMARY KEY,
+        coupon_id VARCHAR(50) REFERENCES coupons(coupon_id) ON DELETE CASCADE,
+        customer_id VARCHAR(20) REFERENCES customers(customer_id) ON DELETE CASCADE,
+        order_id VARCHAR(20) REFERENCES orders(order_id) ON DELETE CASCADE,
+        used_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      );
+    `);
+    console.log("Table 'coupon_usage' initialized successfully.");
+
+    await client1.query(`
+      CREATE TABLE IF NOT EXISTS auth_sessions (
+        session_id SERIAL PRIMARY KEY,
+        user_type VARCHAR(50) NOT NULL,
+        user_ref_id VARCHAR(50) NOT NULL,
+        token_hash TEXT NOT NULL,
+        device_info TEXT,
+        ip_address VARCHAR(45),
+        is_blacklisted BOOLEAN DEFAULT FALSE,
+        expires_at TIMESTAMP NOT NULL,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      );
+    `);
+    console.log("Table 'auth_sessions' initialized successfully.");
 
   } catch (e) {
     console.error("Error creating tables:", e.message);

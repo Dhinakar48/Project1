@@ -26,7 +26,7 @@ import { FaWallet } from "react-icons/fa";
 export default function SellerDashboard() {
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState(() => {
-    return localStorage.getItem('sellerActiveTab') || 'Overview';
+    return localStorage.getItem('sellerActiveTab') || 'Analytics';
   });
 
   const [seller, setSeller] = useState(() => {
@@ -45,8 +45,8 @@ export default function SellerDashboard() {
 
     const handlePopState = (e) => {
       // Whenever back button is pressed:
-      // Force user back to Overview
-      setActiveTab('Overview');
+      // Force user back to Analytics
+      setActiveTab('Analytics');
       // Push history state again so they remain trapped and cannot go back to home page
       window.history.pushState({ dashboardTrap: true }, '', window.location.pathname);
     };
@@ -67,7 +67,7 @@ export default function SellerDashboard() {
 
   const [notifications, setNotifications] = useState([]);
   const [selectedCategory, setSelectedCategory] = useState('All');
-  const [timeRange, setTimeRange] = useState('Today');
+  const [timeRange, setTimeRange] = useState('Daily');
   const [globalSearch, setGlobalSearch] = useState("");
   const [showNotifications, setShowNotifications] = useState(false);
   const [showProfileMenu, setShowProfileMenu] = useState(false);
@@ -406,6 +406,7 @@ export default function SellerDashboard() {
 
           {activeTab === 'Analytics' && <Analytics timeRange={timeRange} setTimeRange={setTimeRange} setActiveTab={setActiveTab} sellerId={seller.seller_id} />}
           {activeTab === 'Reviews' && <Reviews sellerId={seller.seller_id} />}
+
 
           {activeTab === 'Settings' && <Settings />}
           {activeTab === 'Notifications' && <Notifications notifications={notifications} markAsRead={markAsRead} />}

@@ -10,6 +10,7 @@ const userRoutes = require("./routes/users");
 const cartRoutes = require("./routes/cart");
 const reviewRoutes = require("./routes/reviews");
 const adminRoutes = require("./routes/admin");
+const couponRoutes = require("./routes/coupons");
 
 const app = express();
 
@@ -21,7 +22,8 @@ app.use(bodyParser.urlencoded({ limit: "50mb", extended: true }));
 // Request Logger
 app.use((req, res, next) => {
   res.on('finish', () => {
-    console.log(`[${new Date().toISOString()}] ${req.method} ${req.url} ${res.statusCode}`, req.method !== 'GET' ? JSON.stringify(req.body).substring(0, 500) : '');
+    const bodyStr = req.body ? JSON.stringify(req.body) : '';
+    console.log(`[${new Date().toISOString()}] ${req.method} ${req.url} ${res.statusCode}`, req.method !== 'GET' ? bodyStr.substring(0, 500) : '');
   });
   next();
 });
@@ -33,6 +35,7 @@ app.use("/", userRoutes);
 app.use("/", cartRoutes);
 app.use("/", reviewRoutes);
 app.use("/", adminRoutes);
+app.use("/", couponRoutes);
 
 // Additional Support for /api prefix
 app.use("/api", orderRoutes);
@@ -41,6 +44,7 @@ app.use("/api", userRoutes);
 app.use("/api", cartRoutes);
 app.use("/api", reviewRoutes);
 app.use("/api", adminRoutes);
+app.use("/api", couponRoutes);
 
 // Misc Routes
 app.get("/seller-stats/:sellerId", async (req, res) => {

@@ -288,10 +288,11 @@ export default function OrderPage() {
 
   const handleApplyPromo = () => {
     if (!promoCode) return;
-    const res = applyDiscountCode(promoCode, cart.length);
-    setPromoMessage(res.message);
-    if (res.success) setPromoCode('');
-    setTimeout(() => setPromoMessage(''), 3000);
+    applyDiscountCode(promoCode, subtotal).then(res => {
+      setPromoMessage(res.message);
+      if (res.success) setPromoCode('');
+      setTimeout(() => setPromoMessage(''), 3000);
+    });
   };
 
   const handleSaveAddress = async () => {

@@ -155,6 +155,37 @@ export function StoreProvider({ children }) {
 
     fetchWishlist();
     fetchCart();
+
+    // Session Monitoring: Check if user is blocked in real-time
+    const checkUserStatus = async () => {
+      const savedUser = localStorage.getItem("user");
+      if (savedUser) {
+        const user = JSON.parse(savedUser);
+        const userId = user.customerId || user.id;
+        if (userId) {
+          try {
+            const res = await axios.get(`http://localhost:5000/api/verify-user-status/${userId}`);
+            if (res.data.success && res.data.is_active === false) {
+              // User has been blocked!
+              console.warn("Session Expired: Account blocked by administrator.");
+              localStorage.removeItem("user");
+              localStorage.removeItem("userProfile");
+              setUserProfile(null);
+              setCart([]);
+              setWishlist([]);
+              window.location.href = "/?message=blocked";
+            }
+          } catch (err) {
+            console.error("Session verification failed", err);
+          }
+        }
+      }
+    };
+
+    const interval = setInterval(checkUserStatus, 30000); // Check every 30 seconds
+    checkUserStatus(); // Initial check
+
+    return () => clearInterval(interval);
   }, [userProfile]);
 
   // One-time cleanup to fix QuotaExceededError
@@ -292,22 +323,31 @@ export function StoreProvider({ children }) {
 
   const clearCart = () => setCart([]);
 
-  const applyDiscountCode = (code, cartLength = 0) => {
-    const uppercaseCode = code.toUpperCase();
-    if (uppercaseCode === "SUMMER20") {
-      const value = cartLength >= 4 ? 10 : cartLength >= 3 ? 5 : 20;
-      setAppliedDiscount({ type: 'percentage', value, code: 'SUMMER20' });
-      return { success: true, message: `${value}% discount applied!` };
+  const applyDiscountCode = async (code, cartTotal = 0) => {
+    if (!code) return { success: false, message: "Please enter a coupon code." };
+    
+    try {
+       const res = await axios.post("http://localhost:5000/api/validate", {
+          code,
+          cartTotal
+       });
+
+       if (res.data.success) {
+          const coupon = res.data.coupon;
+          setAppliedDiscount({ 
+            type: coupon.type.toLowerCase(), 
+            value: coupon.discount_percent, 
+            maxDiscount: coupon.max_discount,
+            code: coupon.code 
+          });
+          return { success: true, message: "Coupon applied successfully!" };
+       } else {
+          return { success: false, message: res.data.message || "Invalid coupon." };
+       }
+    } catch (err) {
+       console.error("Coupon validation error:", err);
+       return { success: false, message: "Server error validating coupon." };
     }
-    if (uppercaseCode === "FLASH5K") {
-      setAppliedDiscount({ type: 'fixed', value: 5000, code: 'FLASH5K' });
-      return { success: true, message: "₹5,000 discount applied!" };
-    }
-    if (uppercaseCode === "FREESHIP") {
-      setAppliedDiscount({ type: 'shipping', value: 0, code: 'FREESHIP' });
-      return { success: true, message: "Free shipping applied!" };
-    }
-    return { success: false, message: "Invalid discount code." };
   };
 
   const removeDiscount = () => setAppliedDiscount(null);
@@ -331,7 +371,13 @@ export function StoreProvider({ children }) {
 
   const calculateDiscount = () => {
     if (!appliedDiscount) return 0;
-    if (appliedDiscount.type === 'percentage') return (subtotal * appliedDiscount.value) / 100;
+    if (appliedDiscount.type === 'percentage') {
+       let d = (subtotal * appliedDiscount.value) / 100;
+       if (appliedDiscount.maxDiscount && d > appliedDiscount.maxDiscount) {
+          d = appliedDiscount.maxDiscount;
+       }
+       return d;
+    }
     if (appliedDiscount.type === 'fixed') return appliedDiscount.value;
     return 0; // shipping handled separately if needed
   };

@@ -9,6 +9,12 @@ router.post("/order/place", async (req, res) => {
   const client = await pool.connect();
   try {
     await client.query("BEGIN");
+
+    // Security Check: Verify user is not blocked
+    const userCheck = await client.query("SELECT is_active, is_blocked FROM customers WHERE customer_id = $1", [customerId]);
+    if (userCheck.rows.length === 0 || userCheck.rows[0].is_active === false || userCheck.rows[0].is_blocked === true) {
+      throw new Error("ACCOUNT_RESTRICTED");
+    }
     
     const backendSubtotal = cartItems.reduce((acc, it) => {
       const p = parseFloat(String(it.variant?.price || it.price || 0).replace(/[^\d.]/g, ''));
@@ -37,11 +43,39 @@ router.post("/order/place", async (req, res) => {
     const paymentStatus = isPaid ? 'Paid' : 'Pending';
     const platformFee = req.body.platformFee || 15;
 
+    let finalCouponId = null;
+    if (couponId) {
+      const couponRes = await client.query("SELECT coupon_id, code, used_count, max_usage, is_active, valid_until FROM coupons WHERE code = $1", [couponId]);
+      if (couponRes.rows.length > 0) {
+        const coupon = couponRes.rows[0];
+        const now = new Date();
+        if (coupon.is_active && (!coupon.valid_until || new Date(coupon.valid_until) > now) && (!coupon.max_usage || coupon.used_count < coupon.max_usage)) {
+          finalCouponId = coupon.coupon_id;
+        }
+      }
+    }
+
     await client.query(
       `INSERT INTO orders (order_id, customer_id, address_id, coupon_id, subtotal, discount_amount, platform_fee, shipping_charge, total_amount, order_status, payment_status)
        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)`,
-      [orderId, customerId, addressId || null, couponId || null, backendRawSubtotal, totalDiscountAmount, platformFee, shippingCharge || 0, backendTotal, 'Confirmed', paymentStatus]
+      [orderId, customerId, addressId || null, finalCouponId, backendRawSubtotal, totalDiscountAmount, platformFee, shippingCharge || 0, backendTotal, 'Confirmed', paymentStatus]
     );
+
+    if (finalCouponId) {
+      // Record coupon usage
+      await client.query(
+        "INSERT INTO order_coupons (order_id, coupon_id, discount_amount) VALUES ($1, $2, $3)",
+        [orderId, finalCouponId, discountAmount || 0]
+      );
+      await client.query(
+        "INSERT INTO coupon_usage (coupon_id, customer_id, order_id) VALUES ($1, $2, $3)",
+        [finalCouponId, customerId, orderId]
+      );
+      await client.query(
+        "UPDATE coupons SET used_count = used_count + 1 WHERE coupon_id = $1",
+        [finalCouponId]
+      );
+    }
 
     const maxItemRes = await client.query("SELECT order_item_id FROM order_items ORDER BY order_item_id DESC LIMIT 1");
     let nextItemNum = 1;
@@ -102,6 +136,8 @@ router.post("/order/place", async (req, res) => {
 
     for (const sId in sellerSubtotals) {
       await client.query("INSERT INTO order_sellers (order_id, seller_id, seller_subtotal) VALUES ($1, $2, $3)", [orderId, sId, sellerSubtotals[sId]]);
+      // ✅ ADDED: Notify Seller of new order
+      await client.query("INSERT INTO notifications (seller_id, order_id, type, message) VALUES ($1, $2, $3, $4)", [sId, orderId, 'New Order', `New order ${orderId} received for your products.`]);
     }
     await client.query("INSERT INTO notifications (customer_id, order_id, type, message) VALUES ($1, $2, $3, $4)", [customerId, orderId, 'Order Placed', `Your order ${orderId} has been placed successfully.`]);
     await client.query("INSERT INTO order_status_history (order_id, status, changed_by, notes) VALUES ($1, $2, $3, $4)", [orderId, 'Confirmed', 'System', 'Order placed and confirmed.']);
@@ -112,6 +148,9 @@ router.post("/order/place", async (req, res) => {
   } catch (err) {
     await client.query("ROLLBACK");
     console.error("Order placement error:", err);
+    if (err.message === "ACCOUNT_RESTRICTED") {
+      return res.status(403).json({ success: false, message: "Your account is currently restricted. Order placement is disabled." });
+    }
     res.status(500).json({ message: "Order placement error" });
   } finally {
     client.release();
@@ -120,10 +159,49 @@ router.post("/order/place", async (req, res) => {
 
 router.post("/order/cancel", async (req, res) => {
   const { orderId, reason } = req.body;
+  const client = await pool.connect();
   try {
-    const result = await pool.query("UPDATE orders SET order_status = 'Cancelled', cancellation_reason = $1 WHERE order_id = $2 RETURNING *", [reason || "User cancelled", orderId]);
+    await client.query("BEGIN");
+    
+    // Update order status
+    const result = await client.query("UPDATE orders SET order_status = 'Cancelled', cancellation_reason = $1 WHERE order_id = $2 RETURNING *", [reason || "User cancelled", orderId]);
+    
+    if (result.rows.length > 0) {
+      const order = result.rows[0];
+      
+      // 1. Notify Customer
+      await client.query(
+        "INSERT INTO notifications (customer_id, order_id, type, message) VALUES ($1, $2, $3, $4)",
+        [order.customer_id, orderId, 'Order Cancelled', `Your order ${orderId} has been cancelled. Reason: ${reason || 'User request'}`]
+      );
+
+      // 2. Notify Seller(s)
+      const sellerRes = await client.query("SELECT DISTINCT seller_id FROM order_items WHERE order_id = $1", [orderId]);
+      for (const row of sellerRes.rows) {
+        await client.query(
+          "INSERT INTO notifications (seller_id, order_id, type, message) VALUES ($1, $2, $3, $4)",
+          [row.seller_id, orderId, 'Order Cancelled', `Order ${orderId} has been cancelled by the customer.`]
+        );
+      }
+
+      // 3. Platform Notification (for Admin)
+      await client.query(
+        "INSERT INTO notifications (order_id, type, message) VALUES ($1, $2, $3)",
+        [orderId, 'System Alert', `Order ${orderId} was cancelled by customer. Reason: ${reason || 'N/A'}`]
+      );
+
+      await client.query("INSERT INTO order_status_history (order_id, status, changed_by, notes) VALUES ($1, $2, $3, $4)", [orderId, 'Cancelled', 'Customer', reason || 'Order cancelled by customer']);
+    }
+
+    await client.query("COMMIT");
     res.json({ success: true, order: result.rows[0] });
-  } catch (err) { res.status(500).json({ message: "Cancel error" }); }
+  } catch (err) { 
+    await client.query("ROLLBACK");
+    console.error("Cancellation error:", err);
+    res.status(500).json({ message: "Cancel error" }); 
+  } finally {
+    client.release();
+  }
 });
 
 router.patch("/order/status", async (req, res) => {
@@ -203,6 +281,27 @@ router.get("/seller-customers/:sellerId", async (req, res) => {
     console.error("Error fetching seller customers:", err);
     res.status(500).json({ message: "Seller customers error" });
   }
+});
+
+router.get("/notifications/customer/:customerId", async (req, res) => {
+  try {
+    const result = await pool.query("SELECT * FROM notifications WHERE customer_id = $1 ORDER BY created_at DESC", [req.params.customerId]);
+    res.json(result.rows);
+  } catch (err) { res.status(500).json({ message: "Customer notifications error" }); }
+});
+
+router.get("/notifications/seller/:sellerId", async (req, res) => {
+  try {
+    const result = await pool.query("SELECT * FROM notifications WHERE seller_id = $1 ORDER BY created_at DESC", [req.params.sellerId]);
+    res.json(result.rows);
+  } catch (err) { res.status(500).json({ message: "Seller notifications error" }); }
+});
+
+router.patch("/notifications/read/:notificationId", async (req, res) => {
+  try {
+    await pool.query("UPDATE notifications SET is_read = TRUE WHERE notification_id = $1", [req.params.notificationId]);
+    res.json({ success: true });
+  } catch (err) { res.status(500).json({ message: "Mark read error" }); }
 });
 
 module.exports = router;

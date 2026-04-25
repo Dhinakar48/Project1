@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const bcrypt = require('bcryptjs');
 const pool = require('../db');
+const { encrypt, decrypt } = require('../utils/encryption');
 
 // Register Customer
 router.post("/register", async (req, res) => {
@@ -31,8 +32,27 @@ router.post("/login", async (req, res) => {
     if (result.rows.length === 0) return res.status(400).json({ message: "User not found" });
 
     const user = result.rows[0];
+    
+    console.log(`[AUTH-DEBUG] Attempt for: ${email}. active=${user.is_active} (${typeof user.is_active}), blocked=${user.is_blocked} (${typeof user.is_blocked})`);
+
+    // Triple-enforcement check
+    const isDeactivated = user.is_active === false || String(user.is_active) === 'false';
+    const isRestricted = user.is_blocked === true || String(user.is_blocked) === 'true';
+
+    if (isDeactivated || isRestricted) {
+      console.warn(`[AUTH-SECURITY] BLOCKING LOGIN for ${email}. Reason: Account Suspended.`);
+      return res.status(403).json({ 
+        success: false,
+        message: "ACCESS DENIED: Your account has been suspended by the Administrator due to policy violations. Please contact support.",
+        isBlocked: true
+      });
+    }
+
     const isMatch = await bcrypt.compare(password, user.password);
-    if (!isMatch) return res.status(400).json({ message: "Invalid password" });
+    if (!isMatch) {
+      console.warn(`[AUTH-FAILURE] Invalid password for ${email}`);
+      return res.status(400).json({ message: "Invalid password" });
+    }
 
     res.json({
       user: {
@@ -46,6 +66,27 @@ router.post("/login", async (req, res) => {
   } catch (err) {
     console.error(err);
     res.status(500).json({ message: "Server error" });
+  }
+});
+
+// Verify User Status (For session checks)
+router.get("/verify-user-status/:id", async (req, res) => {
+  const { id } = req.params;
+  try {
+    let result;
+    if (id.startsWith('CUS')) {
+      result = await pool.query("SELECT is_active FROM customers WHERE customer_id=$1", [id]);
+    } else if (id.startsWith('SEL')) {
+      result = await pool.query("SELECT is_active FROM sellers WHERE seller_id=$1", [id]);
+    }
+
+    if (!result || result.rows.length === 0) {
+      return res.status(404).json({ success: false, message: "User not found" });
+    }
+
+    res.json({ success: true, is_active: result.rows[0].is_active });
+  } catch (err) {
+    res.status(500).json({ success: false });
   }
 });
 
@@ -87,6 +128,15 @@ router.post("/seller-login", async (req, res) => {
     if (result.rows.length === 0) return res.status(400).json({ message: "Seller not found" });
 
     const seller = result.rows[0];
+    
+    // Check if seller is blocked
+    if (seller.is_active === false) {
+      return res.status(403).json({ 
+        message: "Your merchant account has been suspended by the Administrator. Please contact the platform support for reinstatement.",
+        isBlocked: true
+      });
+    }
+
     console.log("Attempting login for seller:", seller.email, "ID:", seller.seller_id);
     const isMatch = await bcrypt.compare(password, seller.password);
     
@@ -160,12 +210,14 @@ router.post("/seller-onboarding", async (req, res) => {
     const { seller_id, phone } = sellerResult.rows[0];
 
     if (bankDetails) {
+      const encryptedAcc = encrypt(bankDetails.accNumber);
+      const encryptedIfsc = encrypt(bankDetails.ifsc);
       await client.query(
         `INSERT INTO bank_accounts (owner_id, owner_type, account_number, bank_name, ifsc_code, account_holder_name, account_type, is_primary)
          VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
          ON CONFLICT (owner_id, owner_type) DO UPDATE SET 
          account_number=EXCLUDED.account_number, bank_name=EXCLUDED.bank_name, ifsc_code=EXCLUDED.ifsc_code, updated_at=CURRENT_TIMESTAMP`,
-        [seller_id, 'seller', bankDetails.accNumber, bankDetails.bankName, bankDetails.ifsc, bankDetails.accHolder, bankDetails.accType, true]
+        [seller_id, 'seller', encryptedAcc, bankDetails.bankName, encryptedIfsc, bankDetails.accHolder, bankDetails.accType, true]
       );
     }
 
@@ -261,7 +313,15 @@ router.post("/seller/update-password", async (req, res) => {
 router.get("/seller/finances/daily/:sellerId", async (req, res) => {
   try {
     const result = await pool.query(
-      "SELECT daily_finance_id, seller_id, finance_date, total_revenue, platform_commissions as platform_commission, net_seller_earnings, created_at FROM daily_finances WHERE seller_id=$1 ORDER BY finance_date DESC LIMIT 30",
+      `SELECT daily_finance_id, seller_id, finance_date, total_revenue, platform_commissions as platform_commission, net_seller_earnings, created_at 
+       FROM daily_finances 
+       WHERE seller_id=$1 
+       AND finance_date >= (
+         SELECT COALESCE(MIN(finance_date), '1970-01-01') 
+         FROM daily_finances 
+         WHERE seller_id=$1 AND total_revenue > 0
+       )
+       ORDER BY finance_date DESC`,
       [req.params.sellerId]
     );
     res.json(result.rows);
@@ -275,7 +335,16 @@ router.get("/seller/finances/daily/:sellerId", async (req, res) => {
 router.get("/seller/finances/weekly/:sellerId", async (req, res) => {
   try {
     const result = await pool.query(
-      "SELECT * FROM weekly_finances WHERE seller_id=$1 ORDER BY year DESC, week_number DESC LIMIT 12",
+      `SELECT * FROM weekly_finances 
+       WHERE seller_id=$1 
+       AND (year, week_number) >= (
+         SELECT COALESCE(year, 0), COALESCE(week_number, 0)
+         FROM weekly_finances 
+         WHERE seller_id=$1 AND total_revenue > 0 
+         ORDER BY year ASC, week_number ASC 
+         LIMIT 1
+       )
+       ORDER BY year DESC, week_number DESC`,
       [req.params.sellerId]
     );
     res.json(result.rows);
@@ -289,7 +358,16 @@ router.get("/seller/finances/weekly/:sellerId", async (req, res) => {
 router.get("/seller/finances/monthly/:sellerId", async (req, res) => {
   try {
     const result = await pool.query(
-      "SELECT * FROM monthly_finances WHERE seller_id=$1 ORDER BY year DESC, month_number DESC LIMIT 12",
+      `SELECT * FROM monthly_finances 
+       WHERE seller_id=$1 
+       AND (year, month_number) >= (
+         SELECT COALESCE(year, 0), COALESCE(month_number, 0)
+         FROM monthly_finances 
+         WHERE seller_id=$1 AND total_revenue > 0 
+         ORDER BY year ASC, month_number ASC 
+         LIMIT 1
+       )
+       ORDER BY year DESC, month_number DESC`,
       [req.params.sellerId]
     );
     res.json(result.rows);
@@ -303,7 +381,16 @@ router.get("/seller/finances/monthly/:sellerId", async (req, res) => {
 router.get("/seller/finances/quarterly/:sellerId", async (req, res) => {
   try {
     const result = await pool.query(
-      "SELECT * FROM quarterly_finances WHERE seller_id=$1 ORDER BY year DESC, quarter_number DESC LIMIT 8",
+      `SELECT * FROM quarterly_finances 
+       WHERE seller_id=$1 
+       AND (year, quarter_number) >= (
+         SELECT COALESCE(year, 0), COALESCE(quarter_number, 0)
+         FROM quarterly_finances 
+         WHERE seller_id=$1 AND total_revenue > 0 
+         ORDER BY year ASC, quarter_number ASC 
+         LIMIT 1
+       )
+       ORDER BY year DESC, quarter_number DESC`,
       [req.params.sellerId]
     );
     res.json(result.rows);
@@ -317,7 +404,14 @@ router.get("/seller/finances/quarterly/:sellerId", async (req, res) => {
 router.get("/seller/finances/annual/:sellerId", async (req, res) => {
   try {
     const result = await pool.query(
-      "SELECT * FROM annual_finances WHERE seller_id=$1 ORDER BY year DESC LIMIT 5",
+      `SELECT * FROM annual_finances 
+       WHERE seller_id=$1 
+       AND year >= (
+         SELECT COALESCE(MIN(year), 0)
+         FROM annual_finances 
+         WHERE seller_id=$1 AND total_revenue > 0
+       )
+       ORDER BY year DESC`,
       [req.params.sellerId]
     );
     res.json(result.rows);
@@ -331,7 +425,16 @@ router.get("/seller/finances/annual/:sellerId", async (req, res) => {
 router.get("/seller/finances/half-yearly/:sellerId", async (req, res) => {
   try {
     const result = await pool.query(
-      "SELECT * FROM half_yearly_finances WHERE seller_id=$1 ORDER BY year DESC, half_number DESC LIMIT 6",
+      `SELECT * FROM half_yearly_finances 
+       WHERE seller_id=$1 
+       AND (year, half_number) >= (
+         SELECT COALESCE(year, 0), COALESCE(half_number, 0)
+         FROM half_yearly_finances 
+         WHERE seller_id=$1 AND total_revenue > 0 
+         ORDER BY year ASC, half_number ASC 
+         LIMIT 1
+       )
+       ORDER BY year DESC, half_number DESC`,
       [req.params.sellerId]
     );
     res.json(result.rows);

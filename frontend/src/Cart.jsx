@@ -1,3 +1,4 @@
+import React, { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useStore } from "./StoreContext";
 import { useNavigate, Link } from "react-router-dom";
@@ -23,9 +24,11 @@ export default function Cart() {
   } = useStore();
   const navigate = useNavigate();
 
+  const [couponCodeInput, setCouponCodeInput] = useState('');
+  const [couponMessage, setCouponMessage] = useState({ text: '', type: '' });
+
   const platformFee = 15;
   const totalPayable = finalTotal + platformFee;
-  const offerPercent = cart.length >= 4 ? 10 : 5; // tiered: 3 items = 5%, 4+ items = 10%
 
   const perks = [
     { icon: "🛡️", bg: "bg-amber-100", text: "text-amber-600", title: "Free Protection", sub: "Covered on every order" },
@@ -201,40 +204,54 @@ export default function Cart() {
                   Order Summary
                 </p>
 
-                {/* ── Offer banner (3+ items, no discount) ── */}
-                <AnimatePresence>
-                  {cart.length >= 3 && !appliedDiscount && (
-                    <motion.div
-                      initial={{ opacity: 0, scale: 0.97 }}
-                      animate={{ opacity: 1, scale: 1 }}
-                      exit={{ opacity: 0, scale: 0.97 }}
-                      transition={{ duration: 0.3 }}
-                    >
-                      <div className="flex items-center justify-between gap-3 bg-black/10 border border-dashed border-stone-900/30 rounded-xl px-4 py-3 mb-4">
-                        <div className="flex items-start gap-2.5">
-                          <span className="text-xl leading-none mt-0.5 flex-shrink-0">🎉</span>
-                          <div>
-                            <p className="text-[11px] font-black text-stone-900 leading-snug">
-                              {cart.length >= 4 ? "Big order offer unlocked!" : "Multi-item offer unlocked!"}
+                {/* ── Coupon Input ── */}
+                <div className="mb-6">
+                   {!appliedDiscount ? (
+                      <div>
+                         <div className="flex items-center gap-2">
+                            <input 
+                               type="text" 
+                               placeholder="Enter coupon code" 
+                               value={couponCodeInput}
+                               onChange={(e) => setCouponCodeInput(e.target.value.toUpperCase())}
+                               className="flex-1 bg-stone-50 border border-stone-200 rounded-xl px-4 py-3 text-sm font-bold text-stone-900 focus:outline-none focus:ring-2 focus:ring-amber-500 uppercase placeholder:normal-case placeholder:font-medium"
+                            />
+                            <button 
+                               onClick={async () => {
+                                  if (!couponCodeInput.trim()) return;
+                                  const res = await applyDiscountCode(couponCodeInput, subtotal);
+                                  setCouponMessage({ text: res.message, type: res.success ? 'success' : 'error' });
+                                  if (res.success) setCouponCodeInput('');
+                               }}
+                               className="bg-stone-900 text-amber-400 px-6 py-3 rounded-xl text-xs font-black uppercase tracking-wider hover:bg-stone-800 transition-colors"
+                            >
+                               Apply
+                            </button>
+                         </div>
+                         {couponMessage.text && (
+                            <p className={`text-[10px] font-bold mt-2 ${couponMessage.type === 'success' ? 'text-green-600' : 'text-red-500'}`}>
+                               {couponMessage.text}
                             </p>
-                            <p className="text-[10px] text-stone-700 font-medium mt-0.5">
-                              Use <strong>SUMMER20</strong> for <strong>{offerPercent}%</strong> off your order
-                            </p>
-                          </div>
-                        </div>
-                        <button
-                          className="flex-shrink-0 bg-stone-900 text-amber-400 border-none rounded-lg px-3 py-1.5 text-[10px] font-black uppercase tracking-wider cursor-pointer hover:bg-stone-800 hover:scale-105 transition-all duration-150"
-                          onClick={() => applyDiscountCode("SUMMER20", cart.length)}
-                        >
-                          Apply
-                        </button>
+                         )}
                       </div>
-                      <p className="text-[10px] font-bold text-stone-900/70 text-center tracking-wide mb-4">
-                        🚚 Also try <strong>FREESHIP</strong> for free shipping
-                      </p>
-                    </motion.div>
-                  )}
-                </AnimatePresence>
+                   ) : (
+                      <div className="flex items-center justify-between bg-green-50 border border-green-200 rounded-xl px-4 py-3">
+                         <div className="flex items-center gap-2 text-green-800 text-sm font-bold">
+                            <FaTag />
+                            <span>{appliedDiscount.code} Applied!</span>
+                         </div>
+                         <button
+                            className="text-[10px] font-black uppercase text-green-800 hover:text-green-900 underline"
+                            onClick={() => {
+                               removeDiscount();
+                               setCouponMessage({ text: '', type: '' });
+                            }}
+                         >
+                            Remove
+                         </button>
+                      </div>
+                   )}
+                </div>
 
                 {/* Line items */}
                 <div className="flex justify-between items-center mb-3.5">
@@ -252,21 +269,10 @@ export default function Cart() {
                   <span className="text-sm font-bold text-stone-900">₹{subtotal.toLocaleString()}</span>
                 </div>
 
-                {appliedDiscount && (
-                  <div className="flex items-center justify-between bg-black/[0.07] border border-black/10 rounded-xl px-3 py-2 mb-3.5">
-                    <div className="flex items-center gap-2 text-green-900 text-[11px] font-bold">
-                      <FaTag size={10} />
-                      Coupon ({appliedDiscount.code})
-                      <button
-                        className="text-[9px] border border-green-900 rounded-md px-1.5 py-0.5 font-black uppercase hover:bg-green-900 hover:text-white transition-colors cursor-pointer bg-transparent text-green-900"
-                        onClick={removeDiscount}
-                      >
-                        Remove
-                      </button>
-                    </div>
-                    <span className="text-sm font-bold text-green-900">
-                      −₹{couponDiscountAmount.toLocaleString()}
-                    </span>
+                {appliedDiscount && couponDiscountAmount > 0 && (
+                  <div className="flex justify-between items-center mb-3.5 text-green-700">
+                    <span className="text-sm font-semibold">Extra Discount ({appliedDiscount.code})</span>
+                    <span className="text-sm font-bold">−₹{couponDiscountAmount.toLocaleString()}</span>
                   </div>
                 )}
 

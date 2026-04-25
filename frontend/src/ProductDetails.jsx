@@ -21,12 +21,15 @@ export default function ProductDetails() {
     const { addToCart, toggleWishlist, wishlist, userProfile } = useStore();
     
     // Move logic here
-    const specs = product?.specifications || [];
+    const specs = Array.isArray(product?.specifications) 
+        ? product.specifications 
+        : (product?.specifications ? Object.entries(product.specifications).map(([k, v]) => ({ key: k, value: v })) : []);
+
     const colorVariants = specs.filter(s => s.key?.toLowerCase().includes('color'));
     const ramSpecs = specs.filter(s => s.key?.toLowerCase() === 'ram');
     const romSpecs = specs.filter(s => s.key?.toLowerCase() === 'rom' || s.key?.toLowerCase() === 'storage' || s.key?.toLowerCase() === 'memory');
     const preCombined = specs.filter(s => 
-        (s.value?.includes('+') && (s.value?.toLowerCase().includes('gb') || s.value?.toLowerCase().includes('ram'))) ||
+        (s.value && typeof s.value === 'string' && s.value.includes('+') && (s.value.toLowerCase().includes('gb') || s.value.toLowerCase().includes('ram'))) ||
         s.key?.toLowerCase() === 'configuration'
     );
 
@@ -170,24 +173,28 @@ export default function ProductDetails() {
     }, [id]);
 
     useEffect(() => {
-        // This is moved here to be before early returns
-        const specs = product?.specifications || [];
-        const ramSpecs = specs.filter(s => s.key?.toLowerCase() === 'ram');
-        const romSpecs = specs.filter(s => s.key?.toLowerCase() === 'rom' || s.key?.toLowerCase() === 'storage' || s.key?.toLowerCase() === 'memory');
-        const colors = specs.filter(s => s.key?.toLowerCase().includes('color'));
-        const preCombined = specs.filter(s => 
-            (s.value?.includes('+') && (s.value?.toLowerCase().includes('gb') || s.value?.toLowerCase().includes('ram'))) ||
+        // Use the already calculated 'specs' from the component body
+        // But since we need it in useEffect, we recalculate or use local
+        const currentSpecs = Array.isArray(product?.specifications) 
+            ? product.specifications 
+            : (product?.specifications ? Object.entries(product.specifications).map(([k, v]) => ({ key: k, value: v })) : []);
+
+        const ramSpecs = currentSpecs.filter(s => s.key?.toLowerCase() === 'ram');
+        const romSpecs = currentSpecs.filter(s => s.key?.toLowerCase() === 'rom' || s.key?.toLowerCase() === 'storage' || s.key?.toLowerCase() === 'memory');
+        const colors = currentSpecs.filter(s => s.key?.toLowerCase().includes('color'));
+        const preCombined = currentSpecs.filter(s => 
+            (s.value && typeof s.value === 'string' && s.value.includes('+') && (s.value.toLowerCase().includes('gb') || s.value.toLowerCase().includes('ram'))) ||
             s.key?.toLowerCase() === 'configuration'
         );
 
-        if (colors.length > 0) setSelectedColorId(colors[0].variant_id);
+        if (colors.length > 0) setSelectedColorId(colors[0].variant_id || 0);
         
         if (preCombined.length > 0) {
-            setSelectedMemoryId(preCombined[0].variant_id);
+            setSelectedMemoryId(preCombined[0].variant_id || 0);
         } else if (romSpecs.length > 0) {
-            setSelectedMemoryId(romSpecs[0].variant_id);
+            setSelectedMemoryId(romSpecs[0].variant_id || 0);
         } else if (ramSpecs.length > 0) {
-            setSelectedMemoryId(ramSpecs[0].variant_id);
+            setSelectedMemoryId(ramSpecs[0].variant_id || 0);
         }
     }, [product]);
 
@@ -505,7 +512,7 @@ export default function ProductDetails() {
                         )}
 
 
-                        {product.specifications && product.specifications.map((spec, index) => (
+                        {specs && specs.map((spec, index) => (
                             spec.value && spec.value !== "N/A" && !['color', 'ram', 'rom', 'storage', 'memory'].some(k => spec.key.toLowerCase().includes(k)) && (
                                 <div key={index} className="border-b border-stone-100 pb-3 group hover:border-amber-600 transition-colors duration-500">
                                     <h5 className="text-[8px] font-black uppercase tracking-widest text-stone-400 mb-1 group-hover:text-amber-600 transition-colors capitalize">{spec.key}</h5>
