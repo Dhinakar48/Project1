@@ -2,6 +2,7 @@ import { motion } from "framer-motion";
 import { useNavigate } from "react-router-dom";
 import { useEffect, useState } from "react";
 import axios from "axios";
+import { featuredProductsArray } from "./data";
 
 export default function ShopAll() {
     const navigate = useNavigate();
@@ -15,10 +16,41 @@ export default function ShopAll() {
     const fetchProducts = async () => {
         setLoading(true);
         try {
+            // 1. Get Dynamic Products from Backend
             const res = await axios.get("http://localhost:5000/products");
-            setProducts(res.data);
+            const dynamicProducts = res.data;
+
+            // 2. Get Static Products from data.js and Map them
+            const staticProducts = featuredProductsArray.map(p => ({
+                product_id: p.id,
+                name: p.name,
+                price: p.variants[0].price.replace(/[^\d.]/g, ''), // Strip symbols for consistency
+                description: p.desc || p.title,
+                main_image: p.variants[0].img,
+                images: p.variants.map(v => v.img),
+                category: p.category,
+                isStatic: true
+            }));
+
+            // Deduplicate: Prioritize Dynamic, then add Unique Static
+            const dbIds = new Set(dynamicProducts.map(p => String(p.product_id)));
+            const uniqueStatic = staticProducts.filter(p => !dbIds.has(String(p.product_id)));
+            
+            setProducts([...dynamicProducts, ...uniqueStatic]);
         } catch (err) {
             console.error("Error fetching products:", err);
+            // Fallback to static products only
+            const staticProducts = featuredProductsArray.map(p => ({
+                product_id: p.id,
+                name: p.name,
+                price: p.variants[0].price.replace(/[^\d.]/g, ''),
+                description: p.desc || p.title,
+                main_image: p.variants[0].img,
+                images: p.variants.map(v => v.img),
+                category: p.category,
+                isStatic: true
+            }));
+            setProducts(staticProducts);
         } finally {
             setLoading(false);
         }

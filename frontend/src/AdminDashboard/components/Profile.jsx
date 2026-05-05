@@ -18,7 +18,7 @@ export default function Profile() {
    });
 
    useEffect(() => {
-      const admin = JSON.parse(localStorage.getItem('adminUser') || '{}');
+      const admin = JSON.parse(localStorage.getItem('admin') || '{}');
       const adminId = admin.id || 'ADM001';
       setLoading(true);
       axios.get(`http://localhost:5000/api/admin/profile/${adminId}`)

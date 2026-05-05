@@ -1,4 +1,5 @@
 import { createContext, useContext, useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import axios from "axios";
 import { productsData } from "./data";
 
@@ -8,27 +9,35 @@ const stripProduct = (product) => {
   if (!product) return null;
   const pId = product.product_id || product.id;
   
-  // Find the best image: either from images array or from first variant
+  // Try to get data from data.js if it's a static product
+  const staticData = productsData[pId];
+  const name = product.name || staticData?.name || "Unknown Product";
+  const brand = product.brand || staticData?.specs?.brand || "Electro";
+  
+  // Find the best image
   let primaryImg = "/placeholder-product.png";
   if (product.images && product.images.length > 0) {
     primaryImg = product.images[0];
+  } else if (staticData?.variants && staticData.variants.length > 0) {
+    primaryImg = staticData.variants[0].img;
   } else if (product.variants && product.variants.length > 0 && product.variants[0].img) {
     primaryImg = product.variants[0].img;
   }
 
   return {
     product_id: pId,
-    id: pId, // For compatibility
-    name: product.name,
-    price: product.price,
-    mrp: product.mrp || product.price,
-    brand: product.brand,
+    id: pId,
+    name: name,
+    price: product.price || staticData?.variants[0].price.replace(/[^\d.]/g, ''),
+    mrp: product.mrp || product.price || staticData?.variants[0].mrp?.replace(/[^\d.]/g, '') || staticData?.variants[0].price.replace(/[^\d.]/g, ''),
+    brand: brand,
     images: [primaryImg],
-    discount: product.discount || 0
+    discount: product.discount || staticData?.discount || 0
   };
 };
 
 export function StoreProvider({ children }) {
+  const navigate = useNavigate();
   const [cart, setCart] = useState(() => {
     const saved = localStorage.getItem("cart");
     return saved ? JSON.parse(saved) : [];
@@ -67,6 +76,25 @@ export function StoreProvider({ children }) {
 
     return profile;
   });
+
+  const logout = async () => {
+    try {
+      if (userProfile) {
+        const userId = userProfile.customerId || userProfile.id;
+        const userType = userProfile.seller_id ? 'seller' : 'customer';
+        await axios.post("http://localhost:5000/api/logout", { userId, userType });
+      }
+    } catch (err) {
+      console.error("Backend logout failed:", err);
+    } finally {
+      localStorage.removeItem("user");
+      localStorage.removeItem("userProfile");
+      localStorage.removeItem("adminToken");
+      localStorage.removeItem("adminActiveTab");
+      setUserProfile(null);
+      navigate("/login");
+    }
+  };
 
   useEffect(() => {
     try {
@@ -217,6 +245,13 @@ export function StoreProvider({ children }) {
   }, [wishlist]);
 
   const addToCart = async (product, variant) => {
+    const savedUser = localStorage.getItem("user");
+    if (!savedUser) {
+      alert("Please login to add products to your cart.");
+      navigate("/login");
+      return false;
+    }
+
     const lightProduct = stripProduct(product);
     setCart((prev) => {
       const existing = prev.find((item) => item.product_id === lightProduct.product_id && item.variantId === variant.id);
@@ -231,20 +266,18 @@ export function StoreProvider({ children }) {
       return [...prev, { ...lightProduct, variant: { ...variant, img: variantImg }, variantId: variant.id, quantity: 1 }];
     });
 
-    const savedUser = localStorage.getItem("user");
-    if (savedUser) {
-      const user = JSON.parse(savedUser);
-      if (user.customerId) {
-        try {
-          await axios.post("http://localhost:5000/cart/add", {
-            customerId: user.customerId,
-            productId: lightProduct.product_id,
-            variantId: variant.id,
-            quantity: 1
-          });
-        } catch (err) { console.error(err); }
-      }
+    const user = JSON.parse(savedUser);
+    if (user.customerId) {
+      try {
+        await axios.post("http://localhost:5000/cart/add", {
+          customerId: user.customerId,
+          productId: lightProduct.product_id,
+          variantId: variant.id,
+          quantity: 1
+        });
+      } catch (err) { console.error(err); }
     }
+    return true;
   };
 
   const removeFromCart = async (productId, variantId) => {
@@ -358,8 +391,11 @@ export function StoreProvider({ children }) {
   // Discount = Bag Total - Subtotal
   
   const rawSubtotal = cart.reduce((total, item) => {
-    const mrp = parseFloat(String(item.variant?.mrp || item.mrp || item.variant?.price || item.price || 0).replace(/[^\d.]/g, ''));
-    return total + mrp * item.quantity;
+    const mrp = parseFloat(String(item.variant?.mrp || item.mrp || 0).replace(/[^\d.]/g, ''));
+    const price = parseFloat(String(item.variant?.price || item.price || 0).replace(/[^\d.]/g, ''));
+    // Bag Total should be the higher of the two (MRP or Price) to prevent logical errors
+    const effectiveMrp = Math.max(mrp, price);
+    return total + effectiveMrp * item.quantity;
   }, 0);
 
   const subtotal = cart.reduce((total, item) => {
@@ -404,7 +440,8 @@ export function StoreProvider({ children }) {
         couponDiscountAmount,
         finalTotal,
         userProfile,
-        setUserProfile
+        setUserProfile,
+        logout
       }}
     >
       {children}

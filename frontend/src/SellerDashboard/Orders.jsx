@@ -38,20 +38,44 @@ export default function Orders({ globalSearch }) {
     if (sellerId) {
       try {
         const res = await axios.get(`http://localhost:5000/seller-orders/${sellerId}`);
-        setOrders(res.data.map(o => ({
-           id: o.order_id,
-           item_id: o.order_item_id,
-           date: new Date(o.placed_at).toLocaleDateString('en-IN', { month: 'short', day: 'numeric', year: 'numeric' }),
-           time: new Date(o.placed_at).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' }),
-           name: o.shipping_name || o.customer_name,
-           email: o.customer_email,
-           item: o.product_name,
-           image: o.product_images && o.product_images.length > 0 ? o.product_images[0] : "/placeholder-product.png",
-           qty: o.quantity,
-           amount: `₹${parseFloat(o.total_amount).toLocaleString()}`,
-           unitPrice: `₹${parseFloat(o.unit_price).toLocaleString()}`,
-           status: o.item_status || o.order_status,
-           statusColor: getStatusColor(o.item_status || o.order_status)
+        
+        // Group by order_id
+        const grouped = res.data.reduce((acc, o) => {
+           if (!acc[o.order_id]) {
+              acc[o.order_id] = {
+                 id: o.order_id,
+                 date: new Date(o.placed_at).toLocaleDateString('en-IN', { month: 'short', day: 'numeric', year: 'numeric' }),
+                 time: new Date(o.placed_at).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' }),
+                 name: o.shipping_name || o.customer_name,
+                 email: o.customer_email,
+                 status: o.order_status,
+                 statusColor: getStatusColor(o.order_status),
+                 totalAmount: 0,
+                 items: []
+              };
+           }
+           acc[o.order_id].items.push({
+              item_id: o.order_item_id,
+              name: o.product_name,
+              image: o.product_images && o.product_images.length > 0 ? o.product_images[0] : "/placeholder-product.png",
+              qty: o.quantity,
+              unitPrice: parseFloat(o.unit_price),
+              total: parseFloat(o.total_amount)
+           });
+           acc[o.order_id].totalAmount += parseFloat(o.total_amount);
+           return acc;
+        }, {});
+
+        setOrders(Object.values(grouped).map(o => ({
+           ...o,
+           item: o.items.length > 1 ? `${o.items[0].name} + ${o.items.length - 1} more` : o.items[0].name,
+           image: o.items[0].image,
+           qty: o.items.reduce((sum, it) => sum + it.qty, 0),
+           amount: `₹${o.totalAmount.toLocaleString()}`,
+           unitPrice: `₹${o.items[0].unitPrice.toLocaleString()}`,
+           // Use the item_id of the first item as the unique key for the row if needed, 
+           // but we'll use order_id (id) instead.
+           item_id: o.id 
         })));
       } catch (err) {
         console.error("Error fetching seller orders:", err);

@@ -3,6 +3,7 @@ const router = express.Router();
 const bcrypt = require('bcryptjs');
 const pool = require('../db');
 const { encrypt, decrypt } = require('../utils/encryption');
+const { recordSession } = require('./live');
 
 // Register Customer
 router.post("/register", async (req, res) => {
@@ -17,6 +18,14 @@ router.post("/register", async (req, res) => {
 
     const hashedPassword = await bcrypt.hash(password, 10);
     await pool.query("INSERT INTO customers (email, password, customer_id) VALUES ($1, $2, $3)", [email, hashedPassword, customerId]);
+    
+    // ✅ FIX: Shorten notification_id (max 20)
+    const regNotifId = `NC${customerId.replace('CUS', '')}${Date.now().toString(36)}`;
+    await pool.query(
+      "INSERT INTO notifications (notification_id, type, message) VALUES ($1, $2, $3)",
+      [regNotifId.substring(0, 20), 'New User', `New customer registered: ${email} (${customerId})`]
+    );
+
     res.json({ message: "Registered successfully" });
   } catch (err) {
     console.error(err);
@@ -53,6 +62,8 @@ router.post("/login", async (req, res) => {
       console.warn(`[AUTH-FAILURE] Invalid password for ${email}`);
       return res.status(400).json({ message: "Invalid password" });
     }
+
+    await recordSession(user.customer_id, 'customer', req);
 
     res.json({
       user: {
@@ -113,6 +124,13 @@ router.post("/seller-register", async (req, res) => {
       [seller_id, name, phone, 'Address Pending', 'City Pending', 'State Pending', '000000', true]
     );
 
+    // ✅ FIX: Shorten notification_id (max 20)
+    const selRegNotifId = `NS${seller_id.replace('SEL', '')}${Date.now().toString(36)}`;
+    await pool.query(
+      "INSERT INTO notifications (notification_id, type, message) VALUES ($1, $2, $3)",
+      [selRegNotifId.substring(0, 20), 'New Seller', `New merchant registered: ${name} (${seller_id})`]
+    );
+
     res.json({ message: "Seller registered successfully", seller_id });
   } catch (err) {
     console.error(err);
@@ -146,6 +164,7 @@ router.post("/seller-login", async (req, res) => {
     }
 
     console.log("Login successful for:", seller.email);
+    await recordSession(seller.seller_id, 'seller', req);
     res.json({
       seller: {
         id: seller.seller_id,
@@ -275,6 +294,21 @@ router.post("/seller/update-profile", async (req, res) => {
          city=EXCLUDED.city, state=EXCLUDED.state, pincode=EXCLUDED.pincode, country=EXCLUDED.country, updated_at=CURRENT_TIMESTAMP`,
         [seller_id, name, phone, address.address1, address.address2, address.city, address.state, address.pincode, address.country || 'India', true]
       );
+
+      // Sync with Shiprocket Pickup Locations
+      await client.query(`
+        INSERT INTO seller_pickup_locations (
+          seller_id, location_name, contact_name, contact_phone, address_line_1, city, state, pincode, is_default
+        ) VALUES ($1, 'Primary', $2, $3, $4, $5, $6, $7, true)
+        ON CONFLICT (seller_id) WHERE is_default = true DO UPDATE SET
+          contact_name=EXCLUDED.contact_name,
+          contact_phone=EXCLUDED.contact_phone,
+          address_line_1=EXCLUDED.address_line_1,
+          city=EXCLUDED.city,
+          state=EXCLUDED.state,
+          pincode=EXCLUDED.pincode,
+          updated_at=NOW()
+      `, [seller_id, name, phone, address.address1, address.city, address.state, address.pincode]);
     }
     
     await client.query('COMMIT');

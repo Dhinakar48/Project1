@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
+import { featuredProductsArray } from "./data";
 
 export default function Featured() {
     const navigate = useNavigate();
@@ -10,19 +11,35 @@ export default function Featured() {
 
     useEffect(() => {
         const fetchFeatured = async () => {
+            let combinedProducts = [];
+            
+            // 1. Get Static Products from data.js
+            const staticMapped = featuredProductsArray.slice(0, 3).map(p => ({
+                id: p.id,
+                name: p.name,
+                price: p.variants[0].price,
+                img: p.variants[0].img,
+                isStatic: true
+            }));
+            
             try {
-                const res = await axios.get("http://127.0.0.1:5000/featured-products");
-                // Map the DB format to the UI format
-                const mapped = res.data.map(p => ({
+                // 2. Get Dynamic Products from Backend
+                const res = await axios.get("http://localhost:5000/featured-products");
+                const dynamicMapped = res.data.map(p => ({
                     id: p.product_id,
                     name: p.name,
                     price: `₹${parseFloat(p.price).toLocaleString()}`,
-                    img: (p.images && p.images.length > 0) ? p.images[0] : "/placeholder-product.png"
+                    img: (p.images && p.images.length > 0) ? p.images[0] : (p.main_image || "/placeholder-product.png"),
+                    isStatic: false
                 }));
-                setProducts(mapped);
+                
+                // Combine them - Backend products first
+                combinedProducts = [...dynamicMapped, ...staticMapped];
             } catch (err) {
                 console.error("Error fetching featured products:", err);
+                combinedProducts = staticMapped; // Fallback to static only
             } finally {
+                setProducts(combinedProducts);
                 setIsLoading(false);
             }
         };
@@ -49,7 +66,7 @@ export default function Featured() {
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-12 md:gap-16 ">
-                {products.slice(0, 3).map((item, i) => {
+                {products.slice(0, 6).map((item, i) => {
                     return (
                         <motion.div
                             key={item.id}

@@ -37,18 +37,26 @@ export default function ProductDetails({ product, onBack, onEdit, onDeleteComple
                </div>
             </div>
             <div className="flex gap-3">
-               <button 
-                  onClick={() => onEdit(product)}
-                  className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-white border border-stone-200 text-stone-600 font-bold text-sm hover:bg-stone-50 transition-all"
-               >
-                  <FaEdit className="text-indigo-500" /> Edit
-               </button>
-               <button 
-                  onClick={handleDelete}
-                  className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-rose-50 text-rose-600 font-bold text-sm hover:bg-rose-600 hover:text-white transition-all"
-               >
-                  <FaTrashAlt /> Delete
-               </button>
+               {!product.isStatic ? (
+                  <>
+                     <button 
+                        onClick={() => onEdit(product)}
+                        className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-white border border-stone-200 text-stone-600 font-bold text-sm hover:bg-stone-50 transition-all"
+                     >
+                        <FaEdit className="text-indigo-500" /> Edit
+                     </button>
+                     <button 
+                        onClick={handleDelete}
+                        className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-rose-50 text-rose-600 font-bold text-sm hover:bg-rose-600 hover:text-white transition-all"
+                     >
+                        <FaTrashAlt /> Delete
+                     </button>
+                  </>
+               ) : (
+                  <div className="px-5 py-2.5 rounded-xl bg-stone-100 border border-stone-200 text-stone-400 font-bold text-xs uppercase tracking-widest flex items-center gap-2">
+                     <FaBoxOpen className="text-stone-300" /> System Asset (Read-Only)
+                  </div>
+               )}
             </div>
          </div>
 

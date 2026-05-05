@@ -21,7 +21,7 @@ export default function Navbar() {
   const [currentOffer, setCurrentOffer] = useState(0);
   const location = useLocation();
   const isSellerDashboard = location.pathname === "/seller-dashboard";
-  const { cart, wishlist } = useStore();
+  const { cart, wishlist, logout } = useStore();
   const navigate = useNavigate();
   const userRef = useRef(null);
 
@@ -30,7 +30,7 @@ export default function Navbar() {
 
   useEffect(() => {
     if (activeUser.email) {
-      axios.get(`http://127.0.0.1:5000/profile/${activeUser.email}`)
+      axios.get(`http://localhost:5000/profile/${activeUser.email}`)
         .then(res => setProfileImg(res.data.profile_image))
         .catch(err => console.error("Error fetching profile pic:", err));
     }
@@ -257,9 +257,8 @@ export default function Navbar() {
                       {localStorage.getItem("user") ? (
                         <button
                           onClick={() => {
-                            localStorage.removeItem("user");
+                            logout();
                             setUserDropdown(false);
-                            navigate("/login");
                           }}
                           className="px-4 py-2.5 text-xs font-black uppercase tracking-widest text-red-600 hover:bg-red-50 transition rounded-lg text-left"
                         >
@@ -371,9 +370,8 @@ export default function Navbar() {
                 {localStorage.getItem("user") ? (
                   <button
                     onClick={() => {
-                      localStorage.removeItem("user");
+                      logout();
                       setOpen(false);
-                      navigate("/login");
                     }}
                     className="flex items-center gap-3 text-red-600 font-black pt-2 border-t border-stone-200 mt-2 text-left w-full"
                   >

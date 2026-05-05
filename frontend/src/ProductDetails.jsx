@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { useParams, Link, useLocation, useNavigate } from "react-router-dom";
 import axios from "axios";
 import { useStore } from "./StoreContext";
+import { productsData } from "./data";
 import { FaBagShopping, FaCheck, FaHeart } from "react-icons/fa6";
 
 export default function ProductDetails() {
@@ -101,7 +102,7 @@ export default function ProductDetails() {
         if (newReview.comment) {
             const payload = {
                 customerId: userProfile.customerId,
-                productId: id,
+                productId: product.product_id || id,
                 rating: newReview.rating,
                 body: newReview.comment,
                 title: "Verified Purchase",
@@ -113,8 +114,8 @@ export default function ProductDetails() {
                 setReviews([res.data, ...reviews]);
                 setNewReview({ rating: 5, comment: "", img: null });
             } catch (err) {
-                console.error("Error posting review:", err);
-                alert("Failed to post review. Please try again.");
+                console.error("Error posting review:", err.response?.data || err);
+                alert(err.response?.data?.message || "Failed to post review. Please try again.");
             }
         }
     };
@@ -122,6 +123,7 @@ export default function ProductDetails() {
     const fetchProduct = async () => {
         setLoading(true);
         try {
+            // 1. Try Backend
             const res = await axios.get(`http://localhost:5000/product/${id}`);
             const data = res.data;
             setProduct(data);
@@ -132,14 +134,45 @@ export default function ProductDetails() {
                 setRelatedProducts(relatedRes.data.filter(p => p.product_id !== data.product_id).slice(0, 4));
             }
         } catch (err) {
-            console.error("Error fetching product:", err);
+            console.warn("Backend product fetch failed, checking static data...", err);
+            // 2. Try Static data.js
+            const staticP = productsData[id];
+            if (staticP) {
+                const mapped = {
+                    product_id: staticP.id,
+                    name: staticP.name,
+                    brand: staticP.specs.brand || "Electro",
+                    price: staticP.variants[0].price.replace(/[^\d.]/g, ''),
+                    mrp: (staticP.variants[0].mrp || staticP.variants[0].price).replace(/[^\d.]/g, ''),
+                    stock_quantity: 100,
+                    description: staticP.desc || staticP.title,
+                    images: staticP.variants.map(v => v.img),
+                    category_name: staticP.category,
+                    specifications: Object.entries(staticP.specs).map(([k, v]) => ({ key: k, value: v, variant_id: `static-${staticP.id}-${k}` })),
+                    isStatic: true
+                };
+                setProduct(mapped);
+                
+                // Related products from static data
+                const related = Object.values(productsData)
+                    .filter(p => p.category === staticP.category && p.id !== staticP.id)
+                    .slice(0, 4)
+                    .map(p => ({
+                        product_id: p.id,
+                        name: p.name,
+                        price: p.variants[0].price.replace(/[^\d.]/g, ''),
+                        main_image: p.variants[0].img,
+                        category_name: p.category
+                    }));
+                setRelatedProducts(related);
+            }
         } finally {
             setLoading(false);
         }
     };
 
-    const handleAddToCart = () => {
-        if (!product) return;
+    const handleAddToCart = async () => {
+        if (!product) return false;
         const storeProduct = {
             id: product.product_id,
             name: product.name,
@@ -155,14 +188,19 @@ export default function ProductDetails() {
             mrp: activeMRP,
             img: activeImage
         };
-        addToCart(storeProduct, variant);
-        setAddedToCart(true);
-        setTimeout(() => setAddedToCart(false), 2000);
+        const success = await addToCart(storeProduct, variant);
+        if (success) {
+            setAddedToCart(true);
+            setTimeout(() => setAddedToCart(false), 2000);
+        }
+        return success;
     };
 
-    const handleBuyNow = () => {
-        handleAddToCart();
-        navigate("/order");
+    const handleBuyNow = async () => {
+        const success = await handleAddToCart();
+        if (success) {
+            navigate("/order");
+        }
     };
 
     useEffect(() => {
@@ -272,7 +310,7 @@ export default function ProductDetails() {
                 animate={{ opacity: 1, x: 0 }}
                 transition={{ duration: 0.5 }}
             >
-                <Link to={product?.category_name ? `/category/${product.category_name}` : "/"} className="inline-flex items-center gap-2 text-stone-600 hover:text-stone-900 transition duration-300 group">
+                <Link to={`/category/${product.category_name || product.category || ''}`} className="inline-flex items-center gap-2 text-stone-600 hover:text-stone-900 transition duration-300 group">
                     <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 group-hover:-translate-x-1 transition" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
                     </svg>

@@ -39,7 +39,18 @@ export default function AddProduct({ onBack, onAddProduct, initialData, sellerId
   });
 
   const [images, setImages] = useState(initialData && initialData.images ? initialData.images : []);
-  const [specifications, setSpecifications] = useState(initialData && initialData.specifications ? initialData.specifications : [{ key: "", value: "", price: "", stock: "", sku: "" }]);
+  const [specifications, setSpecifications] = useState(() => {
+    if (initialData && initialData.specifications) {
+      if (Array.isArray(initialData.specifications)) return initialData.specifications;
+      try {
+        const parsed = JSON.parse(initialData.specifications);
+        return Array.isArray(parsed) ? parsed : [{ key: "", value: "", price: "", stock: "", sku: "" }];
+      } catch (e) {
+        return [{ key: "", value: "", price: "", stock: "", sku: "" }];
+      }
+    }
+    return [{ key: "", value: "", price: "", stock: "", sku: "" }];
+  });
 
   useEffect(() => {
     fetchCategories();
@@ -53,6 +64,23 @@ export default function AddProduct({ onBack, onAddProduct, initialData, sellerId
       console.error("Error fetching categories:", err);
     }
   };
+
+  useEffect(() => {
+    if (initialData && initialData.specifications) {
+      if (Array.isArray(initialData.specifications)) {
+        setSpecifications(initialData.specifications.length > 0 ? initialData.specifications : [{ key: "", value: "", price: "", stock: "", sku: "" }]);
+      } else {
+        try {
+          const parsed = JSON.parse(initialData.specifications);
+          setSpecifications(Array.isArray(parsed) && parsed.length > 0 ? parsed : [{ key: "", value: "", price: "", stock: "", sku: "" }]);
+        } catch (e) {
+          setSpecifications([{ key: "", value: "", price: "", stock: "", sku: "" }]);
+        }
+      }
+    } else {
+      setSpecifications([{ key: "", value: "", price: "", stock: "", sku: "" }]);
+    }
+  }, [initialData]);
 
   const handleInputChange = (e) => {
     const { name, value, type, checked } = e.target;

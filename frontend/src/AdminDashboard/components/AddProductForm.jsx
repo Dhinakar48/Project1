@@ -19,7 +19,14 @@ export default function AddProductForm({ onBack, onComplete, initialData }) {
       discount: initialData?.discount || 0,
       is_featured: initialData?.is_featured || false,
       is_active: initialData?.is_active !== undefined ? initialData.is_active : true,
-      product_type: initialData?.product_type || "",
+      weight: initialData?.weight || "",
+      height: initialData?.height || "",
+      width: initialData?.width || "",
+      breadth: initialData?.breadth || "",
+      seller_id: (() => {
+         const admin = JSON.parse(localStorage.getItem('admin') || '{}');
+         return initialData?.seller_id || admin.id || "ADM001";
+      })(),
       specifications: (() => {
          const raw = initialData?.specifications;
          if (!raw) return [{ key: "", value: "", price: "", stock: "", sku: "" }];
@@ -55,6 +62,28 @@ export default function AddProductForm({ onBack, onComplete, initialData }) {
          ...formData, 
          specifications: formData.specifications.filter((_, i) => i !== index)
       });
+   };
+
+   const handleImageUpload = (e) => {
+      const files = Array.from(e.target.files);
+      Promise.all(
+         files.map((file) => {
+            return new Promise((resolve) => {
+               const reader = new FileReader();
+               reader.onloadend = () => resolve(reader.result);
+               reader.readAsDataURL(file);
+            });
+         })
+      ).then((base64Images) => {
+         setFormData(prev => ({...prev, images: [...prev.images, ...base64Images]}));
+      });
+   };
+
+   const removeImage = (index) => {
+      setFormData(prev => ({
+         ...prev,
+         images: prev.images.filter((_, i) => i !== index)
+      }));
    };
 
    const handleSubmit = async (e) => {
@@ -146,46 +175,83 @@ export default function AddProductForm({ onBack, onComplete, initialData }) {
 
                <section className="bg-white p-8 rounded-[2.5rem] border border-stone-100 shadow-sm space-y-6">
                   <h4 className="text-sm font-bold text-stone-900 border-b border-stone-50 pb-4 tracking-tight">Pricing & Inventory</h4>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                     <div>
-                        <label className="text-[10px] font-bold text-stone-400 uppercase tracking-widest mb-2 block ml-1">Selling Price (₹)</label>
-                        <input 
-                           required type="number"
-                           className="w-full px-5 py-4 rounded-2xl border border-stone-200 bg-stone-50/30 text-sm focus:bg-white focus:ring-4 focus:ring-indigo-500/5 transition-all outline-none"
-                           placeholder="0.00"
-                           value={formData.price}
-                           onChange={(e) => setFormData({...formData, price: e.target.value})}
-                        />
+                  <div className="space-y-6">
+                     {/* Row 1: Price, MRP, Stock, Weight */}
+                     <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+                        <div>
+                           <label className="text-[10px] font-bold text-stone-400 uppercase tracking-widest mb-2 block ml-1">Selling Price (₹) *</label>
+                           <input 
+                              required type="number"
+                              className="w-full px-5 py-4 rounded-2xl border border-stone-200 bg-stone-50/30 text-sm focus:bg-white focus:ring-4 focus:ring-indigo-500/5 transition-all outline-none"
+                              placeholder="0.00"
+                              value={formData.price}
+                              onChange={(e) => setFormData({...formData, price: e.target.value})}
+                           />
+                        </div>
+                        <div>
+                           <label className="text-[10px] font-bold text-stone-400 uppercase tracking-widest mb-2 block ml-1">MRP (₹)</label>
+                           <input 
+                              required type="number"
+                              className="w-full px-5 py-4 rounded-2xl border border-stone-200 bg-stone-50/30 text-sm focus:bg-white focus:ring-4 focus:ring-indigo-500/5 transition-all outline-none"
+                              placeholder="0.00"
+                              value={formData.mrp}
+                              onChange={(e) => setFormData({...formData, mrp: e.target.value})}
+                           />
+                        </div>
+                        <div>
+                           <label className="text-[10px] font-bold text-stone-400 uppercase tracking-widest mb-2 block ml-1">Stock Qty *</label>
+                           <input 
+                              required type="number"
+                              className="w-full px-5 py-4 rounded-2xl border border-stone-200 bg-stone-50/30 text-sm focus:bg-white focus:ring-4 focus:ring-indigo-500/5 transition-all outline-none"
+                              placeholder="0"
+                              value={formData.stock_quantity}
+                              onChange={(e) => setFormData({...formData, stock_quantity: e.target.value})}
+                           />
+                        </div>
+                        <div>
+                           <label className="text-[10px] font-bold text-stone-400 uppercase tracking-widest mb-2 block ml-1">Weight (grams)</label>
+                           <input 
+                              type="number" step="0.01"
+                              className="w-full px-5 py-4 rounded-2xl border border-stone-200 bg-stone-50/30 text-sm focus:bg-white focus:ring-4 focus:ring-indigo-500/5 transition-all outline-none"
+                              placeholder="0.00"
+                              value={formData.weight}
+                              onChange={(e) => setFormData({...formData, weight: e.target.value})}
+                           />
+                        </div>
                      </div>
-                     <div>
-                        <label className="text-[10px] font-bold text-stone-400 uppercase tracking-widest mb-2 block ml-1">MRP (₹)</label>
-                        <input 
-                           required type="number"
-                           className="w-full px-5 py-4 rounded-2xl border border-stone-200 bg-stone-50/30 text-sm focus:bg-white focus:ring-4 focus:ring-indigo-500/5 transition-all outline-none"
-                           placeholder="0.00"
-                           value={formData.mrp}
-                           onChange={(e) => setFormData({...formData, mrp: e.target.value})}
-                        />
-                     </div>
-                     <div>
-                        <label className="text-[10px] font-bold text-stone-400 uppercase tracking-widest mb-2 block ml-1">Current Stock</label>
-                        <input 
-                           required type="number"
-                           className="w-full px-5 py-4 rounded-2xl border border-stone-200 bg-stone-50/30 text-sm focus:bg-white focus:ring-4 focus:ring-indigo-500/5 transition-all outline-none"
-                           placeholder="e.g. 50"
-                           value={formData.stock_quantity}
-                           onChange={(e) => setFormData({...formData, stock_quantity: e.target.value})}
-                        />
-                     </div>
-                     <div>
-                        <label className="text-[10px] font-bold text-stone-400 uppercase tracking-widest mb-2 block ml-1">SKU Number</label>
-                        <input 
-                           type="text"
-                           className="w-full px-5 py-4 rounded-2xl border border-stone-200 bg-stone-50/30 text-sm focus:bg-white focus:ring-4 focus:ring-indigo-500/5 transition-all outline-none"
-                           placeholder="SKU-XXXX-XXXX"
-                           value={formData.sku}
-                           onChange={(e) => setFormData({...formData, sku: e.target.value})}
-                        />
+
+                     {/* Row 2: Height, Width, Breadth */}
+                     <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                        <div>
+                           <label className="text-[10px] font-bold text-stone-400 uppercase tracking-widest mb-2 block ml-1">Height (mm)</label>
+                           <input 
+                              type="number" step="0.01"
+                              className="w-full px-5 py-4 rounded-2xl border border-stone-200 bg-stone-50/30 text-sm focus:bg-white focus:ring-4 focus:ring-indigo-500/5 transition-all outline-none"
+                              placeholder="0.00"
+                              value={formData.height}
+                              onChange={(e) => setFormData({...formData, height: e.target.value})}
+                           />
+                        </div>
+                        <div>
+                           <label className="text-[10px] font-bold text-stone-400 uppercase tracking-widest mb-2 block ml-1">Width (mm)</label>
+                           <input 
+                              type="number" step="0.01"
+                              className="w-full px-5 py-4 rounded-2xl border border-stone-200 bg-stone-50/30 text-sm focus:bg-white focus:ring-4 focus:ring-indigo-500/5 transition-all outline-none"
+                              placeholder="0.00"
+                              value={formData.width}
+                              onChange={(e) => setFormData({...formData, width: e.target.value})}
+                           />
+                        </div>
+                        <div>
+                           <label className="text-[10px] font-bold text-stone-400 uppercase tracking-widest mb-2 block ml-1">Breadth (mm)</label>
+                           <input 
+                              type="number" step="0.01"
+                              className="w-full px-5 py-4 rounded-2xl border border-stone-200 bg-stone-50/30 text-sm focus:bg-white focus:ring-4 focus:ring-indigo-500/5 transition-all outline-none"
+                              placeholder="0.00"
+                              value={formData.breadth}
+                              onChange={(e) => setFormData({...formData, breadth: e.target.value})}
+                           />
+                        </div>
                      </div>
                   </div>
                </section>
@@ -298,13 +364,13 @@ export default function AddProductForm({ onBack, onComplete, initialData }) {
                         />
                      </div>
                      <div>
-                        <label className="text-[10px] font-bold text-stone-400 uppercase tracking-widest mb-2 block ml-1">Product Type</label>
+                        <label className="text-[10px] font-bold text-stone-400 uppercase tracking-widest mb-2 block ml-1">SKU Number</label>
                         <input 
                            type="text"
                            className="w-full px-5 py-4 rounded-2xl border border-stone-200 bg-stone-50/30 text-sm focus:bg-white focus:ring-4 focus:ring-indigo-500/5 transition-all outline-none"
-                           placeholder="e.g. Wireless, Smart, Portable"
-                           value={formData.product_type}
-                           onChange={(e) => setFormData({...formData, product_type: e.target.value})}
+                           placeholder="SKU-XXXX-XXXX"
+                           value={formData.sku}
+                           onChange={(e) => setFormData({...formData, sku: e.target.value})}
                         />
                      </div>
                   </div>
@@ -312,35 +378,51 @@ export default function AddProductForm({ onBack, onComplete, initialData }) {
 
                <section className="bg-white p-8 rounded-[2.5rem] border border-stone-100 shadow-sm space-y-6">
                   <h4 className="text-sm font-bold text-stone-900 border-b border-stone-50 pb-4 tracking-tight">Media Gallery</h4>
-                  <div className="space-y-4">
-                     <div className="relative group">
-                        <input 
-                           type="text"
-                           className="w-full px-5 py-4 rounded-2xl border border-stone-200 bg-stone-50/30 text-sm focus:bg-white focus:ring-4 focus:ring-indigo-500/5 transition-all outline-none"
-                           placeholder="Paste Image URL & Enter"
-                           onKeyDown={(e) => {
-                              if (e.key === 'Enter' && e.target.value) {
-                                 e.preventDefault();
-                                 setFormData({...formData, images: [...formData.images, e.target.value]});
-                                 e.target.value = '';
-                              }
-                           }}
-                        />
-                        <FaImage className="absolute right-5 top-1/2 -translate-y-1/2 text-stone-300" />
-                     </div>
-                     <div className="grid grid-cols-3 gap-3">
-                        {formData.images.map((img, i) => (
-                           <div key={i} className="group relative aspect-square rounded-2xl overflow-hidden border border-stone-100 shadow-sm">
-                              <img src={img} alt="" className="w-full h-full object-cover" />
-                              <button 
-                                 type="button"
-                                 onClick={() => setFormData({...formData, images: formData.images.filter((_, idx) => idx !== i)})}
-                                 className="absolute inset-0 bg-rose-500/80 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
-                              >
-                                 <FaTimes />
-                              </button>
-                           </div>
-                        ))}
+                  
+                  <div className="space-y-5">
+                     <label className="flex flex-col items-center justify-center w-full h-40 border-2 border-dashed border-stone-200 rounded-[2rem] bg-stone-50/50 hover:bg-stone-50 hover:border-indigo-400 transition-all cursor-pointer group">
+                        <div className="w-12 h-12 rounded-full bg-white flex items-center justify-center text-stone-300 group-hover:text-indigo-500 group-hover:scale-110 transition-all shadow-sm mb-3">
+                           <FaImage />
+                        </div>
+                        <span className="text-[11px] font-black uppercase tracking-widest text-stone-400 group-hover:text-indigo-600 transition-colors">Click to upload assets</span>
+                        <span className="text-[9px] text-stone-400 mt-1">PNG, JPG, WEBP — Multi-select supported</span>
+                        <input type="file" multiple accept="image/*" className="hidden" onChange={handleImageUpload} />
+                     </label>
+
+                     {formData.images.length > 0 && (
+                        <div className="grid grid-cols-3 gap-4">
+                           {formData.images.map((img, i) => (
+                              <div key={i} className="group relative aspect-square rounded-2xl overflow-hidden border border-stone-100 shadow-sm bg-stone-50">
+                                 <img src={img} alt="" className="w-full h-full object-contain p-2" />
+                                 <button 
+                                    type="button"
+                                    onClick={() => removeImage(i)}
+                                    className="absolute top-2 right-2 w-7 h-7 bg-white/90 text-rose-500 rounded-lg flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all shadow-md hover:bg-rose-500 hover:text-white"
+                                 >
+                                    <FaTimes size={10} />
+                                 </button>
+                              </div>
+                           ))}
+                        </div>
+                     )}
+
+                     <div className="pt-4 border-t border-stone-50">
+                        <label className="text-[9px] font-black text-stone-400 uppercase tracking-widest ml-1 mb-2 block">Or Paste Remote URL</label>
+                        <div className="relative group">
+                           <input 
+                              type="text"
+                              className="w-full px-5 py-3.5 rounded-xl border border-stone-100 bg-stone-50/30 text-xs focus:bg-white focus:ring-4 focus:ring-indigo-500/5 transition-all outline-none font-bold"
+                              placeholder="https://example.com/image.jpg"
+                              onKeyDown={(e) => {
+                                 if (e.key === 'Enter' && e.target.value) {
+                                    e.preventDefault();
+                                    setFormData({...formData, images: [...formData.images, e.target.value]});
+                                    e.target.value = '';
+                                 }
+                              }}
+                           />
+                           <FaPlus className="absolute right-4 top-1/2 -translate-y-1/2 text-stone-300 text-[10px]" />
+                        </div>
                      </div>
                   </div>
                </section>

@@ -7,7 +7,10 @@ router.get("/cart/:customerId", async (req, res) => {
     const result = await pool.query(`
       SELECT ci.*, p.name, p.price as base_price, p.mrp as base_mrp, p.images, p.brand, p.discount, 
              pv.price as variant_price, pv.mrp as variant_mrp, pv.variant_name, pv.variant_value
-      FROM cart_items ci JOIN carts c ON ci.cart_id = c.cart_id JOIN products p ON ci.product_id = p.product_id LEFT JOIN product_variants pv ON ci.variant_id = pv.variant_id
+      FROM cart_items ci 
+      JOIN carts c ON ci.cart_id = c.cart_id 
+      LEFT JOIN products p ON ci.product_id = p.product_id 
+      LEFT JOIN product_variants pv ON ci.variant_id = pv.variant_id
       WHERE c.customer_id = $1 ORDER BY ci.added_at ASC
     `, [req.params.customerId]);
     res.json(result.rows);
@@ -128,7 +131,13 @@ router.post("/wishlist/toggle", async (req, res) => {
 
 router.get("/wishlist/:customerId", async (req, res) => {
   try {
-    const result = await pool.query("SELECT p.* FROM products p JOIN wishlist_items wi ON p.product_id=wi.product_id JOIN wishlists w ON wi.wishlist_id=w.wishlist_id WHERE w.customer_id=$1", [req.params.customerId]);
+    const result = await pool.query(`
+      SELECT wi.*, p.name, p.price, p.mrp, p.images, p.brand, p.discount
+      FROM wishlist_items wi 
+      JOIN wishlists w ON wi.wishlist_id = w.wishlist_id 
+      LEFT JOIN products p ON wi.product_id = p.product_id 
+      WHERE w.customer_id = $1
+    `, [req.params.customerId]);
     res.json(result.rows);
   } catch (err) { res.status(500).json({ message: "Fetch wishlist error" }); }
 });

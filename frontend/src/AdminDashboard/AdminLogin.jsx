@@ -17,11 +17,12 @@ export default function AdminLogin() {
       setError("");
 
       try {
-         const res = await axios.post("http://127.0.0.1:5000/admin-login", { email, password });
+         const res = await axios.post("http://localhost:5000/admin-login", { email, password });
          
          if (res.data.success) {
             // Save admin token/details
             localStorage.setItem("admin", JSON.stringify(res.data.admin));
+            localStorage.setItem("adminActiveTab", "overview");
             
             setTimeout(() => {
                navigate("/admin");

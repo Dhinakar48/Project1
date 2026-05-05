@@ -38,7 +38,7 @@ export default function Coupons() {
    const handleCreateCoupon = async (e) => {
       e.preventDefault();
       try {
-         const admin = JSON.parse(localStorage.getItem('adminUser') || '{}');
+         const admin = JSON.parse(localStorage.getItem('admin') || '{}');
          const payload = {
             admin_id: admin.id || 'ADM001',
             title,
@@ -196,75 +196,102 @@ export default function Coupons() {
          ) : (
             <div className="grid grid-cols-1 xl:grid-cols-2 gap-8">
                {coupons.map(coupon => (
-                  <div key={coupon.coupon_id} className="bg-white rounded-[2rem] border border-stone-100 shadow-sm overflow-hidden flex flex-col md:flex-row transition-all hover:shadow-xl hover:border-indigo-100 group">
-                     {/* Left/Top Section: Identity */}
-                     <div className="bg-stone-900 text-white p-8 md:w-2/5 flex flex-col justify-between relative overflow-hidden">
-                        <div className="absolute -right-4 -top-4 text-stone-800 opacity-50 transform rotate-12">
-                           <FaTag className="text-9xl" />
+                  <div key={coupon.coupon_id} className="bg-white rounded-[2.5rem] border border-stone-100 shadow-sm overflow-hidden flex flex-col md:flex-row transition-all hover:shadow-xl hover:border-indigo-100 group min-h-[320px]">
+                     {/* Left Section: Identity (Voucher Style) */}
+                     <div className="bg-stone-900 text-white p-10 md:w-[35%] flex flex-col justify-between relative overflow-hidden shrink-0">
+                        <div className="absolute -right-6 -top-6 text-stone-800 opacity-40 transform rotate-12 pointer-events-none">
+                           <FaTag className="text-[12rem]" />
                         </div>
-                        <div className="relative z-10 space-y-6">
-                           <div>
-                              <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-xl bg-white/10 text-white text-[10px] font-black uppercase tracking-widest mb-4">
-                                 {coupon.type}
-                              </div>
-                              <h4 className="text-2xl font-black tracking-tight leading-none mb-2">{coupon.code}</h4>
-                              <p className="text-stone-400 text-sm font-medium">{coupon.title || 'Platform Offer'}</p>
+                        
+                        <div className="relative z-10">
+                           <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-xl bg-white/10 text-white text-[9px] font-black uppercase tracking-[0.2em] mb-6">
+                              {coupon.type}
                            </div>
-                           <div>
-                              <div className="text-[10px] font-bold text-stone-500 uppercase tracking-widest mb-1">Created By</div>
-                              <div className="text-sm font-bold text-stone-200">{coupon.seller_name || 'Admin Authority'}</div>
-                           </div>
+                           <h4 className="text-3xl font-black tracking-tighter leading-none mb-3 break-all">{coupon.code}</h4>
+                           <p className="text-stone-400 text-[11px] font-bold uppercase tracking-widest">{coupon.title || 'Platform Offer'}</p>
+                        </div>
+
+                        <div className="relative z-10 pt-6 mt-6 border-t border-white/10">
+                           <div className="text-[9px] font-bold text-stone-500 uppercase tracking-widest mb-1">Created By</div>
+                           <div className="text-xs font-bold text-stone-200 truncate">{coupon.seller_name || 'Admin Authority'}</div>
                         </div>
                      </div>
 
-                     {/* Right/Bottom Section: Details & Metrics */}
-                     <div className="p-8 md:w-3/5 flex flex-col justify-between bg-white relative">
-                        <div className="absolute top-6 right-6 flex items-center gap-2">
-                           <span className={`text-[10px] font-black uppercase tracking-widest px-3 py-1.5 rounded-xl ${coupon.is_active ? 'bg-emerald-50 text-emerald-600 border border-emerald-100' : 'bg-rose-50 text-rose-600 border border-rose-100'}`}>
-                              {coupon.is_active ? 'Active' : 'Expired / Inactive'}
-                           </span>
-                           <button onClick={() => toggleStatus(coupon.coupon_id, coupon.is_active)} className="p-2 rounded-xl hover:bg-stone-100 transition-colors">
-                              {coupon.is_active ? 
-                                 <FaTimesCircle className="text-rose-500 text-lg" title="Deactivate" /> : 
-                                 <FaCheckCircle className="text-emerald-500 text-lg" title="Activate" />
-                              }
-                           </button>
-                           <button onClick={() => handleRemoveCoupon(coupon.coupon_id)} className="p-2 rounded-xl hover:bg-red-50 text-red-500 transition-colors">
-                              <FaTrash className="text-sm" title="Delete Coupon" />
-                           </button>
+                     {/* Right Section: Details & Metrics */}
+                     <div className="p-10 md:w-[65%] flex flex-col justify-between bg-white relative">
+                        {/* Header Actions */}
+                        <div className="flex justify-between items-start mb-6">
+                           <div>
+                              <span className={`text-[10px] font-black uppercase tracking-widest px-4 py-2 rounded-xl border ${coupon.is_active ? 'bg-emerald-50 text-emerald-600 border-emerald-100' : 'bg-rose-50 text-rose-600 border-rose-100'}`}>
+                                 {coupon.is_active ? 'Live & Active' : 'Inactive'}
+                              </span>
+                           </div>
+                           <div className="flex items-center gap-2 bg-stone-50 p-1.5 rounded-2xl border border-stone-100">
+                              <button 
+                                 onClick={() => toggleStatus(coupon.coupon_id, coupon.is_active)} 
+                                 className={`p-2 rounded-xl transition-all ${coupon.is_active ? 'hover:bg-rose-100 text-rose-500' : 'hover:bg-emerald-100 text-emerald-500'}`}
+                              >
+                                 {coupon.is_active ? 
+                                    <FaTimesCircle size={18} title="Deactivate" /> : 
+                                    <FaCheckCircle size={18} title="Activate" />
+                                 }
+                              </button>
+                              <div className="w-px h-4 bg-stone-200 mx-1" />
+                              <button 
+                                 onClick={() => handleRemoveCoupon(coupon.coupon_id)} 
+                                 className="p-2 rounded-xl hover:bg-red-50 text-red-500 transition-colors"
+                              >
+                                 <FaTrash size={16} title="Delete Coupon" />
+                              </button>
+                           </div>
                         </div>
 
-                        <div className="space-y-6 mt-4 md:mt-0">
-                           {coupon.description && (
-                              <div>
-                                 <h5 className="text-[10px] font-bold text-stone-400 uppercase tracking-widest mb-1 flex items-center gap-1"><FaInfoCircle /> Description</h5>
-                                 <p className="text-sm font-medium text-stone-700">{coupon.description}</p>
+                        {/* Description */}
+                        <div className="flex-1">
+                           {coupon.description ? (
+                              <div className="mb-8">
+                                 <h5 className="text-[9px] font-black text-stone-400 uppercase tracking-widest mb-2 flex items-center gap-1.5"><FaInfoCircle size={10} /> Coupon Terms</h5>
+                                 <p className="text-sm font-medium text-stone-600 leading-relaxed line-clamp-2">{coupon.description}</p>
                               </div>
+                           ) : (
+                              <div className="h-12" /> // Placeholder for consistent alignment
                            )}
 
-                           <div className="grid grid-cols-2 gap-y-6 gap-x-4">
-                              <div>
-                                 <h5 className="text-[10px] font-bold text-stone-400 uppercase tracking-widest mb-1">Discount</h5>
-                                 <p className="text-xl font-black text-indigo-600">{coupon.discount_percent ? `${coupon.discount_percent}% OFF` : 'Custom'}</p>
+                           {/* Metrics Grid */}
+                           <div className="grid grid-cols-2 gap-8">
+                              <div className="space-y-1">
+                                 <h5 className="text-[9px] font-black text-stone-400 uppercase tracking-widest">Benefit</h5>
+                                 <p className="text-2xl font-black text-indigo-600 tracking-tight">
+                                    {coupon.discount_percent ? `${coupon.discount_percent}%` : 'FIXED'} 
+                                    <span className="text-xs ml-1 text-stone-400 font-bold uppercase">Off</span>
+                                 </p>
                               </div>
-                              <div>
-                                 <h5 className="text-[10px] font-bold text-stone-400 uppercase tracking-widest mb-1">Max Discount</h5>
-                                 <p className="text-lg font-bold text-stone-900">{coupon.max_discount ? `₹${coupon.max_discount}` : 'No Limit'}</p>
+                              <div className="space-y-1">
+                                 <h5 className="text-[9px] font-black text-stone-400 uppercase tracking-widest">Usage Limit</h5>
+                                 <p className="text-xl font-black text-stone-900 tracking-tight">
+                                    {coupon.used_count} <span className="text-xs text-stone-300 font-bold mx-1">/</span> {coupon.max_usage || '∞'}
+                                 </p>
                               </div>
-                              <div>
-                                 <h5 className="text-[10px] font-bold text-stone-400 uppercase tracking-widest mb-1">Min Order</h5>
-                                 <p className="text-lg font-bold text-stone-900">{coupon.min_order_value ? `₹${coupon.min_order_value}` : '₹0'}</p>
+                              <div className="space-y-1">
+                                 <h5 className="text-[9px] font-black text-stone-400 uppercase tracking-widest">Min. Spend</h5>
+                                 <p className="text-base font-black text-stone-800">₹{coupon.min_order_value || '0'}</p>
                               </div>
-                              <div>
-                                 <h5 className="text-[10px] font-bold text-stone-400 uppercase tracking-widest mb-1">Usage Limit</h5>
-                                 <p className="text-lg font-bold text-stone-900">{coupon.used_count} <span className="text-sm text-stone-400">/ {coupon.max_usage || '∞'}</span></p>
+                              <div className="space-y-1">
+                                 <h5 className="text-[9px] font-black text-stone-400 uppercase tracking-widest">Max Cap</h5>
+                                 <p className="text-base font-black text-stone-800">{coupon.max_discount ? `₹${coupon.max_discount}` : 'No Limit'}</p>
                               </div>
                            </div>
                         </div>
 
-                        <div className="mt-8 pt-6 border-t border-stone-100 flex items-center gap-2 text-sm font-bold text-stone-500">
-                           <FaRegCalendarAlt className="text-stone-400" />
-                           Expires: <span className="text-stone-900">{coupon.valid_until ? new Date(coupon.valid_until).toLocaleDateString('en-IN', { year: 'numeric', month: 'long', day: 'numeric' }) : 'Never Expires'}</span>
+                        {/* Footer: Expiry */}
+                        <div className="mt-8 pt-6 border-t border-stone-50 flex items-center justify-between text-[11px] font-bold">
+                           <div className="flex items-center gap-2 text-stone-400">
+                              <FaRegCalendarAlt size={12} />
+                              <span className="uppercase tracking-widest">Validity:</span>
+                           </div>
+                           <span className={new Date(coupon.valid_until) < new Date() ? 'text-red-500' : 'text-stone-900'}>
+                              {coupon.valid_until ? new Date(coupon.valid_until).toLocaleDateString('en-IN', { year: 'numeric', month: 'short', day: 'numeric' }) : 'PERPETUAL'}
+                           </span>
                         </div>
                      </div>
                   </div>

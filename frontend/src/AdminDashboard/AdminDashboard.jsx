@@ -5,6 +5,7 @@ import {
    FaUndo, FaCreditCard, FaUsers, FaChartLine, FaUserCog, FaSignOutAlt, FaTags, FaHandHoldingUsd, FaBell, FaCheck, FaUser, FaShopify, FaTimesCircle, FaExclamationTriangle} from "react-icons/fa";
 import { motion, AnimatePresence } from "framer-motion";
 import axios from "axios";
+import { useStore } from "../StoreContext";
 
 // Component Imports
 import Overview from "./components/Overview";
@@ -19,10 +20,11 @@ import Profile from "./components/Profile";
 import Coupons from "./components/Coupons";
 
 export default function AdminDashboard() {
-   const [activeTab, setActiveTab] = useState(() => localStorage.getItem('adminActiveTab') || "dashboard");
+   const [activeTab, setActiveTab] = useState(() => localStorage.getItem('adminActiveTab') || "overview");
    const [notifications, setNotifications] = useState([]);
    const [showNotifDropdown, setShowNotifDropdown] = useState(false);
    const notifRef = useRef(null);
+   const { logout } = useStore();
    const navigate = useNavigate();
 
    useEffect(() => {
@@ -77,7 +79,7 @@ export default function AdminDashboard() {
    const unreadCount = notifications.filter(n => !n.is_read).length;
 
    const navItems = [
-      { id: "dashboard", label: "Dashboard", icon: FaChartPie, component: Overview },
+      { id: "overview", label: "Overview", icon: FaChartPie, component: Overview },
       { id: "products", label: "Products", icon: FaBoxOpen, component: Products },
       { id: "orders", label: "Orders", icon: FaShoppingCart, component: Orders },
       { id: "shipping", label: "Shipping", icon: FaShippingFast, component: Shipping },
@@ -89,9 +91,14 @@ export default function AdminDashboard() {
       { id: "profile", label: "Profile", icon: FaUserCog, component: Profile },
    ];
 
-   const handleLogout = () => {
-      localStorage.removeItem('adminToken');
-      navigate("/");
+   const handleLogout = async () => {
+      try {
+         const adminId = JSON.parse(localStorage.getItem('adminUser'))?.id;
+         await axios.post("http://localhost:5000/api/admin-logout", { admin_id: adminId });
+      } catch (err) {
+         console.error("Logout log error:", err);
+      }
+      logout();
    };
 
    // Find the current component to render
@@ -145,8 +152,8 @@ export default function AdminDashboard() {
          </aside>
 
          {/* Main Content Area */}
-         <main className="flex-1 overflow-y-auto bg-stone-500 no-scrollbar">
-            <header className="sticky top-0 z-10 bg-white border-b border-stone-200 px-8 py-5 flex justify-between items-center">
+         <main className="flex-1 overflow-y-auto bg-stone-50 no-scrollbar relative">
+            <header className="sticky top-0 z-[60] bg-white border-b border-stone-200 px-8 py-5 flex justify-between items-center shadow-sm">
                <h2 className="text-2xl font-bold tracking-tight capitalize">{activeTab.replace('-', ' ')}</h2>
                <div className="flex items-center gap-6">
                   {/* Notification Bell */}
@@ -169,7 +176,7 @@ export default function AdminDashboard() {
                                initial={{ opacity: 0, y: 15, scale: 0.95 }}
                                animate={{ opacity: 1, y: 0, scale: 1 }}
                                exit={{ opacity: 0, y: 15, scale: 0.95 }}
-                               className="absolute top-full right-0 mt-4 w-[420px] bg-white border border-stone-200 shadow-2xl rounded-[1.5rem] overflow-hidden z-[100]"
+                               className="absolute top-full right-0 mt-4 w-[420px] bg-white border border-stone-200 shadow-2xl rounded-[2rem] overflow-hidden z-[1000] ring-1 ring-black/5"
                             >
                                {/* Header */}
                                <div className="px-5 py-4 border-b border-stone-100 flex justify-between items-center bg-gradient-to-r from-indigo-50/80 to-white">
@@ -198,18 +205,28 @@ export default function AdminDashboard() {
                                      notifications.map((notif) => {
                                         const isPlaced = notif.type === 'Order Placed' || notif.type === 'New Order';
                                         const isCancelled = notif.type === 'Order Cancelled' || notif.type === 'System Alert';
-                                        const isUpdated = notif.type === 'Order Update';
+                                        const isRegistration = notif.type === 'New User' || notif.type === 'New Seller';
+                                        const isNewProduct = notif.type === 'New Product';
 
                                         const iconBg = isPlaced ? 'bg-emerald-100 text-emerald-600'
                                            : isCancelled ? 'bg-red-100 text-red-500'
-                                           : 'bg-amber-100 text-amber-600';
+                                           : isRegistration ? 'bg-indigo-100 text-indigo-600'
+                                           : isNewProduct ? 'bg-amber-100 text-amber-600'
+                                           : 'bg-stone-100 text-stone-600';
 
-                                        const TypeIcon = isPlaced ? FaBoxOpen : isCancelled ? FaTimesCircle : FaExclamationTriangle;
+                                        const TypeIcon = isPlaced ? FaBoxOpen 
+                                           : isCancelled ? FaTimesCircle 
+                                           : notif.type === 'New User' ? FaUser 
+                                           : notif.type === 'New Seller' ? FaShopify 
+                                           : isNewProduct ? FaBoxOpen 
+                                           : FaExclamationTriangle;
 
                                         const typeBadge = isPlaced
                                            ? 'bg-emerald-50 text-emerald-700'
                                            : isCancelled ? 'bg-red-50 text-red-600'
-                                           : 'bg-amber-50 text-amber-700';
+                                           : isRegistration ? 'bg-indigo-50 text-indigo-700'
+                                           : isNewProduct ? 'bg-amber-50 text-amber-700'
+                                           : 'bg-stone-50 text-stone-700';
 
                                         return (
                                            <div

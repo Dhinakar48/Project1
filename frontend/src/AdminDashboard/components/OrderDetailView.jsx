@@ -7,6 +7,8 @@ export default function OrderDetailView({ order: initialOrder, items, history: i
    const [history, setHistory] = useState(initialHistory);
    const [updating, setUpdating] = useState(false);
    const [successMsg, setSuccessMsg] = useState("");
+   const [shipping, setShipping] = useState(false);
+   const [srData, setSrData] = useState(null);
    
    if (!order) return null;
 
@@ -25,10 +27,8 @@ export default function OrderDetailView({ order: initialOrder, items, history: i
          });
          
          if (res.data.success) {
-            // Update local state instead of reloading
             setOrder(prev => ({ ...prev, order_status: newStatus }));
             
-            // Add to local history immediately
             const newHistoryEntry = {
                status: newStatus,
                changed_at: new Date().toISOString(),
@@ -37,8 +37,7 @@ export default function OrderDetailView({ order: initialOrder, items, history: i
             };
             setHistory(prev => [newHistoryEntry, ...prev]);
             
-            if (onStatusUpdate) onStatusUpdate(); // Notify parent to refresh list
-            
+            if (onStatusUpdate) onStatusUpdate();
             setSuccessMsg(`Status updated to ${newStatus}`);
             setTimeout(() => setSuccessMsg(""), 3000);
          }
@@ -50,10 +49,32 @@ export default function OrderDetailView({ order: initialOrder, items, history: i
       }
    };
 
+    const handleShiprocketSync = async () => {
+       setShipping(true);
+       try {
+          const admin = JSON.parse(localStorage.getItem('admin') || '{}');
+          const res = await axios.post(`http://localhost:5000/shiprocket/initiate/${order.order_id}`, {
+             adminId: admin.id || 'ADM001'
+          });
+          if (res.data.success) {
+             setSrData(res.data.data);
+             setOrder(prev => ({ ...prev, order_status: 'Processing', tracking_id: res.data.data.shipment_id }));
+             setSuccessMsg("Order Synced with Shiprocket!");
+             if (onStatusUpdate) onStatusUpdate();
+          }
+      } catch (err) {
+         console.error("Shiprocket sync failed", err);
+         alert("Shiprocket Sync Failed: " + (err.response?.data?.message || err.message));
+      } finally {
+         setShipping(false);
+      }
+   };
+
    const getStatusColor = (status) => {
       switch (status?.toLowerCase()) {
          case 'confirmed': return 'bg-blue-50 text-blue-600 border-blue-100';
          case 'shipped': return 'bg-amber-50 text-amber-600 border-amber-100';
+         case 'processing': return 'bg-indigo-50 text-indigo-600 border-indigo-100';
          case 'delivered': return 'bg-emerald-50 text-emerald-600 border-emerald-100';
          case 'cancelled': return 'bg-rose-50 text-rose-600 border-rose-100';
          default: return 'bg-stone-50 text-stone-600 border-stone-100';
@@ -81,6 +102,21 @@ export default function OrderDetailView({ order: initialOrder, items, history: i
             )}
 
             <div className="ml-auto flex items-center gap-4">
+               {order.order_status !== 'Delivered' && order.order_status !== 'Cancelled' && (
+                  <button
+                     disabled={shipping || updating}
+                     onClick={handleShiprocketSync}
+                     className={`flex items-center gap-2 px-5 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all shadow-sm ${
+                        srData || order.courier === 'Shiprocket'
+                        ? 'bg-emerald-500 text-white border-emerald-400 cursor-default'
+                        : 'bg-stone-900 text-amber-500 hover:bg-stone-800 hover:scale-105 active:scale-95'
+                     }`}
+                  >
+                     <FaTruck size={12} className={shipping ? 'animate-bounce' : ''} />
+                     {shipping ? 'Syncing...' : (srData || order.courier === 'Shiprocket' ? 'Synced with Shiprocket' : 'Ship with Shiprocket')}
+                  </button>
+               )}
+
                <div className="flex items-center gap-2">
                   <span className="text-[10px] font-bold text-stone-400 uppercase tracking-widest">Update Status:</span>
                   <div className="relative group/select">
@@ -102,7 +138,6 @@ export default function OrderDetailView({ order: initialOrder, items, history: i
          </div>
 
          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            {/* Left Column: Items & Summary */}
             <div className="lg:col-span-2 space-y-6">
                <div className="bg-white rounded-[2.5rem] border border-stone-100 shadow-sm overflow-hidden p-8">
                   <div className="flex items-center gap-3 mb-6">
@@ -156,7 +191,6 @@ export default function OrderDetailView({ order: initialOrder, items, history: i
                   </div>
                </div>
 
-               {/* History */}
                <div className="bg-white rounded-[2.5rem] border border-stone-100 shadow-sm overflow-hidden p-8 flex flex-col max-h-[400px]">
                   <div className="flex items-center gap-3 mb-6">
                      <div className="w-10 h-10 rounded-2xl bg-amber-50 flex items-center justify-center text-amber-600">
@@ -167,7 +201,7 @@ export default function OrderDetailView({ order: initialOrder, items, history: i
                   
                   <div className="overflow-y-auto pr-4 scrollbar-thin scrollbar-thumb-stone-200 scrollbar-track-transparent">
                      <div className="relative pl-8 space-y-8 before:absolute before:left-3.5 before:top-2 before:bottom-2 before:w-0.5 before:bg-stone-100">
-                        {history.filter(log => log.status?.toLowerCase() === order.order_status?.toLowerCase()).map((log, idx) => (
+                        {history.map((log, idx) => (
                            <div key={idx} className="relative">
                               <div className="absolute -left-8 top-1.5 w-7 h-7 rounded-full bg-white border-2 border-stone-100 flex items-center justify-center z-10">
                                  <div className="w-2 h-2 rounded-full bg-stone-300" />
@@ -187,7 +221,6 @@ export default function OrderDetailView({ order: initialOrder, items, history: i
                </div>
             </div>
 
-            {/* Right Column: Customer & Shipping */}
             <div className="space-y-6">
                <div className="bg-white rounded-[2.5rem] border border-stone-100 shadow-sm overflow-hidden p-8">
                   <div className="flex items-center gap-3 mb-6">

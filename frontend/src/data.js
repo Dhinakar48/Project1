@@ -53,8 +53,7 @@ const cp_mb3 = '/computing/mobile3.webp';
 const cp_mb4 = '/computing/mobile4.webp';
 const cp_mb5 = '/computing/mobile5.avif';
 const cp_mb6 = '/computing/mobile6.avif';
-const cp_mn1 = '/computing/monitor1.avif';
-const cp_mn2 = '/computing/monitor2.avif';
+
 
 // Accessories
 const acc_cs1 = '/accessories/case1.jpg';
@@ -277,7 +276,7 @@ export const productsData = {
             weight: "125g",
             battery: "4 Hours AR use",
             processor: "Vision AR Engine v2",
-            camera: "Dual 12MP Ultra-wide",
+            camera: "Dual 12MP",
             height: "4.8 cm",
             width: "14.5 cm",
             display: "Dual 4K Micro-OLED"
@@ -344,34 +343,13 @@ export const productsData = {
             weight: "233g",
             battery: "5000mAh Intelligence",
             processor: "Snapdragon 8 Gen 3",
-            camera: "200MP Main + 50MP Zoom",
+            camera: "200MP + 50MP",
             height: "16.2 cm",
             width: "7.9 cm",
             display: '6.8" Dynamic AMOLED 2X'
         }
     },
-    "14": {
-        id: "14",
-        name: "Horizon Ultra",
-        title: "Pro Monitor",
-        category: "Computing",
-        desc: "4K Color-accurate display for professional designers.",
-        variants: [
-            { id: "v14_1", colorBg: "bg-black", ringColor: "ring-zinc-900", img: cp_mn1, price: "₹74,999", colorName: "Studio" },
-            { id: "v14_2", colorBg: "bg-zinc-300", ringColor: "ring-zinc-700", img: cp_mn2, price: "₹76,999", colorName: "Design" }
-        ],
-        specs: {
-            brand: "Horizon",
-            material: "Aluminum & Glass",
-            weight: "4.5kg",
-            processor: "Horizon Display Engine",
-            display: '27" 5K Nano-texture',
-            height: "46.2 cm",
-            width: "62.3 cm",
-            battery: "N/A (AC Powered)",
-            camera: "12MP Center Stage"
-        }
-    },
+
     "15": {
         id: "15",
         name: "Urban Shield",
@@ -417,7 +395,7 @@ export const productsData = {
         name: "Apple iPhone 17 ProMax",
         title: "Smartphone",
         category: "Computing",
-        desc: "Forged in titanium. Featuring the groundbreaking A17 Pro chip and a customizable Action button.",
+        desc: "Titanium design with A17 Pro chip and Action button.",
         discount: 5,
         variants: [
             { id: "v17_1", colorBg: "bg-blue-100", ringColor: "ring-stone-600", img: cp_mb3, price: "₹1,34,900", colorName: "Sky Blue Titanium" },
@@ -432,7 +410,7 @@ export const productsData = {
             height: "15.99 cm",
             width: "7.67 cm",
             battery: "Up to 29 hours video",
-            camera: "48MP Main | 12MP Ultra Wide | 12MP Telephoto"
+            camera: "48MP Main | 12MP | 12MP"
         }
     },
     "18": {
@@ -440,7 +418,7 @@ export const productsData = {
         name: "Nothing Phone 4a",
         title: "Smartphone",
         category: "Computing",
-        desc: "A new way to interact. The iconic Glyph Interface meets premium performance and symmetry.",
+        desc: "Iconic Glyph Interface with premium performance.",
         variants: [
             { id: "v18_1", colorBg: "bg-stone-200", ringColor: "ring-stone-400", img: cp_mb5, price: "₹35,999", colorName: "White" },
             { id: "v18_2", colorBg: "bg-pink-300", ringColor: "ring-stone-700", img: cp_mb6, price: "₹34,999", colorName: "Dark Gray" }
@@ -454,7 +432,7 @@ export const productsData = {
             height: "16.1 cm",
             width: "7.6 cm",
             battery: "5000mAh with 45W charging",
-            camera: "50MP Dual Rear | 32MP Front"
+            camera: "50MP | 32MP"
         }
     },
     "19": {
@@ -462,7 +440,7 @@ export const productsData = {
         name: "Samsung Silicon Case",
         title: "Smartphone Case",
         category: "Accessories",
-        desc: "Soft to the touch, easy on the eyes. A premium silicone case that protects your device without the bulk.",
+        desc: "Premium silicone case for slim protection.",
         variants: [
             { id: "v19_1", colorBg: "bg-orange-400", ringColor: "ring-stone-300", img: acc_cs3, price: "₹2,199", colorName: "Lilac" },
             { id: "v19_2", colorBg: "bg-red-900", ringColor: "ring-blue-200", img: acc_cs4, price: "₹2,199", colorName: "Sky Blue" }
@@ -482,7 +460,7 @@ export const productsData = {
         name: "Super Fast Charger",
         title: "Universal Adapter",
         category: "Accessories",
-        desc: "Power through your day with our most advanced 45W charger. Safe, efficient, and universally compatible.",
+        desc: "Advanced 45W universal charger.",
         variants: [
             { id: "v20_1", colorBg: "bg-black", ringColor: "ring-stone-100", img: acc_ch1, price: "₹3,499", colorName: "Classic" },
             { id: "v20_2", colorBg: "bg-gray-200", ringColor: "ring-stone-700", img: acc_ch2, price: "₹3,499", colorName: "Phantom" }
@@ -502,7 +480,7 @@ export const productsData = {
         name: "Zenith Pods Pro",
         title: "Wireless Buds",
         category: "Audio",
-        desc: "The original studio-quality earbuds. Unmatched clarity and comfortable fit for all-day listening.",
+        desc: "Studio-quality earbuds with unmatched clarity.",
         variants: [
             { id: "v21_1", colorBg: "bg-violet-200", ringColor: "ring-stone-200", img: bd1, price: "₹14,999", colorName: "Pure White" },
             { id: "v21_2", colorBg: "bg-green-600", ringColor: "ring-stone-700", img: bd2, price: "₹15,499", colorName: "Space Black" }
@@ -523,7 +501,7 @@ export const productsData = {
         name: "JBL Box XL",
         title: "Wi-Fi Speaker",
         category: "Audio",
-        desc: "Fill any room with rich, high-fidelity sound. Features dual woofers and crystal clear tweeters.",
+        desc: "High-fidelity speaker with rich sound.",
         variants: [
             { id: "v22_1", colorBg: "bg-black", ringColor: "ring-blue-800", img: spk1, price: "₹24,999", colorName: "Midnight Black" },
             { id: "v22_2", colorBg: "bg-blue-300", ringColor: "ring-stone-200", img: spk2, price: "₹24,999", colorName: "Sandstone" }
@@ -544,7 +522,7 @@ export const productsData = {
         name: "Sonic Boom",
         title: "Powerful Speaker",
         category: "Audio",
-        desc: "Explosive bass and massive volume. The ultimate speaker for large gatherings and outdoor events.",
+        desc: "Powerful speaker with explosive bass.",
         variants: [
             { id: "v23_1", colorBg: "bg-blue-300", ringColor: "ring-stone-700", img: spk3, price: "₹32,999", colorName: "Obsidian" },
             { id: "v23_2", colorBg: "bg-gray-700", ringColor: "ring-stone-300", img: spk4, price: "₹32,999", colorName: "Granite" }
@@ -565,7 +543,7 @@ export const productsData = {
         name: "Nova Chrono",
         title: "Classic Smartwatch",
         category: "Wearables",
-        desc: "Timeless design meets modern intelligence. A versatile smartwatch that fits perfectly in both the boardroom and the gym.",
+        desc: "Versatile smartwatch with timeless design.",
         variants: [
             { id: "v24_1", colorBg: "bg-gray-200", ringColor: "ring-stone-400", img: wt1, price: "₹29,999", colorName: "Slate" },
             { id: "v24_2", colorBg: "bg-stone-400", ringColor: "ring-stone-600", img: wt2, price: "₹29,999", colorName: "Charcoal" }
@@ -587,7 +565,7 @@ export const productsData = {
         name: "Aero Slim 13",
         title: "Ultraportable Laptop",
         category: "Computing",
-        desc: "Designed for those who move. Phenomenal battery life meets lightweight engineering for the ultimate travel workstation.",
+        desc: "Lightweight laptop with phenomenal battery.",
         variants: [
             { id: "v25_1", colorBg: "bg-stone-300", ringColor: "ring-stone-200", img: cp_lp1, price: "₹1,29,999", colorName: "Platinum" },
             { id: "v25_2", colorBg: "bg-blue-900", ringColor: "ring-stone-600", img: cp_lp2, price: "₹1,32,999", colorName: "Storm" }
@@ -601,7 +579,7 @@ export const productsData = {
             height: "1.4 cm",
             width: "29.5 cm",
             battery: "14 Hours runtime",
-            camera: "720p Dual-array Mic"
+            camera: "720p"
         }
     }
 };

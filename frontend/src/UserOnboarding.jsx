@@ -107,7 +107,7 @@ export default function UserOnboarding() {
       await confirmationResult.confirm(formData.otp);
 
       // ✅ Save to backend
-      await axios.post("http://127.0.0.1:5000/onboarding", {
+      await axios.post("http://localhost:5000/onboarding", {
         email: loggedInUser.email,
         phone: formattedPhone,
         name: formData.name,

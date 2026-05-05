@@ -128,19 +128,46 @@ router.post("/order/place", async (req, res) => {
     const sellerIds = Object.keys(sellerSubtotals);
     if (paymentMethod) {
       const finalTransactionId = (transactionId && transactionId !== 'COD') ? transactionId : null;
+      // ✅ FIX: Shorten payment_id (max 20)
+      const payId = `P${orderId.replace('ORD-', '')}${Date.now().toString(36)}`;
       await client.query(
-        "INSERT INTO payments (customer_id, order_id, payment_method, amount, transaction_id, payment_status, paid_at, gateway_name, seller_id) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)",
-        [customerId, orderId, paymentMethod, backendTotal, finalTransactionId, paymentStatus, isPaid ? new Date() : null, isPaid ? 'Razorpay' : null, sellerIds[0] || null]
+        "INSERT INTO payments (payment_id, customer_id, order_id, payment_method, amount, transaction_id, payment_status, paid_at, gateway_name, seller_id) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)",
+        [payId.substring(0, 20), customerId, orderId, paymentMethod, backendTotal, finalTransactionId, paymentStatus, isPaid ? new Date() : null, isPaid ? 'Razorpay' : null, sellerIds[0] || null]
       );
     }
 
     for (const sId in sellerSubtotals) {
       await client.query("INSERT INTO order_sellers (order_id, seller_id, seller_subtotal) VALUES ($1, $2, $3)", [orderId, sId, sellerSubtotals[sId]]);
-      // ✅ ADDED: Notify Seller of new order
-      await client.query("INSERT INTO notifications (seller_id, order_id, type, message) VALUES ($1, $2, $3, $4)", [sId, orderId, 'New Order', `New order ${orderId} received for your products.`]);
+      
+      // ✅ FIX: Shorten notification_id (max 20)
+      const sellerNotifId = `NS${sId.replace('SEL', '')}${Date.now().toString(36)}${Math.floor(Math.random() * 100).toString(36)}`;
+      await client.query(
+        "INSERT INTO notifications (notification_id, seller_id, order_id, type, message) VALUES ($1, $2, $3, $4, $5)", 
+        [sellerNotifId.substring(0, 20), sId, orderId, 'New Order', `New order ${orderId} received for your products.`]
+      );
     }
-    await client.query("INSERT INTO notifications (customer_id, order_id, type, message) VALUES ($1, $2, $3, $4)", [customerId, orderId, 'Order Placed', `Your order ${orderId} has been placed successfully.`]);
-    await client.query("INSERT INTO order_status_history (order_id, status, changed_by, notes) VALUES ($1, $2, $3, $4)", [orderId, 'Confirmed', 'System', 'Order placed and confirmed.']);
+
+    // ✅ FIX: Shorten notification_id (max 20)
+    const customerNotifId = `NC${customerId.replace('CUS', '')}${Date.now().toString(36)}`;
+    await client.query(
+      "INSERT INTO notifications (notification_id, customer_id, order_id, type, message) VALUES ($1, $2, $3, $4, $5)", 
+      [customerNotifId.substring(0, 20), customerId, orderId, 'Order Placed', `Your order ${orderId} has been placed successfully.`]
+    );
+    
+    // ✅ FIX: Shorten history_id (max 20)
+    const histId = `H${orderId.replace('ORD-', '')}${Date.now().toString(36)}`;
+    await client.query(
+      "INSERT INTO order_status_history (history_id, order_id, status, changed_by, notes) VALUES ($1, $2, $3, $4, $5)", 
+      [histId.substring(0, 20), orderId, 'Confirmed', 'System', 'Order placed and confirmed.']
+    );
+
+    // ✅ FIX: Shorten notification_id (max 20)
+    const platformNotifId = `NP${orderId.replace('ORD-', '')}${Date.now().toString(36)}`;
+    await client.query(
+      "INSERT INTO notifications (notification_id, order_id, type, message) VALUES ($1, $2, $3, $4)",
+      [platformNotifId.substring(0, 20), orderId, 'New Order', `A new transaction has been recorded: ${orderId}`]
+    );
+
     await client.query("DELETE FROM cart_items ci USING carts c WHERE ci.cart_id = c.cart_id AND c.customer_id = $1", [customerId]);
 
     await client.query("COMMIT");
@@ -151,7 +178,7 @@ router.post("/order/place", async (req, res) => {
     if (err.message === "ACCOUNT_RESTRICTED") {
       return res.status(403).json({ success: false, message: "Your account is currently restricted. Order placement is disabled." });
     }
-    res.status(500).json({ message: "Order placement error" });
+    res.status(500).json({ success: false, message: "Order placement error", error: err.message });
   } finally {
     client.release();
   }
@@ -170,27 +197,36 @@ router.post("/order/cancel", async (req, res) => {
       const order = result.rows[0];
       
       // 1. Notify Customer
+      const custNotifId = `NOT-CUS-${order.customer_id}-${Date.now()}`;
       await client.query(
-        "INSERT INTO notifications (customer_id, order_id, type, message) VALUES ($1, $2, $3, $4)",
-        [order.customer_id, orderId, 'Order Cancelled', `Your order ${orderId} has been cancelled. Reason: ${reason || 'User request'}`]
+        "INSERT INTO notifications (notification_id, customer_id, order_id, type, message) VALUES ($1, $2, $3, $4, $5)",
+        [custNotifId, order.customer_id, orderId, 'Order Cancelled', `Your order ${orderId} has been cancelled. Reason: ${reason || 'User request'}`]
       );
 
       // 2. Notify Seller(s)
       const sellerRes = await client.query("SELECT DISTINCT seller_id FROM order_items WHERE order_id = $1", [orderId]);
       for (const row of sellerRes.rows) {
+        const selNotifId = `NOT-SEL-${row.seller_id}-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
         await client.query(
-          "INSERT INTO notifications (seller_id, order_id, type, message) VALUES ($1, $2, $3, $4)",
-          [row.seller_id, orderId, 'Order Cancelled', `Order ${orderId} has been cancelled by the customer.`]
+          "INSERT INTO notifications (notification_id, seller_id, order_id, type, message) VALUES ($1, $2, $3, $4, $5)",
+          [selNotifId, row.seller_id, orderId, 'Order Cancelled', `Order ${orderId} has been cancelled by the customer.`]
         );
       }
 
       // 3. Platform Notification (for Admin)
+      // ✅ FIX: Shorten history_id (max 20)
+      const cancelHistId = `HC${orderId.replace('ORD-', '')}${Date.now().toString(36)}`;
       await client.query(
-        "INSERT INTO notifications (order_id, type, message) VALUES ($1, $2, $3)",
-        [orderId, 'System Alert', `Order ${orderId} was cancelled by customer. Reason: ${reason || 'N/A'}`]
+        "INSERT INTO order_status_history (history_id, order_id, status, changed_by, notes) VALUES ($1, $2, $3, $4, $5)", 
+        [cancelHistId.substring(0, 20), orderId, 'Cancelled', 'Customer', reason || 'Order cancelled by customer']
       );
 
-      await client.query("INSERT INTO order_status_history (order_id, status, changed_by, notes) VALUES ($1, $2, $3, $4)", [orderId, 'Cancelled', 'Customer', reason || 'Order cancelled by customer']);
+      // ✅ RESTORED: Platform Notification
+      const platformCancelNotifId = `NPC${orderId.replace('ORD-', '')}${Date.now().toString(36)}`;
+      await client.query(
+        "INSERT INTO notifications (notification_id, order_id, type, message) VALUES ($1, $2, $3, $4)",
+        [platformCancelNotifId.substring(0, 20), orderId, 'Order Cancelled', `Transaction ${orderId} was terminated. Reason: ${reason || 'N/A'}`]
+      );
     }
 
     await client.query("COMMIT");
@@ -198,7 +234,7 @@ router.post("/order/cancel", async (req, res) => {
   } catch (err) { 
     await client.query("ROLLBACK");
     console.error("Cancellation error:", err);
-    res.status(500).json({ message: "Cancel error" }); 
+    res.status(500).json({ success: false, message: "Cancel error", error: err.message }); 
   } finally {
     client.release();
   }
@@ -210,12 +246,28 @@ router.patch("/order/status", async (req, res) => {
   try {
     await client.query("BEGIN");
     await client.query("UPDATE orders SET order_status = $1, updated_at = CURRENT_TIMESTAMP WHERE order_id = $2", [status, orderId]);
-    await client.query("INSERT INTO order_status_history (order_id, status, changed_by, notes) VALUES ($1, $2, $3, $4)", [orderId, status, changedBy || 'Seller', notes || 'Order status updated to ' + status]);
+    
+    // ✅ FIX: Shorten history_id (max 20)
+    const statusHistId = `HS${orderId.replace('ORD-', '')}${Date.now().toString(36)}`;
+    await client.query(
+      "INSERT INTO order_status_history (history_id, order_id, status, changed_by, notes) VALUES ($1, $2, $3, $4, $5)", 
+      [statusHistId.substring(0, 20), orderId, status, changedBy || 'Seller', notes || 'Order status updated to ' + status]
+    );
+
     const orderRes = await client.query("SELECT customer_id FROM orders WHERE order_id = $1", [orderId]);
     if (orderRes.rows.length > 0) {
-      await client.query("INSERT INTO notifications (customer_id, order_id, type, message) VALUES ($1, $2, $3, $4)", [orderRes.rows[0].customer_id, orderId, 'Order Update', `Your order ${orderId} is now ${status}.`]);
+      const updateNotifId = `NOT-UPDT-${orderRes.rows[0].customer_id}-${Date.now()}`;
+      await client.query(
+        "INSERT INTO notifications (notification_id, customer_id, order_id, type, message) VALUES ($1, $2, $3, $4, $5)", 
+        [updateNotifId, orderRes.rows[0].customer_id, orderId, 'Order Update', `Your order ${orderId} is now ${status}.`]
+      );
     }
     await client.query("COMMIT");
+
+    // Audit Log
+    const { recordAuditLog } = require('../utils/audit');
+    await recordAuditLog(changedBy || 'System', 'orders', orderId, 'STATUS_UPDATE', null, { status, notes }, req);
+
     res.json({ success: true });
   } catch (err) { await client.query("ROLLBACK"); res.status(500).json({ message: "Status update error" }); }
   finally { client.release(); }

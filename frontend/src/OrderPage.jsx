@@ -31,6 +31,15 @@ export default function OrderPage() {
     removeDiscount,
     userProfile
   } = useStore();
+
+  useEffect(() => {
+    const savedUser = localStorage.getItem("user");
+    if (!savedUser) {
+      alert("Please login to proceed with your order.");
+      navigate("/login");
+    }
+  }, [navigate]);
+
   const [isOrderPlaced, setIsOrderPlaced] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
   const [isEditingAddress, setIsEditingAddress] = useState(false);
@@ -197,14 +206,25 @@ export default function OrderPage() {
                 paymentMethod: formData.paymentMethod,
                 transactionId: paymentId
             });
+
+            // Only clear cart and show success if the API call succeeds
+            clearCart();
+            setIsProcessing(false);
+            setIsOrderPlaced(true);
+            window.scrollTo(0, 0);
+
         } catch (err) {
             console.error("Failed to save order to database:", err);
+            setIsProcessing(false);
+            const errorMsg = err.response?.data?.message || "We encountered a technical issue processing your order. Please try again or contact support.";
+            alert("Order Error: " + errorMsg);
+            throw err; // Re-throw to handle in calling function if needed
         }
+    } else {
+        setIsProcessing(false);
+        alert("Authentication Error: Your session might have expired. Please login again.");
+        navigate("/login");
     }
-
-    clearCart();
-    setIsProcessing(false);
-    setIsOrderPlaced(true);
   };
 
   const handleCheckout = async (e) => {

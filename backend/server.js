@@ -1,3 +1,4 @@
+require('dotenv').config();
 const express = require("express");
 const cors = require("cors");
 const bodyParser = require("body-parser");
@@ -11,6 +12,9 @@ const cartRoutes = require("./routes/cart");
 const reviewRoutes = require("./routes/reviews");
 const adminRoutes = require("./routes/admin");
 const couponRoutes = require("./routes/coupons");
+const shiprocketRoutes = require("./routes/shiprocket"); // Add this
+const { router: liveRoutes } = require("./routes/live");
+const otpRoutes = require("./routes/otp");
 
 const app = express();
 
@@ -36,6 +40,9 @@ app.use("/", cartRoutes);
 app.use("/", reviewRoutes);
 app.use("/", adminRoutes);
 app.use("/", couponRoutes);
+app.use("/", shiprocketRoutes);
+app.use("/", liveRoutes);
+app.use("/otp", otpRoutes);
 
 // Additional Support for /api prefix
 app.use("/api", orderRoutes);
@@ -45,6 +52,9 @@ app.use("/api", cartRoutes);
 app.use("/api", reviewRoutes);
 app.use("/api", adminRoutes);
 app.use("/api", couponRoutes);
+app.use("/api", shiprocketRoutes);
+app.use("/api", liveRoutes);
+app.use("/api/otp", otpRoutes);
 
 // Misc Routes
 app.get("/seller-stats/:sellerId", async (req, res) => {
@@ -53,7 +63,7 @@ app.get("/seller-stats/:sellerId", async (req, res) => {
   try {
     const rev = await pool.query("SELECT SUM(seller_subtotal) as total_revenue FROM order_sellers WHERE seller_id = $1", [sellerId]);
     const ord = await pool.query("SELECT COUNT(DISTINCT order_id) as total_orders FROM order_items WHERE seller_id = $1", [sellerId]);
-    const prd = await pool.query("SELECT COUNT(*) as total_products FROM products WHERE seller_id = $1", [sellerId]);
+    const prd = await pool.query("SELECT COUNT(*) as total_products FROM products WHERE seller_id = $1 AND product_id LIKE 'PRD%'", [sellerId]);
     const cust = await pool.query("SELECT COUNT(DISTINCT o.customer_id) as total_customers FROM orders o JOIN order_items oi ON o.order_id = oi.order_id WHERE oi.seller_id = $1", [sellerId]);
     
     console.log(`[seller-stats] Raw Results -> Rev: ${rev.rows[0].total_revenue}, Ord: ${ord.rows[0].total_orders}, Prd: ${prd.rows[0].total_products}, Cust: ${cust.rows[0].total_customers}`);
@@ -78,6 +88,16 @@ app.get("/categories", async (req, res) => {
 });
 
 app.get("/", (req, res) => { res.send("Backend is running 🚀 (Modular Version)"); });
+
+// Global Error Handler
+app.use((err, req, res, next) => {
+  console.error("GLOBAL ERROR:", err);
+  res.status(500).json({ 
+    message: "Global error caught", 
+    error: err.message,
+    stack: err.stack 
+  });
+});
 
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => { console.log(`Server running on http://localhost:${PORT}`); });

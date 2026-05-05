@@ -54,15 +54,40 @@ async function setup() {
     `);
     console.log("Table 'customers' initialized successfully.");
 
+    await client1.query(`CREATE SEQUENCE IF NOT EXISTS otp_id_seq START 1;`);
     await client1.query(`
       CREATE TABLE IF NOT EXISTS otp_verifications (
-        id SERIAL PRIMARY KEY,
-        phone TEXT,
-        otp TEXT,
+        otp_id VARCHAR(20) PRIMARY KEY,
+        user_type VARCHAR(20) NOT NULL, -- 'Customer' or 'Seller'
+        user_ref_id VARCHAR(20),        -- FK to customer_id or seller_id
+        contact VARCHAR(150) NOT NULL,  -- email or phone
+        otp_hash TEXT NOT NULL,         -- Encrypted OTP
+        purpose VARCHAR(50) NOT NULL,   -- 'Login', 'Register', 'ResetPassword', 'VerifyContact'
+        attempts INT DEFAULT 0,
+        is_used BOOLEAN DEFAULT FALSE,
+        expires_at TIMESTAMP NOT NULL,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       );
     `);
-    console.log("Table 'otp_verifications' initialized successfully.");
+    await client1.query(`
+      CREATE OR REPLACE FUNCTION generate_otp_id()
+      RETURNS TRIGGER AS $$
+      BEGIN
+          IF NEW.otp_id IS NULL THEN
+            NEW.otp_id := 'OTP-' || LPAD(nextval('otp_id_seq')::text, 3, '0');
+          END IF;
+          RETURN NEW;
+      END;
+      $$ LANGUAGE plpgsql;
+    `);
+    await client1.query(`
+      DROP TRIGGER IF EXISTS trigger_generate_otp_id ON otp_verifications;
+      CREATE TRIGGER trigger_generate_otp_id
+      BEFORE INSERT ON otp_verifications
+      FOR EACH ROW
+      EXECUTE FUNCTION generate_otp_id();
+    `);
+    console.log("Table 'otp_verifications' with enhanced auditing initialized successfully.");
 
     await client1.query(`
       CREATE TABLE IF NOT EXISTS sellers (

@@ -3,6 +3,7 @@ import axios from "axios";
 import { FaBoxOpen, FaPlus, FaSearch } from "react-icons/fa";
 import AddProductForm from "./AddProductForm";
 import ProductDetails from "./ProductDetails";
+import { featuredProductsArray } from "../../data";
 
 export default function Products() {
    const [productsData, setProductsData] = useState([]);
@@ -18,11 +19,14 @@ export default function Products() {
       setLoading(true);
       axios.get("http://localhost:5000/api/admin/products")
          .then(res => {
-            if (res.data.success) setProductsData(res.data.products);
+            if (res.data.success) {
+               setProductsData(res.data.products);
+            }
             setLoading(false);
          })
          .catch(err => {
             console.error("Products fetch error", err);
+            setProductsData([]);
             setLoading(false);
          });
    };
@@ -160,15 +164,28 @@ export default function Products() {
                            </div>
                         </td>
                         <td className="px-6 py-5 text-right">
-                           <button 
-                              onClick={() => {
-                                 setSelectedProduct(prod);
-                                 setView("inspect");
-                              }}
-                              className="px-5 py-2 rounded-xl bg-indigo-50 text-indigo-600 text-[10px] font-black uppercase tracking-widest hover:bg-indigo-600 hover:text-white transition-all shadow-sm border border-indigo-100"
-                           >
-                              Inspect
-                           </button>
+                           <div className="flex items-center justify-end gap-2">
+                              <button 
+                                 onClick={() => {
+                                    setSelectedProduct(prod);
+                                    setView("inspect");
+                                 }}
+                                 className="px-4 py-2 rounded-xl bg-stone-100 text-stone-600 text-[10px] font-black uppercase tracking-widest hover:bg-stone-200 transition-all shadow-sm border border-stone-200"
+                              >
+                                 Inspect
+                              </button>
+                              {!prod.isStatic && (
+                                 <button 
+                                    onClick={() => {
+                                       setSelectedProduct(prod);
+                                       setView("add");
+                                    }}
+                                    className="px-4 py-2 rounded-xl bg-indigo-50 text-indigo-600 text-[10px] font-black uppercase tracking-widest hover:bg-indigo-600 hover:text-white transition-all shadow-sm border border-indigo-100"
+                                 >
+                                    Edit
+                                 </button>
+                              )}
+                           </div>
                         </td>
                      </tr>
                   ))}

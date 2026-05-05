@@ -2,6 +2,7 @@ import { useParams, useNavigate, Link } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { useEffect, useState } from "react";
 import axios from "axios";
+import { featuredProductsArray } from "./data";
 
 export default function CategoryPage() {
     const { categoryName } = useParams();
@@ -18,10 +19,43 @@ export default function CategoryPage() {
     const fetchProducts = async () => {
         setLoading(true);
         try {
+            // 1. Get Dynamic Products from Backend
             const res = await axios.get(`http://localhost:5000/products/category/${categoryName}`);
-            setProducts(res.data);
+            const dynamicProducts = res.data;
+
+            // 2. Get Static Products from data.js and Filter by Category
+            const staticProducts = featuredProductsArray
+                .filter(p => p.category.toLowerCase() === categoryName.toLowerCase())
+                .map(p => ({
+                    product_id: p.id,
+                    name: p.name,
+                    price: p.variants[0].price.replace(/[^\d.]/g, ''),
+                    description: p.desc || p.title,
+                    main_image: p.variants[0].img,
+                    images: p.variants.map(v => v.img),
+                    isStatic: true
+                }));
+
+            // Deduplicate: Prioritize Dynamic, then add Unique Static
+            const dbIds = new Set(dynamicProducts.map(p => String(p.product_id)));
+            const uniqueStatic = staticProducts.filter(p => !dbIds.has(String(p.product_id)));
+            
+            setProducts([...dynamicProducts, ...uniqueStatic]);
         } catch (err) {
             console.error("Error fetching products:", err);
+            // Fallback to static products only
+            const staticProducts = featuredProductsArray
+                .filter(p => p.category.toLowerCase() === categoryName.toLowerCase())
+                .map(p => ({
+                    product_id: p.id,
+                    name: p.name,
+                    price: p.variants[0].price.replace(/[^\d.]/g, ''),
+                    description: p.desc || p.title,
+                    main_image: p.variants[0].img,
+                    images: p.variants.map(v => v.img),
+                    isStatic: true
+                }));
+            setProducts(staticProducts);
         } finally {
             setLoading(false);
         }

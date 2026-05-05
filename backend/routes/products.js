@@ -92,10 +92,11 @@ router.get("/seller-products/:seller_id", async (req, res) => {
       `SELECT p.*, c.name as category_name, p.images[1] as main_image
        FROM products p
        LEFT JOIN categories c ON p.category_id = c.category_id
-       WHERE p.seller_id = $1 AND p.deleted_at IS NULL
+       WHERE p.seller_id = $1 AND p.deleted_at IS NULL AND p.product_id LIKE 'PRD%'
        ORDER BY p.created_at DESC`,
       [req.params.seller_id]
     );
+    console.log(`[seller-products] Found ${result.rows.length} PRD products for ${req.params.seller_id}`);
     res.json(result.rows);
   } catch (err) {
     console.error(err);
@@ -138,14 +139,14 @@ router.post("/seller-add-product", async (req, res) => {
       `INSERT INTO products (
         product_id, seller_id, category_id, name, description, 
         price, mrp, stock_quantity, images, sku, brand, 
-        weight, height, width, breadth, is_featured, is_active
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17)`,
+        weight, height, width, breadth, is_featured, is_active, specifications
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18)`,
       [
         pId, seller_id, final_category_id || null, name, description || "", 
         parseFloat(price) || 0, parseFloat(mrp) || parseFloat(price) || 0, 
         parseInt(stock) || 0, images || [], sku || null, brand || "", 
         parseFloat(weight) || 0, parseFloat(height) || 0, parseFloat(width) || 0, parseFloat(breadth) || 0, 
-        is_featured || false, true
+        is_featured || false, true, JSON.stringify(specifications || [])
       ]
     );
 
@@ -171,6 +172,13 @@ router.post("/seller-add-product", async (req, res) => {
         }
       }
     }
+
+    // ✅ FIX: Shorten notification_id (max 20)
+    const adminNotifId = `NP${pId.replace('PRD', '')}${Date.now().toString(36)}`;
+    await client.query(
+      "INSERT INTO notifications (notification_id, type, message) VALUES ($1, $2, $3)",
+      [adminNotifId.substring(0, 20), 'New Product', `Merchant added a new asset: ${name} (ID: ${pId})`]
+    );
 
     await client.query('COMMIT');
     res.json({ message: "Product added successfully", product_id: pId });
@@ -211,14 +219,15 @@ router.put("/seller-update-product/:id", async (req, res) => {
        category_id = $1, name = $2, description = $3, price = $4, mrp = $5, 
        stock_quantity = $6, images = $7, sku = $8, brand = $9, 
        weight = $10, height = $11, width = $12, breadth = $13, 
-       is_active = $14, is_featured = $15, updated_at = CURRENT_TIMESTAMP
-       WHERE product_id = $16`,
+       is_active = $14, is_featured = $15, specifications = $16, updated_at = CURRENT_TIMESTAMP
+       WHERE product_id = $17`,
       [
         final_category_id, name, description, parseFloat(price), parseFloat(mrp), 
         parseInt(stock), images, sku || null, brand, 
         parseFloat(weight), parseFloat(height), parseFloat(width), parseFloat(breadth), 
         is_active !== undefined ? is_active : true, 
         is_featured !== undefined ? is_featured : false,
+        JSON.stringify(specifications || []),
         product_id
       ]
     );

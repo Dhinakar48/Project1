@@ -57,7 +57,7 @@ export default function MyAccount() {
 
   useEffect(() => {
     if (activeUser.email) {
-      axios.get(`http://127.0.0.1:5000/profile/${activeUser.email}`)
+      axios.get(`http://localhost:5000/profile/${activeUser.email}`)
         .then(res => {
           setProfileData({
             firstName: res.data.name || "User",
@@ -91,7 +91,7 @@ export default function MyAccount() {
 
   const handleSaveProfile = async () => {
     try {
-      await axios.post('http://127.0.0.1:5000/update-profile', {
+      await axios.post('http://localhost:5000/update-profile', {
         email: profileData.email,
         name: profileData.firstName,
         phone: profileData.phone,
@@ -146,7 +146,7 @@ export default function MyAccount() {
   useEffect(() => {
     if (activeUser.customerId && activeTab === 'orders') {
       setIsLoadingOrders(true);
-      axios.get(`http://127.0.0.1:5000/customer-orders/${activeUser.customerId}`)
+      axios.get(`http://localhost:5000/customer-orders/${activeUser.customerId}`)
         .then(res => {
           setRealOrders(res.data.map(o => ({
             id: o.order_id,
@@ -181,7 +181,7 @@ export default function MyAccount() {
     if (!selectedOrder) return;
 
     try {
-      const res = await axios.post("http://127.0.0.1:5000/order/cancel", {
+      const res = await axios.post("http://localhost:5000/order/cancel", {
         orderId: selectedOrder.id,
         reason: cancellationReason
       });
@@ -209,7 +209,7 @@ export default function MyAccount() {
       const savedUser = JSON.parse(localStorage.getItem("user") || "{}");
       if (savedUser.customerId) {
         try {
-          const res = await axios.get(`http://127.0.0.1:5000/payment-methods/${savedUser.customerId}`);
+          const res = await axios.get(`http://localhost:5000/payment-methods/${savedUser.customerId}`);
           setPaymentMethods(res.data.map(p => ({
             id: p.payment_method_id,
             type: p.type,
@@ -248,7 +248,7 @@ export default function MyAccount() {
         // Standard practice for cards is add/delete only for security
         console.warn("Editing not fully implemented for DB yet");
       } else {
-        const res = await axios.post("http://127.0.0.1:5000/payment-methods", {
+        const res = await axios.post("http://localhost:5000/payment-methods", {
           customerId: savedUser.customerId,
           type: newPayment.type,
           last4: last4,
@@ -281,7 +281,7 @@ export default function MyAccount() {
 
   const handleDeletePayment = async (id) => {
     try {
-      await axios.delete(`http://127.0.0.1:5000/payment-methods/${id}`);
+      await axios.delete(`http://localhost:5000/payment-methods/${id}`);
       setPaymentMethods(paymentMethods.filter(p => p.id !== id));
     } catch (err) {
       console.error("Error deleting payment method:", err);

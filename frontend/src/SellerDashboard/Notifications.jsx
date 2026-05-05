@@ -50,7 +50,7 @@ export default function Notifications({ notifications, markAsRead }) {
               >
                 <div className="flex items-start gap-6">
                   <div className={`w-14 h-14 rounded-2xl flex items-center justify-center text-xl shadow-sm border ${!n.is_read ? 'bg-amber-500 text-white border-amber-400' : 'bg-stone-100 text-stone-400 border-stone-200'}`}>
-                    {n.type === 'New Order' ? '📦' : '🔔'}
+                    {n.type === 'New Order' ? '📦' : n.type === 'Order Cancelled' ? '❌' : '🔔'}
                   </div>
                   <div className="space-y-1.5">
                     <div className="flex items-center gap-3">

@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const pool = require('../db');
+const { recordAuditLog } = require('../utils/audit');
 
 // --- ADMIN COUPONS ---
 // Get all coupons for Admin
@@ -36,6 +37,10 @@ router.post('/admin/coupons', async (req, res) => {
          VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11) RETURNING *`,
          [coupon_id, admin_id, title, description, code, type, discount_percent, max_discount, min_order_value || 0, max_usage, valid_until || null]
       );
+
+      // Audit Log
+      await recordAuditLog(admin_id, 'coupons', coupon_id, 'CREATE_COUPON', null, result.rows[0], req);
+
       res.json({ success: true, coupon: result.rows[0] });
    } catch (err) {
       console.error('[admin-coupons-post] Error:', err);
@@ -48,6 +53,10 @@ router.patch('/admin/coupons/:id', async (req, res) => {
    const { is_active } = req.body;
    try {
       await pool.query("UPDATE coupons SET is_active = $1 WHERE coupon_id = $2", [is_active, req.params.id]);
+      
+      // Audit Log
+      await recordAuditLog(req.body.admin_id || 'System', 'coupons', req.params.id, 'UPDATE_COUPON_STATUS', null, { is_active }, req);
+
       res.json({ success: true });
    } catch (err) {
       console.error('[admin-coupons-patch] Error:', err);
@@ -69,6 +78,10 @@ router.delete('/admin/coupons/:id', async (req, res) => {
 
       const result = await pool.query("DELETE FROM coupons WHERE coupon_id = $1 RETURNING *", [req.params.id]);
       if (result.rowCount === 0) return res.status(404).json({ success: false, message: 'Coupon not found' });
+      
+      // Audit Log
+      await recordAuditLog(req.body.admin_id || 'System', 'coupons', req.params.id, 'DELETE_COUPON', result.rows[0], null, req);
+
       res.json({ success: true });
    } catch (err) {
       console.error('[admin-coupons-delete] Error:', err);

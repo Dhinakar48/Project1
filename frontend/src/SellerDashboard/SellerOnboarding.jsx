@@ -71,7 +71,7 @@ export default function SellerOnboarding() {
       const email = localStorage.getItem('onboardingSellerEmail');
       if (email) {
         try {
-          await axios.post("http://127.0.0.1:5000/seller-onboarding", {
+          await axios.post("http://localhost:5000/seller-onboarding", {
             email: email,
             storeName: onboardingData.storeName || onboardingData.businessName,
             gstin: onboardingData.gstin,

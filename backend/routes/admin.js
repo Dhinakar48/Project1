@@ -3,6 +3,8 @@ const router = express.Router();
 const pool = require('../db');
 const bcrypt = require('bcryptjs');
 const { decrypt } = require('../utils/encryption');
+const { recordSession } = require('./live');
+const { recordAuditLog } = require('../utils/audit');
 
 // Admin Login Route
 router.post('/admin-login', async (req, res) => {
@@ -30,6 +32,12 @@ router.post('/admin-login', async (req, res) => {
 
       await pool.query('UPDATE admins SET last_login_at = NOW() WHERE admin_id = $1', [admin.admin_id]);
 
+      await recordSession(admin.admin_id, 'admin', req);
+
+      // Audit Log
+      const { recordAuditLog } = require('../utils/audit');
+      await recordAuditLog(admin.admin_id, 'admins', admin.admin_id, 'LOGIN', null, { email: admin.email }, req);
+
       res.json({
          success: true,
          admin: {
@@ -44,6 +52,18 @@ router.post('/admin-login', async (req, res) => {
    } catch (err) {
       console.error('[admin-login] Error:', err);
       res.status(500).json({ success: false, message: 'Server error during authentication.' });
+   }
+});
+
+// Admin Logout Route
+router.post('/admin-logout', async (req, res) => {
+   const { admin_id } = req.body;
+   try {
+      await recordAuditLog(admin_id || 'System', 'admins', admin_id || 'UNKNOWN', 'LOGOUT', null, null, req);
+      res.json({ success: true, message: 'Logged out successfully.' });
+   } catch (err) {
+      console.error('[admin-logout] Error:', err);
+      res.status(500).json({ success: false });
    }
 });
 
@@ -97,7 +117,7 @@ router.get('/admin/products', async (req, res) => {
          SELECT p.*, s.store_name as seller_name 
          FROM products p 
          LEFT JOIN sellers s ON p.seller_id = s.seller_id 
-         WHERE p.deleted_at IS NULL
+         WHERE p.deleted_at IS NULL AND p.product_id LIKE 'PRD%'
          ORDER BY p.created_at DESC
       `);
       res.json({ success: true, products: result.rows });
@@ -123,14 +143,16 @@ router.post('/admin/add-product', async (req, res) => {
    const { 
       name, description, price, mrp, stock_quantity, 
       category_id, new_category_name, brand, sku, 
-      images, discount, is_featured, product_type, specifications
+      images, discount, is_featured, product_type, specifications,
+      weight, height, width, breadth, seller_id
    } = req.body;
    
    const client = await pool.connect();
    try {
       await client.query('BEGIN');
 
-      let final_category_id = category_id;
+      let final_category_id = (category_id && category_id !== "" && category_id !== 'new') ? parseInt(category_id) : null;
+      if (isNaN(final_category_id)) final_category_id = null;
 
       // Handle new category creation
       if (category_id === 'new' && new_category_name) {
@@ -142,31 +164,70 @@ router.post('/admin/add-product', async (req, res) => {
          final_category_id = catResult.rows[0].category_id;
       }
 
-      // Generate Product ID
-      const countRes = await client.query("SELECT COUNT(*) FROM products");
-      const nextNum = parseInt(countRes.rows[0].count) + 1;
+      // Generate Product ID more robustly
+      const maxRes = await client.query("SELECT product_id FROM products WHERE product_id LIKE 'PRD%' ORDER BY product_id DESC LIMIT 1");
+      let nextNum = 1;
+      if (maxRes.rows.length > 0) {
+         const lastId = maxRes.rows[0].product_id;
+         const lastNum = parseInt(lastId.replace('PRD', ''));
+         if (!isNaN(lastNum)) nextNum = lastNum + 1;
+      }
       const productId = `PRD${nextNum.toString().padStart(3, '0')}`;
-
-      const sellerId = 'SEL001'; // Default system seller
+ 
+      const final_seller_id = seller_id || 'ADMIN'; // Use provided seller_id or default to system admin
 
       const result = await client.query(
          `INSERT INTO products 
-         (product_id, name, description, price, mrp, stock_quantity, category_id, brand, sku, images, discount, is_featured, seller_id, is_active, product_type, specifications)
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, true, $14, $15)
+         (product_id, name, description, price, mrp, stock_quantity, category_id, brand, sku, images, discount, is_featured, seller_id, is_active, product_type, specifications, weight, height, width, breadth)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, true, $14, $15, $16, $17, $18, $19)
          RETURNING *`,
          [
-            productId, name, description, price, mrp, stock_quantity, final_category_id, brand, sku, 
-            images || [], discount || 0, is_featured || false, sellerId, 
-            product_type, JSON.stringify(specifications || [])
+            productId, name, description, 
+            parseFloat(price) || 0, 
+            parseFloat(mrp) || 0, 
+            parseInt(stock_quantity) || 0, 
+            final_category_id, brand, sku || null, 
+            images || [], 
+            parseInt(discount) || 0, 
+            is_featured || false, final_seller_id, 
+            product_type || null, 
+            typeof specifications === 'string' ? specifications : JSON.stringify(specifications || []),
+            parseFloat(weight) || 0, parseFloat(height) || 0, parseFloat(width) || 0, parseFloat(breadth) || 0
          ]
       );
 
+      // Sync specifications to product_variants table
+      if (specifications && Array.isArray(specifications)) {
+         for (const spec of specifications) {
+            if (spec.key && spec.value) {
+               const maxVarRes = await client.query("SELECT variant_id FROM product_variants ORDER BY variant_id DESC LIMIT 1");
+               const nextVarNum = (maxVarRes.rows.length ? (parseInt(maxVarRes.rows[0].variant_id.split('-')[1]) || 0) : 0) + 1;
+               const vId = `VAR-${nextVarNum.toString().padStart(3, '0')}`;
+               await client.query(
+                  "INSERT INTO product_variants (variant_id, product_id, sku, variant_name, variant_value, price, mrp, stock_quantity) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)",
+                  [vId, productId, spec.sku || sku || null, spec.key, spec.value, parseFloat(spec.price) || parseFloat(price) || 0, parseFloat(spec.mrp) || parseFloat(mrp) || parseFloat(price) || 0, parseInt(spec.stock) || parseInt(stock_quantity) || 0]
+               );
+            }
+         }
+      }
+
       await client.query('COMMIT');
+      
+      // Audit Log
+      await recordAuditLog(admin_id || 'ADMIN', 'products', productId, 'CREATE_PRODUCT', null, result.rows[0], req);
+
       res.json({ success: true, product: result.rows[0] });
    } catch (err) {
       await client.query('ROLLBACK');
-      console.error('[admin-add-product] Error:', err);
-      res.status(500).json({ success: false, message: err.message });
+      console.error('--- [admin-add-product] CRITICAL ERROR ---');
+      console.error('Message:', err.message);
+      
+      let clientMessage = err.message;
+      if (err.code === '23505') { // Unique constraint violation
+         clientMessage = "A product with this SKU already exists. Please use a unique SKU.";
+      }
+
+      res.status(500).json({ success: false, message: clientMessage, details: err.detail });
    } finally {
       client.release();
    }
@@ -179,14 +240,15 @@ router.put('/admin/update-product/:id', async (req, res) => {
       name, description, price, mrp, stock_quantity, 
       category_id, new_category_name, brand, sku, 
       images, discount, is_featured, is_active,
-      product_type, specifications 
+      product_type, specifications,
+      weight, height, width, breadth
    } = req.body;
    
    const client = await pool.connect();
    try {
       await client.query('BEGIN');
 
-      let final_category_id = category_id;
+      let final_category_id = category_id && category_id !== "" && category_id !== 'new' ? parseInt(category_id) : null;
       if (category_id === 'new' && new_category_name) {
          const slug = new_category_name.toLowerCase().trim().replace(/ /g, '-').replace(/[^\w-]+/g, '');
          const catResult = await client.query(
@@ -194,6 +256,8 @@ router.put('/admin/update-product/:id', async (req, res) => {
             [new_category_name.trim(), slug]
          );
          final_category_id = catResult.rows[0].category_id;
+      } else if (category_id && category_id !== 'new') {
+         final_category_id = parseInt(category_id);
       }
 
       await client.query(
@@ -201,17 +265,45 @@ router.put('/admin/update-product/:id', async (req, res) => {
          name = $1, description = $2, price = $3, mrp = $4, stock_quantity = $5, 
          category_id = $6, brand = $7, sku = $8, images = $9, 
          discount = $10, is_featured = $11, is_active = $12, 
-         product_type = $13, specifications = $14, updated_at = CURRENT_TIMESTAMP
-         WHERE product_id = $15`,
+         product_type = $13, specifications = $14, 
+         weight = $15, height = $16, width = $17, breadth = $18,
+         updated_at = CURRENT_TIMESTAMP
+         WHERE product_id = $19`,
          [
-            name, description, price, mrp, stock_quantity, 
+            name, description, 
+            parseFloat(price) || 0, 
+            parseFloat(mrp) || 0, 
+            parseInt(stock_quantity) || 0, 
             final_category_id, brand, sku, images || [], 
-            discount || 0, is_featured || false, is_active !== undefined ? is_active : true,
-            product_type, JSON.stringify(specifications || []), id
+            parseInt(discount) || 0, 
+            is_featured || false, is_active !== undefined ? is_active : true,
+            product_type, JSON.stringify(specifications || []),
+            parseFloat(weight) || 0, parseFloat(height) || 0, parseFloat(width) || 0, parseFloat(breadth) || 0,
+            id
          ]
       );
-
+      
+      // Sync specifications to product_variants table
+      await client.query("DELETE FROM product_variants WHERE product_id = $1", [id]);
+      if (specifications && Array.isArray(specifications)) {
+         for (const spec of specifications) {
+            if (spec.key && spec.value) {
+               const maxVarRes = await client.query("SELECT variant_id FROM product_variants ORDER BY variant_id DESC LIMIT 1");
+               const nextVarNum = (maxVarRes.rows.length ? (parseInt(maxVarRes.rows[0].variant_id.split('-')[1]) || 0) : 0) + 1;
+               const vId = `VAR-${nextVarNum.toString().padStart(3, '0')}`;
+               await client.query(
+                  "INSERT INTO product_variants (variant_id, product_id, sku, variant_name, variant_value, price, mrp, stock_quantity) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)",
+                  [vId, id, spec.sku || sku || null, spec.key, spec.value, parseFloat(spec.price) || parseFloat(price) || 0, parseFloat(spec.mrp) || parseFloat(mrp) || parseFloat(price) || 0, parseInt(spec.stock) || parseInt(stock_quantity) || 0]
+               );
+            }
+         }
+      }
+      
       await client.query('COMMIT');
+
+      // Audit Log
+      await recordAuditLog(req.body.adminId || 'ADMIN', 'products', id, 'UPDATE_PRODUCT', null, req.body, req);
+
       res.json({ success: true });
    } catch (err) {
       await client.query('ROLLBACK');
@@ -243,6 +335,10 @@ router.delete('/admin/delete-product/:id', async (req, res) => {
          
          await client.query('COMMIT');
          console.log(`[admin-delete] Hard deleted product: ${req.params.id}`);
+         
+         // Audit Log
+         await recordAuditLog(req.body.adminId || 'ADMIN', 'products', req.params.id, 'DELETE_PRODUCT_PERMANENT', null, null, req);
+
          return res.json({ success: true, message: 'Product permanently removed.' });
       } catch (hardErr) {
          // If hard delete fails (likely due to order history/foreign keys in other tables), 
@@ -255,6 +351,9 @@ router.delete('/admin/delete-product/:id', async (req, res) => {
             [req.params.id]
          );
          
+         // Audit Log
+         await recordAuditLog(req.body.adminId || 'ADMIN', 'products', req.params.id, 'ARCHIVE_PRODUCT', null, null, req);
+
          return res.json({ success: true, message: 'Product archived (soft-deleted) because it has existing order records.' });
       }
    } catch (err) {
@@ -395,6 +494,10 @@ router.patch('/admin/toggle-user-status', async (req, res) => {
       } else {
          await pool.query("UPDATE sellers SET is_active = $1, is_blocked = $2 WHERE seller_id = $3", [isActive, !isActive, userId]);
       }
+
+      // Audit Log
+      await recordAuditLog(req.body.adminId || 'ADMIN', type === 'Customer' ? 'customers' : 'sellers', userId, isActive ? 'ACTIVATE_ACCOUNT' : 'BLOCK_ACCOUNT', null, { isActive }, req);
+
       res.json({ success: true, message: `User ${isActive ? 'activated' : 'deactivated/blocked'} successfully.` });
    } catch (err) {
       console.error('[toggle-user-status] Error:', err);
@@ -571,11 +674,13 @@ router.patch('/admin/returns/:id/process', async (req, res) => {
          [status, id]
       );
 
-      await client.query(
-         `INSERT INTO order_status_history (order_id, status, notes, changed_by, changed_at)
-          VALUES ($1, $2, $3, $4, NOW())`,
-         [id, status, notes || `Status updated to ${status} by Admin.`, 'Administrator']
-      );
+       // ✅ FIX: Shorten history_id (max 20)
+       const adminHistId = `HA${id.replace('ORD-', '')}${Date.now().toString(36)}`;
+       await client.query(
+          `INSERT INTO order_status_history (history_id, order_id, status, notes, changed_by, changed_at)
+           VALUES ($1, $2, $3, $4, $5, NOW())`,
+          [adminHistId.substring(0, 20), id, status, notes || `Status updated to ${status} by Admin.`, 'Administrator']
+       );
 
       await client.query('COMMIT');
       res.json({ success: true, message: `Order ${id} marked as ${status}.` });
@@ -685,7 +790,7 @@ router.get('/admin/notifications', async (req, res) => {
          LEFT JOIN customers c ON n.customer_id = c.customer_id
          LEFT JOIN sellers s ON n.seller_id = s.seller_id
          LEFT JOIN orders o ON n.order_id = o.order_id
-         WHERE n.type IN ('Order Placed', 'Order Update', 'New Order', 'Order Cancelled', 'System Alert')
+         WHERE n.type IN ('Order Placed', 'Order Update', 'New Order', 'Order Cancelled', 'System Alert', 'New User', 'New Seller', 'New Product')
          ORDER BY n.created_at DESC
          LIMIT 50
       `);
@@ -699,7 +804,7 @@ router.get('/admin/notifications', async (req, res) => {
 // Mark ALL notifications as read
 router.patch('/admin/notifications/read-all', async (req, res) => {
    try {
-      await pool.query("UPDATE notifications SET is_read = true WHERE type IN ('Order Placed', 'Order Update', 'New Order', 'Order Cancelled', 'System Alert')");
+      await pool.query("UPDATE notifications SET is_read = true WHERE type IN ('Order Placed', 'Order Update', 'New Order', 'Order Cancelled', 'System Alert', 'New User', 'New Seller', 'New Product')");
       res.json({ success: true });
    } catch (err) {
       console.error('[admin-notifications-read-all] Error:', err);
@@ -715,6 +820,23 @@ router.patch('/admin/notifications/read/:id', async (req, res) => {
    } catch (err) {
       console.error('[admin-notifications-patch] Error:', err);
       res.status(500).json({ success: false });
+   }
+});
+
+// Get Audit Logs
+router.get('/admin/audit-logs', async (req, res) => {
+   try {
+      const result = await pool.query(`
+         SELECT al.*, a.name as admin_name 
+         FROM audit_logs al
+         LEFT JOIN admins a ON al.admin_id = a.admin_id
+         ORDER BY al.created_at DESC
+         LIMIT 100
+      `);
+      res.json({ success: true, logs: result.rows });
+   } catch (err) {
+      console.error('[audit-logs] Error:', err);
+      res.status(500).json({ success: false, message: 'Failed to fetch audit logs' });
    }
 });
 
