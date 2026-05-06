@@ -21,13 +21,14 @@ import {
   FaCcVisa,
   FaCcMastercard,
   FaLock,
-  FaKey
+  FaKey,
+  FaMoneyBills
 } from 'react-icons/fa6';
 import { useNavigate } from 'react-router-dom';
 import { useStore } from './StoreContext';
 
 export default function MyAccount() {
-  const [activeTab, setActiveTab] = useState('profile');
+  const [activeTab, setActiveTab] = useState(localStorage.getItem('myAccountActiveTab') || 'profile');
 
   const [selectedOrder, setSelectedOrder] = useState(null);
   const [isCancellingOrder, setIsCancellingOrder] = useState(false);
@@ -144,6 +145,10 @@ export default function MyAccount() {
   const [isLoadingOrders, setIsLoadingOrders] = useState(false);
 
   useEffect(() => {
+    localStorage.setItem('myAccountActiveTab', activeTab);
+  }, [activeTab]);
+
+  useEffect(() => {
     if (activeUser.customerId && activeTab === 'orders') {
       setIsLoadingOrders(true);
       axios.get(`http://localhost:5000/customer-orders/${activeUser.customerId}`)
@@ -161,13 +166,16 @@ export default function MyAccount() {
               city: o.city,
               state: o.state,
               pincode: o.pincode,
-              phone: o.shipping_phone
+              phone: o.shipping_phone,
+              selectedAddressType: o.selected_address_type || "address1"
             },
             items: (o.items || []).map(it => ({
               name: it.name,
               quantity: it.quantity,
               price: `₹${parseFloat(it.unit_price).toLocaleString()}`
             })),
+            paymentMethod: o.payment_method,
+            transactionId: o.transaction_id,
             icon: FaBoxOpen
           })));
         })
@@ -663,21 +671,21 @@ export default function MyAccount() {
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                               <div className="bg-stone-50 p-6 rounded-2xl border border-stone-100 relative overflow-hidden">
                                 <h3 className="text-[10px] font-black text-stone-400 uppercase tracking-widest mb-3">Shipping Address</h3>
-                                {selectedOrder.shippingAddress && selectedOrder.shippingAddress.address1 ? (
-                                  <>
-                                    <p className="font-bold text-stone-900 text-sm">{selectedOrder.shippingAddress.name}</p>
-                                    <p className="text-stone-500 text-sm mt-1">
-                                      {selectedOrder.shippingAddress.selectedAddressType === "address2"
-                                        ? selectedOrder.shippingAddress.address2
-                                        : selectedOrder.shippingAddress.address1
-                                      }
-                                      <br />
-                                      {selectedOrder.shippingAddress.city}, {selectedOrder.shippingAddress.state} {selectedOrder.shippingAddress.pincode}
-                                      <br />
-                                      India
-                                    </p>
-                                    <p className="text-stone-500 text-sm mt-2">{selectedOrder.shippingAddress.phone}</p>
-                                  </>
+                                  {selectedOrder.shippingAddress && selectedOrder.shippingAddress.address1 ? (
+                                   <>
+                                     <p className="font-bold text-stone-900 text-sm">{selectedOrder.shippingAddress.name}</p>
+                                     <p className="text-stone-500 text-sm mt-1">
+                                       {selectedOrder.shippingAddress.selectedAddressType === "address2"
+                                         ? selectedOrder.shippingAddress.address2
+                                         : selectedOrder.shippingAddress.address1
+                                       }
+                                       <br />
+                                       {selectedOrder.shippingAddress.city}, {selectedOrder.shippingAddress.state} {selectedOrder.shippingAddress.pincode}
+                                       <br />
+                                       India
+                                     </p>
+                                     <p className="text-stone-500 text-sm mt-2">{selectedOrder.shippingAddress.phone}</p>
+                                   </>
                                 ) : (
                                   <p className="text-stone-500 text-sm italic">Address details unavailable</p>
                                 )}
@@ -686,10 +694,16 @@ export default function MyAccount() {
                               <div className="bg-stone-50 p-6 rounded-2xl border border-stone-100 relative overflow-hidden">
                                 <h3 className="text-[10px] font-black text-stone-400 uppercase tracking-widest mb-3">Payment Method</h3>
                                 <div className="flex items-center gap-3">
-                                  <FaCcVisa className="text-stone-400" size={32} />
+                                  {selectedOrder.paymentMethod?.toLowerCase() === 'cod' ? <FaMoneyBills className="text-stone-400" size={32} /> : <FaCcVisa className="text-stone-400" size={32} />}
                                   <div>
-                                    <p className="font-bold text-stone-900 text-sm">Visa ending in 4242</p>
-                                    <p className="text-stone-500 text-xs mt-1">Paid on {selectedOrder.date}</p>
+                                    <p className="font-bold text-stone-900 text-sm uppercase tracking-tight">
+                                      {selectedOrder.paymentMethod || "Not Specified"}
+                                    </p>
+                                    <p className="text-stone-500 text-xs mt-1">
+                                      {selectedOrder.transactionId && selectedOrder.transactionId !== 'COD' 
+                                        ? `ID: ${selectedOrder.transactionId}` 
+                                        : `Confirmed on ${selectedOrder.date}`}
+                                    </p>
                                   </div>
                                 </div>
                                 <FaCreditCard className="absolute -bottom-4 -right-4 text-stone-200/50" size={100} />

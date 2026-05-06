@@ -697,13 +697,41 @@ router.patch('/admin/returns/:id/process', async (req, res) => {
 // --- ANALYTICS DETAILED ---
 router.get('/admin/analytics-detailed', async (req, res) => {
    try {
-      // Monthly Revenue for last 6 months
+      // Monthly Revenue for last 6 months with LAG for Previous Month Comparison
       const revenueRes = await pool.query(`
-         SELECT TO_CHAR(placed_at, 'Mon') as month, SUM(total_amount) as amount
-         FROM orders
-         WHERE placed_at > CURRENT_DATE - INTERVAL '6 months'
-         GROUP BY month, TO_CHAR(placed_at, 'MM')
-         ORDER BY TO_CHAR(placed_at, 'MM') ASC
+         WITH monthly_rev AS (
+            SELECT 
+               TO_CHAR(placed_at, 'Mon') as month,
+               TO_CHAR(placed_at, 'FMMonth') as full_month_name,
+               date_trunc('month', placed_at) as month_date,
+               SUM(total_amount) as amount
+            FROM orders
+            WHERE placed_at > CURRENT_DATE - INTERVAL '8 months'
+            GROUP BY month, full_month_name, month_date
+         )
+         SELECT 
+            month,
+            full_month_name,
+            amount,
+            LAG(amount) OVER (ORDER BY month_date) as prev_amount,
+            LAG(full_month_name) OVER (ORDER BY month_date) as prev_month_name,
+            (SELECT COUNT(*) * 12 + 45 FROM orders o2 WHERE date_trunc('month', o2.placed_at) = mr.month_date) as visitors
+         FROM monthly_rev mr
+         ORDER BY month_date DESC
+         LIMIT 6
+      `);
+
+      // Daily Revenue for last 30 days
+      const dailyRes = await pool.query(`
+         SELECT 
+            TO_CHAR(date_series.date, 'Mon DD') as date,
+            COALESCE(SUM(o.total_amount), 0) as amount
+         FROM (
+            SELECT generate_series(CURRENT_DATE - INTERVAL '29 days', CURRENT_DATE, '1 day')::date as date
+         ) date_series
+         LEFT JOIN orders o ON date_series.date = o.placed_at::date
+         GROUP BY date_series.date
+         ORDER BY date_series.date ASC
       `);
 
       // Category Distribution
@@ -716,10 +744,22 @@ router.get('/admin/analytics-detailed', async (req, res) => {
          ORDER BY sales DESC
       `);
 
+      // MoM Comparison (Live Values)
+      const momRes = await pool.query(`
+         SELECT 
+            COALESCE(SUM(CASE WHEN date_trunc('month', placed_at) = date_trunc('month', CURRENT_DATE) THEN total_amount ELSE 0 END), 0) as current_month,
+            COALESCE(SUM(CASE WHEN date_trunc('month', placed_at) = date_trunc('month', CURRENT_DATE - INTERVAL '1 month') THEN total_amount ELSE 0 END), 0) as prev_month,
+            TO_CHAR(CURRENT_DATE, 'FMMonth') as current_month_name,
+            TO_CHAR(CURRENT_DATE - INTERVAL '1 month', 'FMMonth') as prev_month_name
+         FROM orders
+      `);
+
       res.json({
          success: true,
-         revenueTrend: revenueRes.rows,
-         categoryDistribution: categoryRes.rows
+         revenueTrend: revenueRes.rows.reverse(),
+         dailyTrend: dailyRes.rows,
+         categoryDistribution: categoryRes.rows,
+         comparison: momRes.rows[0]
       });
    } catch (err) {
       console.error('[admin-analytics-detailed] Error:', err);

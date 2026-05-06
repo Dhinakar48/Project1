@@ -151,11 +151,23 @@ export default function SellerDashboard() {
   }, [activeTab]);
 
   const markAsRead = async (id) => {
+    if (id === 'all') {
+      return markAllAsRead();
+    }
     try {
       await axios.patch(`http://localhost:5000/notifications/${id}/read`);
       fetchNotifications();
     } catch (err) {
       console.error("Error marking as read:", err);
+    }
+  };
+
+  const markAllAsRead = async () => {
+    try {
+      await axios.patch(`http://localhost:5000/notifications/mark-all-read/${seller.seller_id}`);
+      fetchNotifications();
+    } catch (err) {
+      console.error("Error marking all as read:", err);
     }
   };
 
@@ -266,10 +278,20 @@ export default function SellerDashboard() {
               {showNotifications && (
                 <div className="absolute right-0 mt-4 w-80 bg-white rounded-[2rem] shadow-2xl border border-stone-100 overflow-hidden z-[60] animate-in fade-in slide-in-from-top-4 duration-300">
                   <div className="p-6 border-b border-stone-100 flex items-center justify-between">
-                    <h4 className="font-semibold text-stone-900 text-[10px]">Real-time Alerts</h4>
-                    <span className="text-[10px] font-semibold text-amber-600">{notifications.filter(n => !n.is_read).length} New</span>
+                    <div className="flex items-center gap-3">
+                      <h4 className="font-semibold text-stone-900 text-[10px] uppercase tracking-wider">Notifications</h4>
+                      <span className="text-[10px] font-semibold text-amber-600 bg-amber-50 px-2 py-0.5 rounded-full">{notifications.filter(n => !n.is_read).length} New</span>
+                    </div>
+                    {notifications.some(n => !n.is_read) && (
+                      <button 
+                        onClick={(e) => { e.stopPropagation(); markAllAsRead(); }}
+                        className="text-[10px] font-bold text-stone-400 hover:text-amber-600 transition-colors"
+                      >
+                        Mark all as read
+                      </button>
+                    )}
                   </div>
-                  <div className="divide-y divide-stone-200 max-h-[350px] overflow-y-auto">
+                  <div className="divide-y divide-stone-200 max-h-[350px] overflow-y-auto no-scrollbar">
                     {notifications.length === 0 ? (
                       <div className="p-10 text-center text-stone-400 text-[10px] font-bold uppercase tracking-widest">
                         No new alerts

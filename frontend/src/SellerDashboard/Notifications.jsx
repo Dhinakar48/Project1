@@ -11,9 +11,19 @@ export default function Notifications({ notifications, markAsRead }) {
              <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse" />
              <span className="text-[9px] font-semibold tracking-widest uppercase">Center</span>
           </div>
-          <h1 className="text-4xl font-semibold text-stone-900 tracking-tight">
-            Notifications
-          </h1>
+          <div className="flex items-center gap-6">
+            <h1 className="text-4xl font-semibold text-stone-900 tracking-tight">
+              Notifications
+            </h1>
+            {notifications.some(n => !n.is_read) && (
+              <button 
+                onClick={() => markAsRead('all')} 
+                className="mt-2 px-4 py-1.5 rounded-xl bg-stone-100 text-stone-600 text-[10px] font-bold hover:bg-amber-500 hover:text-white transition-all shadow-sm"
+              >
+                Mark all as read
+              </button>
+            )}
+          </div>
           <p className="text-stone-400 text-[10px] font-semibold mt-1">
              Manage your alerts and system updates
           </p>

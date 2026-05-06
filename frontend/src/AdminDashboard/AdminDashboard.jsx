@@ -315,7 +315,7 @@ export default function AdminDashboard() {
             </header>
 
             <div className="p-8 bg-[#fafafa] min-h-full">
-               <ActiveComponent />
+               <ActiveComponent setActiveTab={setActiveTab} />
             </div>
          </main>
       </div>

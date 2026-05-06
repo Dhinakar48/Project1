@@ -10,16 +10,7 @@ export default function Overview({ setActiveTab, stats, notifications, recentOrd
           <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-amber-500/10 text-amber-600">
              <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse" />
              <span className="text-[9px] font-semibold">Live Dashboard</span>
-             <button onClick={() => window.location.reload()} className="ml-4 px-2 py-1 bg-white border border-stone-200 text-stone-900 rounded-md text-[9px] font-bold hover:bg-stone-100">
-               Force Reload
-             </button>
           </div>
-          {/* Debug Block */}
-          {stats && stats.length > 0 && stats[0].value === '₹0' && (
-             <div className="text-[10px] text-red-500 font-mono mt-2">
-               DEBUG: Stats are still showing default zeros. Please click "Force Reload".
-             </div>
-          )}
           <h1 className="text-4xl font-semibold text-stone-900">
             Overview
           </h1>

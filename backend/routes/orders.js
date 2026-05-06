@@ -5,7 +5,7 @@ const pool = require('../db');
 // Place Order
 router.post("/order/place", async (req, res) => {
   console.log("--- ORDER PLACE REQUEST RECEIVED ---", req.body);
-  const { customerId, addressId, cartItems, subtotal, discountAmount, totalAmount, couponId, shippingCharge, paymentMethod, transactionId } = req.body;
+  const { customerId, addressId, cartItems, subtotal, discountAmount, totalAmount, couponId, shippingCharge, paymentMethod, transactionId, selectedAddressType } = req.body;
   const client = await pool.connect();
   try {
     await client.query("BEGIN");
@@ -56,9 +56,9 @@ router.post("/order/place", async (req, res) => {
     }
 
     await client.query(
-      `INSERT INTO orders (order_id, customer_id, address_id, coupon_id, subtotal, discount_amount, platform_fee, shipping_charge, total_amount, order_status, payment_status)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)`,
-      [orderId, customerId, addressId || null, finalCouponId, backendRawSubtotal, totalDiscountAmount, platformFee, shippingCharge || 0, backendTotal, 'Confirmed', paymentStatus]
+      `INSERT INTO orders (order_id, customer_id, address_id, coupon_id, subtotal, discount_amount, platform_fee, shipping_charge, total_amount, order_status, payment_status, selected_address_type, payment_method, transaction_id)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)`,
+      [orderId, customerId, addressId || null, finalCouponId, backendRawSubtotal, totalDiscountAmount, platformFee, shippingCharge || 0, backendTotal, 'Confirmed', paymentStatus, selectedAddressType || 'address1', paymentMethod, transactionId]
     );
 
     if (finalCouponId) {
@@ -126,19 +126,52 @@ router.post("/order/place", async (req, res) => {
     }
 
     const sellerIds = Object.keys(sellerSubtotals);
+    let mainPaymentId = null;
     if (paymentMethod) {
       const finalTransactionId = (transactionId && transactionId !== 'COD') ? transactionId : null;
       // ✅ FIX: Shorten payment_id (max 20)
       const payId = `P${orderId.replace('ORD-', '')}${Date.now().toString(36)}`;
+      mainPaymentId = payId.substring(0, 20);
+      
       await client.query(
         "INSERT INTO payments (payment_id, customer_id, order_id, payment_method, amount, transaction_id, payment_status, paid_at, gateway_name, seller_id) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)",
-        [payId.substring(0, 20), customerId, orderId, paymentMethod, backendTotal, finalTransactionId, paymentStatus, isPaid ? new Date() : null, isPaid ? 'Razorpay' : null, sellerIds[0] || null]
+        [mainPaymentId, customerId, orderId, paymentMethod, backendTotal, finalTransactionId, paymentStatus, isPaid ? new Date() : null, isPaid ? 'Razorpay' : null, sellerIds[0] || null]
       );
     }
 
     for (const sId in sellerSubtotals) {
       await client.query("INSERT INTO order_sellers (order_id, seller_id, seller_subtotal) VALUES ($1, $2, $3)", [orderId, sId, sellerSubtotals[sId]]);
       
+      // Finance logic
+      const today = new Date().toISOString().split('T')[0];
+      const commissionAmount = Object.values(sellerSubtotals).length > 0 ? (sellerSubtotals[sId] * 0.1) : 0; // Simple 10%
+      const netEarnings = sellerSubtotals[sId] - commissionAmount;
+
+      let dailyFinRes = await client.query(
+        "SELECT daily_finance_id FROM daily_finances WHERE seller_id = $1 AND finance_date = $2",
+        [sId, today]
+      );
+
+      let dailyFinId;
+      if (dailyFinRes.rows.length === 0) {
+        const newDailyFin = await client.query(
+          "INSERT INTO daily_finances (seller_id, finance_date, total_revenue, platform_commissions, net_seller_earnings) VALUES ($1, $2, $3, $4, $5) RETURNING daily_finance_id",
+          [sId, today, sellerSubtotals[sId], commissionAmount, netEarnings]
+        );
+        dailyFinId = newDailyFin.rows[0].daily_finance_id;
+      } else {
+        dailyFinId = dailyFinRes.rows[0].daily_finance_id;
+        await client.query(
+          "UPDATE daily_finances SET total_revenue = total_revenue + $1, platform_commissions = platform_commissions + $2, net_seller_earnings = net_seller_earnings + $3 WHERE daily_finance_id = $4",
+          [sellerSubtotals[sId], commissionAmount, netEarnings, dailyFinId]
+        );
+      }
+
+      await client.query(
+        "INSERT INTO finance_transactions (daily_finance_id, order_id, payment_id, transaction_type, amount) VALUES ($1, $2, $3, $4, $5)",
+        [dailyFinId, orderId, mainPaymentId, 'sale', sellerSubtotals[sId]]
+      );
+
       // ✅ FIX: Shorten notification_id (max 20)
       const sellerNotifId = `NS${sId.replace('SEL', '')}${Date.now().toString(36)}${Math.floor(Math.random() * 100).toString(36)}`;
       await client.query(
@@ -283,7 +316,7 @@ router.get("/order-history/:orderId", async (req, res) => {
 router.get("/customer-orders/:customerId", async (req, res) => {
   try {
     const result = await pool.query(`
-      SELECT o.*, a.full_name as shipping_name, a.address1 as address, a.address2, a.city, a.state, a.pincode, a.phone as shipping_phone,
+      SELECT o.*, a.full_name as shipping_name, a.address1, a.address2, a.city, a.state, a.pincode, a.phone as shipping_phone,
              (SELECT json_agg(items) FROM (SELECT oi.*, p.name, p.images FROM order_items oi JOIN products p ON oi.product_id = p.product_id WHERE oi.order_id = o.order_id) items) as items
       FROM orders o LEFT JOIN addresses a ON o.address_id = a.address_id WHERE o.customer_id = $1 ORDER BY o.placed_at DESC
     `, [req.params.customerId]);
@@ -295,7 +328,7 @@ router.get("/seller-orders/:sellerId", async (req, res) => {
   try {
     const result = await pool.query(`
       SELECT oi.*, o.placed_at, o.order_status, o.payment_status, o.total_amount, p.name as product_name, p.images as product_images, c.name as customer_name, c.email as customer_email,
-             a.full_name as shipping_name, a.address1 as address, a.address2, a.city, a.state, a.pincode, a.phone as shipping_phone
+             a.full_name as shipping_name, a.address1, a.address2, a.city, a.state, a.pincode, a.phone as shipping_phone
       FROM order_items oi JOIN orders o ON oi.order_id = o.order_id JOIN products p ON oi.product_id = p.product_id LEFT JOIN customers c ON o.customer_id = c.customer_id LEFT JOIN addresses a ON o.address_id = a.address_id
       WHERE oi.seller_id = $1 ORDER BY o.placed_at DESC
     `, [req.params.sellerId]);
@@ -354,6 +387,24 @@ router.patch("/notifications/read/:notificationId", async (req, res) => {
     await pool.query("UPDATE notifications SET is_read = TRUE WHERE notification_id = $1", [req.params.notificationId]);
     res.json({ success: true });
   } catch (err) { res.status(500).json({ message: "Mark read error" }); }
+});
+
+// Support frontend's preferred path
+router.patch("/notifications/:notificationId/read", async (req, res) => {
+  try {
+    await pool.query("UPDATE notifications SET is_read = TRUE WHERE notification_id = $1", [req.params.notificationId]);
+    res.json({ success: true });
+  } catch (err) { res.status(500).json({ message: "Mark read error" }); }
+});
+
+router.patch("/notifications/mark-all-read/:sellerId", async (req, res) => {
+  try {
+    await pool.query("UPDATE notifications SET is_read = TRUE WHERE seller_id = $1 AND is_read = FALSE", [req.params.sellerId]);
+    res.json({ success: true });
+  } catch (err) { 
+    console.error("Mark all read error:", err);
+    res.status(500).json({ message: "Mark all read error" }); 
+  }
 });
 
 module.exports = router;

@@ -22,7 +22,14 @@ export default function Users() {
    const [users, setUsers]           = useState([]);
    const [loading, setLoading]       = useState(true);
    const [searchQuery, setSearchQuery] = useState("");
-   const [filter, setFilter]         = useState("All");
+   const [filter, setFilter]         = useState(() => {
+      const saved = localStorage.getItem('adminUserFilter');
+      if (saved) {
+         localStorage.removeItem('adminUserFilter');
+         return saved;
+      }
+      return "All";
+   });
    const [activeMenu, setActiveMenu] = useState(null);
 
    // Detail panel
@@ -64,7 +71,10 @@ export default function Users() {
          u.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
          u.email?.toLowerCase().includes(searchQuery.toLowerCase()) ||
          u.id.toLowerCase().includes(searchQuery.toLowerCase());
-      const matchesFilter = filter === "All" || u.type === filter;
+      const matchesFilter = 
+         filter === "All" ? true :
+         filter === "Blocked" ? !u.is_active :
+         u.type === filter;
       return matchesSearch && matchesFilter;
    });
 
@@ -102,6 +112,7 @@ export default function Users() {
                   <option value="All">All Types</option>
                   <option value="Customer">Customers</option>
                   <option value="Seller">Sellers</option>
+                  <option value="Blocked">Blocked Accounts</option>
                </select>
             </div>
          </div>

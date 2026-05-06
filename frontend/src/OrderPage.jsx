@@ -58,7 +58,8 @@ export default function OrderPage() {
     pincode: userProfile?.pincode || "",
     country: userProfile?.country || "India",
     country: userProfile?.country || "India",
-    paymentMethod: ""
+    paymentMethod: "",
+    selectedAddressType: "address1"
   });
   const [previousFormData, setPreviousFormData] = useState(null);
   const [savedAddresses, setSavedAddresses] = useState([]);
@@ -204,7 +205,8 @@ export default function OrderPage() {
                 totalAmount: totalPayable,
                 couponId: appliedDiscount?.code,
                 paymentMethod: formData.paymentMethod,
-                transactionId: paymentId
+                transactionId: paymentId,
+                selectedAddressType: formData.selectedAddressType
             });
 
             // Only clear cart and show success if the API call succeeds
@@ -539,7 +541,8 @@ export default function OrderPage() {
                                   city: addr.city,
                                   state: addr.state,
                                   pincode: addr.pincode,
-                                  country: addr.country
+                                  country: addr.country,
+                                  selectedAddressType: "address1"
                                 }));
                                 setIsEditingAddress(false);
                               }}
@@ -580,7 +583,8 @@ export default function OrderPage() {
                                     city: addr.city,
                                     state: addr.state,
                                     pincode: addr.pincode,
-                                    country: addr.country
+                                    country: addr.country,
+                                    selectedAddressType: "address2"
                                   }));
                                   setIsEditingAddress(false);
                                 }}

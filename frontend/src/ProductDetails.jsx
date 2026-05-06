@@ -292,8 +292,21 @@ export default function ProductDetails() {
 
     const activeVariant = lastSelectedType === 'color' ? (activeColor || activeMemory) : (activeMemory || activeColor);
 
-    const activePrice = activeVariant?.price || product.price;
-    const activeMRP = activeVariant?.mrp || product.mrp;
+    const basePrice = parseFloat(product.price) || 0;
+    const baseMRP = parseFloat(product.mrp) || basePrice;
+
+    // Calculate active price using "Highest Price Wins" logic
+    const activePrice = Math.max(
+        basePrice,
+        activeColor ? parseFloat(activeColor.price) : 0,
+        activeMemory ? parseFloat(activeMemory.price) : 0
+    );
+
+    const activeMRP = Math.max(
+        baseMRP,
+        activeColor ? parseFloat(activeColor.mrp || activeColor.price) : 0,
+        activeMemory ? parseFloat(activeMemory.mrp || activeMemory.price) : 0
+    );
     const activeStock = activeVariant?.stock !== undefined ? parseInt(activeVariant.stock) : parseInt(product.stock_quantity);
     const activeValue = activeVariant?.value || null;
 
@@ -425,10 +438,16 @@ export default function ProductDetails() {
                                                     <div className="flex items-center gap-2">
                                                         {disc > 0 && <span className="text-green-700 text-xs font-black">↓{disc}%</span>}
                                                         {v.mrp && parseFloat(v.mrp) > parseFloat(v.price) && (
-                                                            <span className="text-stone-400 line-through text-xs">₹{parseFloat(v.mrp).toLocaleString()}</span>
+                                                            <span className="text-stone-400 line-through text-xs">₹{Math.max(
+                                                                parseFloat(v.mrp),
+                                                                activeColor ? parseFloat(activeColor.mrp || activeColor.price) : 0
+                                                            ).toLocaleString()}</span>
                                                         )}
                                                     </div>
-                                                    <span className="text-lg font-black text-stone-900 tracking-tight">₹{parseFloat(v.price).toLocaleString()}</span>
+                                                    <span className="text-lg font-black text-stone-900 tracking-tight">₹{Math.max(
+                                                        parseFloat(v.price),
+                                                        activeColor ? parseFloat(activeColor.price) : 0
+                                                    ).toLocaleString()}</span>
                                                 </div>
                                             </div>
                                         );

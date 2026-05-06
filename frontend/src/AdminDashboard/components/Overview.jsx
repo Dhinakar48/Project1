@@ -3,7 +3,7 @@ import axios from "axios";
 import { motion, AnimatePresence } from "framer-motion";
 import { FaTimes, FaChartLine, FaUsers, FaStore, FaBan, FaMoneyBillWave, FaArrowLeft, FaBoxOpen, FaEdit, FaTrashAlt, FaBarcode, FaTags, FaInfoCircle, FaCalendarAlt } from "react-icons/fa";
 
-export default function Overview() {
+export default function Overview({ setActiveTab }) {
    const [dashboardData, setDashboardData] = useState(null);
    const [loading, setLoading] = useState(true);
    const [activeModal, setActiveModal] = useState(null);
@@ -214,7 +214,23 @@ export default function Overview() {
                   return (
                      <button
                         key={card.id}
-                        onClick={() => setActiveModal(card.id)}
+                        onClick={() => {
+                           if (card.id === 'volume') setActiveTab('payments');
+                           else if (card.id === 'sellers') {
+                              localStorage.setItem('adminUserFilter', 'Seller');
+                              setActiveTab('users');
+                           }
+                           else if (card.id === 'customers') {
+                              localStorage.setItem('adminUserFilter', 'Customer');
+                              setActiveTab('users');
+                           }
+                           else if (card.id === 'revenue') setActiveTab('analytics');
+                           else if (card.id === 'blocked') {
+                              localStorage.setItem('adminUserFilter', 'Blocked');
+                              setActiveTab('users');
+                           }
+                           else setActiveModal(card.id);
+                        }}
                         className={`bg-white p-6 rounded-[2rem] border border-stone-100 shadow-sm relative overflow-hidden group text-left transition-all hover:shadow-md hover:-translate-y-0.5 active:scale-[0.98]`}
                      >
                         <div className={`absolute inset-0 bg-gradient-to-br ${cm.grad} to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none`} />

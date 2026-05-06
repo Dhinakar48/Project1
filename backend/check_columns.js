@@ -1,0 +1,9 @@
+const pool = require('./db');
+pool.query("SELECT column_name FROM information_schema.columns WHERE table_name = 'orders'", (err, res) => {
+  if (err) console.error(err);
+  else {
+    console.log("Columns in orders table:");
+    res.rows.forEach(row => console.log("- " + row.column_name));
+  }
+  process.exit();
+});
