@@ -1,8 +1,8 @@
 // Featured/Home specific images
 const img1 = '/featured/buds1.avif';
-const img1alt = '/featured/buds2.jpg';
+const img1alt = '/featured/buds2.avif';
 const img2 = '/featured/watch1.avif';
-const img2alt = '/featured/watch2.webp';
+const img2alt = '/featured/watch2.jpg';
 const img3 = '/computing/laptop5.avif';
 const img3alt = '/featured/laptop2.jpg';
 const img4 = '/featured/headphone3.jpg';
@@ -17,15 +17,13 @@ const img6alt = '/featured/watch4.jpg';
 // Audios
 const mic1 = '/audios/microphone1.jpg';
 const mic2 = '/audios/microphone2.png';
-const mic3 = '/audios/microphone3.jpg';
-const mic4 = '/audios/microphone4.png';
+
 const spk1 = '/audios/speaker1.avif';
 const spk2 = '/audios/speaker2.avif';
 const spk3 = '/audios/speaker3.jpg';
 const spk4 = '/audios/speaker4.avif';
-const hdp1 = '/audios/headphone1.jpg';
-const hdp2 = '/audios/headphone2.jpg';
-const hdp3 = '/audios/headphone3.avif';
+
+const hdp3 = '/audios/headphone3.webp';
 const hdp4 = '/audios/headphone4.png';
 const bd1 = '/audios/buds1.webp';
 const bd2 = '/audios/buds2.webp';
@@ -33,8 +31,7 @@ const bd3 = '/audios/buds3.jpg';
 const bd4 = '/audios/buds4.jpg';
 
 // Wearables
-const glass1 = '/wearables/glass1.avif';
-const glass2 = '/wearables/glass2.jpg';
+
 const wt1 = '/wearables/watch1.jpg';
 const wt2 = '/wearables/watch2.webp';
 const wt3 = '/wearables/watch3.webp';
@@ -94,8 +91,8 @@ export const productsData = {
         category: "Wearables",
         desc: "Track your fitness, stay connected, and look sleek. The ultimate companion.",
         variants: [
-            { id: "v2_1", colorBg: "bg-yellow-100", ringColor: "ring-stone-400", img: img2, price: "₹11,999", colorName: "Titanium" },
-            { id: "v2_2", colorBg: "bg-blue-900", ringColor: "ring-blue-700", img: img2alt, price: "₹13,999", colorName: "Ocean" }
+            { id: "v2_1", colorBg: "bg-violet-200", ringColor: "ring-stone-400", img: img2, price: "₹11,999", colorName: "Violet" },
+            { id: "v2_2", colorBg: "bg-sandel-200", ringColor: "ring-blue-700", img: img2alt, price: "₹13,999", colorName: "Sandel" }
         ],
         specs: {
             brand: "Pulse",
@@ -139,8 +136,8 @@ export const productsData = {
         desc: "Studio-quality sound with spatial audio capabilities.",
         discount: 20,
         variants: [
-            { id: "v4_1", colorBg: "bg-gray-200", ringColor: "ring-blue-400", img: hdp3, price: "₹11,999", colorName: "Ocean Blue" },
-            { id: "v4_2", colorBg: "bg-blue-600", ringColor: "ring-red-400", img: hdp4, price: "₹10,999", colorName: "Ember Red" }
+            { id: "v4_1", colorBg: "bg-red-200", ringColor: "ring-blue-400", img: hdp3, price: "₹11,999", colorName: "Red" },
+            { id: "v4_2", colorBg: "bg-blue-600", ringColor: "ring-red-400", img: hdp4, price: "₹10,999", colorName: "Ocean Blue" }
         ],
         specs: {
             brand: "Aura",
@@ -218,70 +215,8 @@ export const productsData = {
             width: "12.0 cm"
         }
     },
-    "8": {
-        id: "8",
-        name: "Advanced Streamer",
-        title: "Vocal Mic",
-        category: "Audio",
-        desc: "Optimized for streaming with noise-rejection technology.",
-        variants: [
-            { id: "v8_1", img: mic3, price: "₹14,999", colorName: "Midnight" },
-            { id: "v8_2", img: mic4, price: "₹14,999", colorName: "Titan" }
-        ],
-        specs: {
-            brand: "Advanced Streamer",
-            material: "High-grade Polymer",
-            weight: "450g",
-            battery: "N/A (USB-C)",
-            processor: "Stream DSP Core",
-            camera: "N/A",
-            height: "15.4 cm",
-            width: "6.4 cm"
-        }
-    },
-    "9": {
-        id: "9",
-        name: "Sonic Core H1",
-        title: "Hi-Fi Headphones",
-        category: "Audio",
-        desc: "Experience sound in its purest form with open-back acoustics.",
-        variants: [
-            { id: "v9_1", colorBg: "bg-gray-200", ringColor: "ring-blue-600", img: hdp1, price: "₹42,999", colorName: "Deep Sea" },
-            { id: "v9_2", colorBg: "bg-violet-300", ringColor: "ring-stone-600", img: hdp2, price: "₹42,999", colorName: "Matte" }
-        ],
-        specs: {
-            brand: "Sonic Core",
-            material: "Carbon Fiber & Mesh",
-            weight: "310g",
-            battery: "N/A (Wired)",
-            processor: "Acoustic Engine Q1",
-            camera: "N/A",
-            height: "20.0 cm",
-            width: "18.5 cm"
-        }
-    },
-    "10": {
-        id: "10",
-        name: "Vision Pro Glass",
-        title: "AR Glasses",
-        category: "Wearables",
-        desc: "The future of vision. Overlay your life with digital intelligence.",
-        variants: [
-            { id: "v10_1", img: glass1, price: "₹4,999", colorName: "Dark Matter Style" },
-            { id: "v10_2", img: glass2, price: "₹5,999", colorName: "Pure Style" }
-        ],
-        specs: {
-            brand: "Vision",
-            material: "Magnesium Alloy & Lenses",
-            weight: "125g",
-            battery: "4 Hours AR use",
-            processor: "Vision AR Engine v2",
-            camera: "Dual 12MP",
-            height: "4.8 cm",
-            width: "14.5 cm",
-            display: "Dual 4K Micro-OLED"
-        }
-    },
+
+
     "11": {
         id: "11",
         name: "G-Shock Watch",
@@ -545,8 +480,8 @@ export const productsData = {
         category: "Wearables",
         desc: "Versatile smartwatch with timeless design.",
         variants: [
-            { id: "v24_1", colorBg: "bg-gray-200", ringColor: "ring-stone-400", img: wt1, price: "₹29,999", colorName: "Slate" },
-            { id: "v24_2", colorBg: "bg-stone-400", ringColor: "ring-stone-600", img: wt2, price: "₹29,999", colorName: "Charcoal" }
+            { id: "v24_1", colorBg: "bg-gray-100", ringColor: "ring-stone-400", img: wt1, price: "₹29,999", colorName: "White" },
+            { id: "v24_2", colorBg: "bg-gray-800", ringColor: "ring-stone-600", img: wt2, price: "₹29,999", colorName: "Black" }
         ],
         specs: {
             brand: "Nova",
@@ -593,7 +528,7 @@ const hero4 = '/laptop.jpg';
 
 export const heroSlides = [
     { id: 1, linkToProductId: "4", image: hero1, title: "Pure Sound", desc: "Precision audio.", btnText: "Explore", theme: "dark" },
-    { id: 2, linkToProductId: "2", image: hero2, title: "Stay Connected", desc: "Wearables redfined.", btnText: "Shop", theme: "dark" },
+    { id: 2, linkToProductId: "11", image: hero2, title: "Stay Connected", desc: "Wearables redfined.", btnText: "Shop", theme: "dark" },
     { id: 3, linkToProductId: "5", image: hero3, title: "Radical Design", desc: "Transparent tech.", btnText: "Discover", theme: "light" },
     { id: 4, linkToProductId: "3", image: hero4, title: "Ultimate Power", desc: "Workstation performance.", btnText: "View", theme: "dark" }
 ];

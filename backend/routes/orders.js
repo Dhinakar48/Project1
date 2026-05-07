@@ -126,10 +126,10 @@ router.post("/order/place", async (req, res) => {
     }
 
     const sellerIds = Object.keys(sellerSubtotals);
+    // ✅ FIX: Shorten payment_id (max 20)
     let mainPaymentId = null;
     if (paymentMethod) {
       const finalTransactionId = (transactionId && transactionId !== 'COD') ? transactionId : null;
-      // ✅ FIX: Shorten payment_id (max 20)
       const payId = `P${orderId.replace('ORD-', '')}${Date.now().toString(36)}`;
       mainPaymentId = payId.substring(0, 20);
       
@@ -139,39 +139,11 @@ router.post("/order/place", async (req, res) => {
       );
     }
 
-    for (const sId in sellerSubtotals) {
+    // Finance logic is handled by 'trigger_sync_finances' on seller_commissions table.
+    // Manual sync removed to prevent double-counting.
+
+    for (const sId of sellerIds) {
       await client.query("INSERT INTO order_sellers (order_id, seller_id, seller_subtotal) VALUES ($1, $2, $3)", [orderId, sId, sellerSubtotals[sId]]);
-      
-      // Finance logic
-      const today = new Date().toISOString().split('T')[0];
-      const commissionAmount = Object.values(sellerSubtotals).length > 0 ? (sellerSubtotals[sId] * 0.1) : 0; // Simple 10%
-      const netEarnings = sellerSubtotals[sId] - commissionAmount;
-
-      let dailyFinRes = await client.query(
-        "SELECT daily_finance_id FROM daily_finances WHERE seller_id = $1 AND finance_date = $2",
-        [sId, today]
-      );
-
-      let dailyFinId;
-      if (dailyFinRes.rows.length === 0) {
-        const newDailyFin = await client.query(
-          "INSERT INTO daily_finances (seller_id, finance_date, total_revenue, platform_commissions, net_seller_earnings) VALUES ($1, $2, $3, $4, $5) RETURNING daily_finance_id",
-          [sId, today, sellerSubtotals[sId], commissionAmount, netEarnings]
-        );
-        dailyFinId = newDailyFin.rows[0].daily_finance_id;
-      } else {
-        dailyFinId = dailyFinRes.rows[0].daily_finance_id;
-        await client.query(
-          "UPDATE daily_finances SET total_revenue = total_revenue + $1, platform_commissions = platform_commissions + $2, net_seller_earnings = net_seller_earnings + $3 WHERE daily_finance_id = $4",
-          [sellerSubtotals[sId], commissionAmount, netEarnings, dailyFinId]
-        );
-      }
-
-      await client.query(
-        "INSERT INTO finance_transactions (daily_finance_id, order_id, payment_id, transaction_type, amount) VALUES ($1, $2, $3, $4, $5)",
-        [dailyFinId, orderId, mainPaymentId, 'sale', sellerSubtotals[sId]]
-      );
-
       // ✅ FIX: Shorten notification_id (max 20)
       const sellerNotifId = `NS${sId.replace('SEL', '')}${Date.now().toString(36)}${Math.floor(Math.random() * 100).toString(36)}`;
       await client.query(

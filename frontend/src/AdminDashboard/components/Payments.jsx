@@ -7,7 +7,7 @@ import {
    FaHistory, FaReceipt, FaFileCsv, FaFilePdf, FaFileDownload, FaChevronDown
 } from "react-icons/fa";
 
-export default function Payments() {
+export default function Payments({ setActiveTab }) {
    const [view, setView] = useState("transactions");
    const [transactions, setTransactions] = useState([]);
    const [customerPayments, setCustomerPayments] = useState([]);
@@ -71,10 +71,11 @@ export default function Payments() {
       view === 'transactions' ? 'Finance_Ledger' : 'Customer_Payments';
 
    const buildCSVRows = () => {
-      const header = ['Ref ID', 'Entity / Order', 'Method', 'Date', 'Amount (₹)', 'Status'];
+      const header = ['Order ID', 'Ref ID', 'Entity', 'Method', 'Date', 'Amount (₹)', 'Status'];
       const rows = filteredData.map(item => [
+         `#${item.order_id || 'N/A'}`,
          item.finance_transaction_id || item.payment_id || '',
-         `${item.seller_name || item.customer_name || 'System'} / ${item.order_id || ''}`,
+         item.seller_name || item.customer_name || 'System',
          item.payment_method || 'System',
          new Date(item.created_at || item.paid_at).toLocaleDateString(),
          Number(item.amount || item.order_total || 0).toFixed(2),
@@ -102,7 +103,7 @@ export default function Payments() {
       const date = new Date().toLocaleString();
 
       const tableRows = rows.slice(1).map(r =>
-         `<tr>${r.map((c, i) => `<td style="padding:8px 12px;border-bottom:1px solid #f1f1f1;font-size:11px;color:${i === 4 ? '#4f46e5' : '#1c1917'}">${c}</td>`).join('')}</tr>`
+         `<tr>${r.map((c, i) => `<td style="padding:8px 12px;border-bottom:1px solid #f1f1f1;font-size:11px;color:${i === 5 ? '#4f46e5' : '#1c1917'}">${c}</td>`).join('')}</tr>`
       ).join('');
 
       const html = `
@@ -307,8 +308,8 @@ export default function Payments() {
                   <table className="w-full text-left">
                      <thead className="bg-stone-50/50 border-b border-stone-100">
                         <tr>
-                           <th className="px-8 py-5 text-[10px] font-black text-stone-400 uppercase tracking-widest">Ref ID</th>
-                           <th className="px-8 py-5 text-[10px] font-black text-stone-400 uppercase tracking-widest">{view === 'transactions' ? 'Merchant' : 'Customer'} / Order</th>
+                           <th className="px-8 py-5 text-[10px] font-black text-stone-400 uppercase tracking-widest">Order Identifier</th>
+                           <th className="px-8 py-5 text-[10px] font-black text-stone-400 uppercase tracking-widest">{view === 'transactions' ? 'Merchant' : 'Customer'} Info</th>
                            <th className="px-8 py-5 text-[10px] font-black text-stone-400 uppercase tracking-widest">Method</th>
                            <th className="px-8 py-5 text-[10px] font-black text-stone-400 uppercase tracking-widest">Date</th>
                            <th className="px-8 py-5 text-[10px] font-black text-stone-400 uppercase tracking-widest">Value</th>
@@ -320,23 +321,30 @@ export default function Payments() {
                            <tr key={item.finance_transaction_id || item.payment_id} className="hover:bg-stone-50/30 transition-colors group">
                               <td className="px-8 py-6">
                                  <div className="flex items-center gap-4">
-                                    <div className="w-10 h-10 rounded-xl bg-stone-50 flex items-center justify-center text-stone-400 group-hover:bg-indigo-50 group-hover:text-indigo-600 transition-all border border-stone-100">
+                                    <div className="w-12 h-12 rounded-2xl bg-stone-50 border border-stone-100 flex items-center justify-center text-stone-400 group-hover:bg-indigo-50 group-hover:text-indigo-500 group-hover:border-indigo-100 transition-all shadow-sm">
                                        <FaCreditCard size={14} />
                                     </div>
                                     <div className="flex flex-col">
-                                       <span className="text-sm font-bold text-stone-900 group-hover:text-indigo-600 transition-colors tracking-tight">
-                                          {item.finance_transaction_id || item.payment_id}
+                                       <span className="text-sm font-black text-stone-900 group-hover:text-indigo-600 transition-colors tracking-tight">
+                                          #{item.order_id || 'N/A'}
                                        </span>
                                        <span className="text-[10px] font-mono font-bold text-stone-400 truncate w-32">
-                                          {item.payment_id || item.transaction_id || item.seller_payout_id || 'INTERNAL_LEDGER'}
+                                          Ref: {item.finance_transaction_id || item.payment_id || 'INTERNAL'}
                                        </span>
                                     </div>
                                  </div>
                               </td>
                               <td className="px-8 py-6">
-                                 <div className="flex flex-col">
+                                 <div className="flex flex-col gap-1">
                                     <span className="text-sm font-bold text-stone-900">{item.seller_name || item.customer_name || 'System'}</span>
-                                    <span className="text-[10px] text-stone-400 font-bold uppercase tracking-widest mt-0.5">Order ID: #{item.order_id}</span>
+                                    <div className="flex items-center gap-2">
+                                       <span className="text-[9px] font-black text-stone-400 uppercase tracking-widest bg-stone-50 px-2 py-0.5 rounded border border-stone-100">
+                                          {item.transaction_id ? `TXN: ${item.transaction_id}` : 'Manual Transaction'}
+                                       </span>
+                                    </div>
+                                    <button onClick={() => setActiveTab(`orders`)} className="text-[9px] font-black text-indigo-500 hover:text-indigo-700 uppercase tracking-tighter mt-1 text-left w-fit">
+                                       Track Order Details
+                                    </button>
                                  </div>
                               </td>
                               <td className="px-8 py-6">

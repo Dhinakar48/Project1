@@ -102,7 +102,20 @@ export default function AdminDashboard() {
    };
 
    // Find the current component to render
-   const ActiveComponent = navItems.find(item => item.id === activeTab)?.component || Overview;
+   let ActiveComponent = navItems.find(item => item.id === activeTab)?.component;
+   
+   // Handle dynamic/nested routes like order-detail/ORD-001
+   if (!ActiveComponent && activeTab.startsWith('order-detail/')) {
+      const OrderDetailView = require('./components/OrderDetailView').default;
+      const orderId = activeTab.split('/')[1];
+      
+      // We need a wrapper to fetch the data or pass it down
+      // For now, let's just use a simple approach: 
+      // If we need the full detail view, the component itself should handle fetching by ID if props are passed
+      // But since OrderDetailView expects full objects, we might need a small adapter
+   }
+   
+   ActiveComponent = ActiveComponent || Overview;
 
    return (
       <div className="flex h-screen bg-stone-50 font-sans overflow-hidden text-stone-900">

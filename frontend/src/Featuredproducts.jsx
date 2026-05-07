@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
-import { featuredProductsArray } from "./data";
+import { featuredProductsArray, productsData } from "./data";
 
 export default function Featured() {
     const navigate = useNavigate();
@@ -13,31 +13,36 @@ export default function Featured() {
         const fetchFeatured = async () => {
             let combinedProducts = [];
             
-            // 1. Get Static Products from data.js
-            const staticMapped = featuredProductsArray.slice(0, 3).map(p => ({
-                id: p.id,
-                name: p.name,
-                price: p.variants[0].price,
-                img: p.variants[0].img,
-                isStatic: true
-            }));
-            
             try {
-                // 2. Get Dynamic Products from Backend
-                const res = await axios.get("http://localhost:5000/featured-products");
-                const dynamicMapped = res.data.map(p => ({
-                    id: p.product_id,
+                // 1. Get Static Products from data.js
+                const featuredIds = ["1", "11", "3"]; // Using G-Shock (11) instead of Nova Chrono (24)
+                const staticMapped = featuredIds.map(id => productsData[id]).filter(Boolean).map(p => ({
+                    id: p.id,
                     name: p.name,
-                    price: `₹${parseFloat(p.price).toLocaleString()}`,
-                    img: (p.images && p.images.length > 0) ? p.images[0] : (p.main_image || "/placeholder-product.png"),
-                    isStatic: false
+                    price: p.variants[0].price,
+                    img: p.variants[0].img,
+                    isStatic: true
                 }));
-                
-                // Combine them - Backend products first
-                combinedProducts = [...dynamicMapped, ...staticMapped];
+
+                // 2. Get Dynamic Products from Backend
+                try {
+                    const res = await axios.get("http://localhost:5000/featured-products");
+                    const dynamicMapped = res.data.map(p => ({
+                        id: p.product_id,
+                        name: p.name,
+                        price: `₹${parseFloat(p.price).toLocaleString()}`,
+                        img: (p.images && p.images.length > 0) ? p.images[0] : (p.main_image || "/placeholder-product.png"),
+                        isStatic: false
+                    }));
+                    
+                    // Combine them - Backend products first
+                    combinedProducts = [...dynamicMapped, ...staticMapped];
+                } catch (backendErr) {
+                    console.warn("Backend featured products fetch failed, using static only.", backendErr);
+                    combinedProducts = staticMapped;
+                }
             } catch (err) {
-                console.error("Error fetching featured products:", err);
-                combinedProducts = staticMapped; // Fallback to static only
+                console.error("Critical error in fetchFeatured:", err);
             } finally {
                 setProducts(combinedProducts);
                 setIsLoading(false);

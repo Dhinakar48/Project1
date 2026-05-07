@@ -11,7 +11,7 @@ import { featuredProductsArray as products } from "./data";
 const offers = [
   "🔥 Get 20% off all Bose Buds Pro - Limited Time!",
   "🚚 Free 2-Day Shipping on the new Vertex Pro 16",
-  "⌚ Bundle a Pulse Watch X with any Audio product for 15% off"
+  "⌚ Bundle a G-Shock Watch with any Audio product for 15% off"
 ];
 
 export default function Navbar() {
