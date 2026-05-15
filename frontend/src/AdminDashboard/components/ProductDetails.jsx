@@ -10,7 +10,7 @@ export default function ProductDetails({ product, onBack, onEdit, onDeleteComple
    const handleDelete = async () => {
       if (window.confirm(`Are you sure you want to decommission product ${product.product_id}?`)) {
          try {
-            const res = await axios.delete(`http://localhost:5000/api/admin/delete-product/${product.product_id}`);
+            const res = await axios.delete(`http://127.0.0.1:5001/api/admin/delete-product/${product.product_id}`);
             if (res.data.success) {
                onDeleteComplete();
             }

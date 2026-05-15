@@ -11,7 +11,7 @@ export default function Reviews({ sellerId }) {
     const fetchReviews = async () => {
       if (!sellerId) return;
       try {
-        const res = await axios.get(`http://localhost:5000/seller-reviews/${sellerId}`);
+        const res = await axios.get(`http://127.0.0.1:5001/seller-reviews/${sellerId}`);
         const formatted = res.data.map(r => ({
           id: r.review_id,
           user: r.customer_name || 'Anonymous',

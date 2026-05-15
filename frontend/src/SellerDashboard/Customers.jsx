@@ -12,7 +12,7 @@ export default function Customers({ globalSearch, setViewedCustomer, sellerId })
     const fetchCustomers = async () => {
       if (!sellerId) return;
       try {
-        const res = await axios.get(`http://localhost:5000/seller-customers/${sellerId}`);
+        const res = await axios.get(`http://127.0.0.1:5001/seller-customers/${sellerId}`);
         const formatted = res.data.map(c => {
           const spendAmt = parseFloat(c.total_spend) || 0;
           let tier = 'Silver';

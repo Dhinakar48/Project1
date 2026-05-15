@@ -33,9 +33,9 @@ export default function Payments({ setActiveTab }) {
       setLoading(true);
       try {
          const [txnRes, statRes, payRes] = await Promise.all([
-            axios.get("http://localhost:5000/api/admin/finance-transactions"),
-            axios.get("http://localhost:5000/api/admin/finance-stats"),
-            axios.get("http://localhost:5000/api/admin/transactions")
+            axios.get("http://127.0.0.1:5001/api/admin/finance-transactions"),
+            axios.get("http://127.0.0.1:5001/api/admin/finance-stats"),
+            axios.get("http://127.0.0.1:5001/api/admin/transactions")
          ]);
          if (txnRes.data.success) setTransactions(txnRes.data.transactions);
          if (statRes.data.success) setStats(statRes.data.stats);

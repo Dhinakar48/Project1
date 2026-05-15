@@ -80,23 +80,29 @@ router.post("/login", async (req, res) => {
   }
 });
 
+router.get("/test-user", (req, res) => res.send("User Router OK"));
 // Verify User Status (For session checks)
 router.get("/verify-user-status/:id", async (req, res) => {
   const { id } = req.params;
+  console.log(`[VERIFY-STATUS] Checking status for: ${id}`);
   try {
     let result;
     if (id.startsWith('CUS')) {
       result = await pool.query("SELECT is_active FROM customers WHERE customer_id=$1", [id]);
     } else if (id.startsWith('SEL')) {
       result = await pool.query("SELECT is_active FROM sellers WHERE seller_id=$1", [id]);
+    } else if (id.startsWith('ADM')) {
+      result = await pool.query("SELECT is_active FROM admins WHERE admin_id=$1", [id]);
     }
 
     if (!result || result.rows.length === 0) {
+      console.warn(`[VERIFY-STATUS] User not found: ${id}`);
       return res.status(404).json({ success: false, message: "User not found" });
     }
 
     res.json({ success: true, is_active: result.rows[0].is_active });
   } catch (err) {
+    console.error(`[VERIFY-STATUS] Error for ${id}:`, err);
     res.status(500).json({ success: false });
   }
 });

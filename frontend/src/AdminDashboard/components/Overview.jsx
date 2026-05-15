@@ -11,7 +11,7 @@ export default function Overview({ setActiveTab }) {
 
    useEffect(() => {
       setLoading(true);
-      axios.get("http://localhost:5000/api/admin/dashboard-stats")
+      axios.get("http://127.0.0.1:5001/api/admin/dashboard-stats")
          .then(res => {
             if (res.data.success) setDashboardData(res.data);
             setLoading(false);

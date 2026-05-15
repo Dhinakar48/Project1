@@ -9,7 +9,7 @@ export default function Analytics() {
 
    useEffect(() => {
       setLoading(true);
-      axios.get("http://localhost:5000/api/admin/analytics-detailed")
+      axios.get("http://127.0.0.1:5001/api/admin/analytics-detailed")
          .then(res => {
             if (res.data.success) setData(res.data);
             setLoading(false);

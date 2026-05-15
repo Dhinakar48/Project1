@@ -20,7 +20,7 @@ export default function Analytics({ timeRange, setTimeRange, setActiveTab, selle
             if (timeRange === 'Half-Yearly') type = 'half-yearly';
             if (timeRange === 'Yearly') type = 'annual';
             
-            const res = await axios.get(`http://localhost:5000/api/seller/finances/${type}/${sellerId}`);
+            const res = await axios.get(`http://127.0.0.1:5001/api/seller/finances/${type}/${sellerId}`);
             setFinances(res.data);
          } catch (err) {
             console.error("Error fetching finances:", err);

@@ -17,7 +17,7 @@ export default function Products() {
 
    const fetchProducts = () => {
       setLoading(true);
-      axios.get("http://localhost:5000/api/admin/products")
+      axios.get("http://127.0.0.1:5001/api/admin/products")
          .then(res => {
             if (res.data.success) {
                setProductsData(res.data.products);

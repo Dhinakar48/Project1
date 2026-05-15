@@ -39,7 +39,7 @@ export default function AdminDashboard() {
 
    const fetchNotifications = async () => {
       try {
-         const res = await axios.get("http://localhost:5000/api/admin/notifications");
+         const res = await axios.get("http://127.0.0.1:5001/api/admin/notifications");
          if (res.data.success) {
             setNotifications(res.data.notifications);
          }
@@ -50,7 +50,7 @@ export default function AdminDashboard() {
 
    const markAsRead = async (id) => {
       try {
-         await axios.patch(`http://localhost:5000/api/admin/notifications/read/${id}`);
+         await axios.patch(`http://127.0.0.1:5001/api/admin/notifications/read/${id}`);
          setNotifications(prev => prev.map(n => n.notification_id === id ? { ...n, is_read: true } : n));
       } catch (err) {
          console.error("Failed to mark notification as read:", err);
@@ -59,7 +59,7 @@ export default function AdminDashboard() {
 
    const markAllRead = async () => {
       try {
-         await axios.patch('http://localhost:5000/api/admin/notifications/read-all');
+         await axios.patch('http://127.0.0.1:5001/api/admin/notifications/read-all');
          setNotifications(prev => prev.map(n => ({ ...n, is_read: true })));
       } catch (err) {
          console.error("Failed to mark all as read:", err);
@@ -94,7 +94,7 @@ export default function AdminDashboard() {
    const handleLogout = async () => {
       try {
          const adminId = JSON.parse(localStorage.getItem('adminUser'))?.id;
-         await axios.post("http://localhost:5000/api/admin-logout", { admin_id: adminId });
+         await axios.post("http://127.0.0.1:5001/api/admin-logout", { admin_id: adminId });
       } catch (err) {
          console.error("Logout log error:", err);
       }

@@ -23,22 +23,30 @@ app.use(cors());
 app.use(bodyParser.json({ limit: "50mb" }));
 app.use(bodyParser.urlencoded({ limit: "50mb", extended: true }));
 
-// Request Logger
+// Broad Catch-All Logger & Request Logger
 app.use((req, res, next) => {
+  console.log(`[TRACE] ${req.method} ${req.url}`);
   res.on('finish', () => {
-    const bodyStr = req.body ? JSON.stringify(req.body) : '';
-    console.log(`[${new Date().toISOString()}] ${req.method} ${req.url} ${res.statusCode}`, req.method !== 'GET' ? bodyStr.substring(0, 500) : '');
+    console.log(`[RESPONSE] ${req.method} ${req.url} -> ${res.statusCode}`);
   });
   next();
 });
 
+app.get("/test", (req, res) => res.send("OK"));
+app.get("/api/test", (req, res) => res.send("API OK"));
+
 // Use Routes (Mounted at root to match original endpoints exactly)
+console.log("[SERVER] Registering routes...");
+app.use("/", (req, res, next) => {
+  if (req.url === '/admin-login') console.log(`[DEBUG] Request for /admin-login: ${req.method}`);
+  next();
+}, adminRoutes); 
+
 app.use("/", orderRoutes);
 app.use("/", productRoutes);
 app.use("/", userRoutes);
 app.use("/", cartRoutes);
 app.use("/", reviewRoutes);
-app.use("/", adminRoutes);
 app.use("/", couponRoutes);
 app.use("/", shiprocketRoutes);
 app.use("/", liveRoutes);
@@ -99,5 +107,18 @@ app.use((err, req, res, next) => {
   });
 });
 
-const PORT = process.env.PORT || 5000;
-app.listen(PORT, () => { console.log(`Server running on http://localhost:${PORT}`); });
+// 404 Handler
+app.use((req, res) => {
+  console.log(`[404-DEBUG] ${req.method} ${req.originalUrl || req.url} - Not Found`);
+  res.status(404).json({ 
+    message: "Endpoint not found", 
+    method: req.method, 
+    path: req.originalUrl || req.url 
+  });
+});
+
+const PORT = process.env.PORT || 5001;
+app.listen(PORT, "0.0.0.0", () => { 
+  console.log(`Server running on http://0.0.0.0:${PORT}`); 
+  console.log(`Accessible at http://127.0.0.1:${PORT}`);
+});

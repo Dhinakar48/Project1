@@ -20,7 +20,7 @@ export default function CategoryPage() {
         setLoading(true);
         try {
             // 1. Get Dynamic Products from Backend
-            const res = await axios.get(`http://localhost:5000/products/category/${categoryName}`);
+            const res = await axios.get(`http://127.0.0.1:5001/products/category/${categoryName}`);
             const dynamicProducts = res.data;
 
             // 2. Get Static Products from data.js and Filter by Category
@@ -63,7 +63,7 @@ export default function CategoryPage() {
 
     const fetchCategories = async () => {
         try {
-            const res = await axios.get("http://localhost:5000/categories");
+            const res = await axios.get("http://127.0.0.1:5001/categories");
             const allowedNames = ["Audio", "Wearables", "Computing", "Accessories"];
             
             // Map the allowed names and find their corresponding data from the API

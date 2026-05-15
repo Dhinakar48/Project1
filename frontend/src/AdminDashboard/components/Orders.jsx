@@ -17,7 +17,7 @@ export default function Orders() {
 
    const fetchOrders = () => {
       setLoading(true);
-      axios.get("http://localhost:5000/api/admin/orders")
+      axios.get("http://127.0.0.1:5001/api/admin/orders")
          .then(res => {
             if (res.data.success) setOrdersData(res.data.orders);
             setLoading(false);
@@ -34,7 +34,7 @@ export default function Orders() {
 
    const handleViewOrder = (orderId) => {
       setLoading(true);
-      axios.get(`http://localhost:5000/api/admin/order-details/${orderId}`)
+      axios.get(`http://127.0.0.1:5001/api/admin/order-details/${orderId}`)
          .then(res => {
             if (res.data.success) {
                setSelectedOrder(res.data.order);

@@ -37,7 +37,7 @@ export default function AddProductForm({ onBack, onComplete, initialData }) {
    });
 
    useEffect(() => {
-      axios.get("http://localhost:5000/api/admin/categories")
+      axios.get("http://127.0.0.1:5001/api/admin/categories")
          .then(res => {
             if (res.data.success) setCategories(res.data.categories);
          })
@@ -91,8 +91,8 @@ export default function AddProductForm({ onBack, onComplete, initialData }) {
       setIsSubmitting(true);
       try {
          const url = initialData 
-            ? `http://localhost:5000/api/admin/update-product/${initialData.product_id}`
-            : "http://localhost:5000/api/admin/add-product";
+            ? `http://127.0.0.1:5001/api/admin/update-product/${initialData.product_id}`
+            : "http://127.0.0.1:5001/api/admin/add-product";
          
          const method = initialData ? 'put' : 'post';
          const res = await axios[method](url, formData);

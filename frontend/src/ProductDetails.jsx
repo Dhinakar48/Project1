@@ -71,7 +71,7 @@ export default function ProductDetails() {
     const fetchReviews = async () => {
         setFetchingReviews(true);
         try {
-            const res = await axios.get(`http://localhost:5000/product-reviews/${id}`);
+            const res = await axios.get(`http://127.0.0.1:5001/product-reviews/${id}`);
             setReviews(res.data);
         } catch (err) {
             console.error("Error fetching reviews:", err);
@@ -110,7 +110,7 @@ export default function ProductDetails() {
             };
             console.log("Review payload:", payload);
             try {
-                const res = await axios.post("http://localhost:5000/add-review", payload);
+                const res = await axios.post("http://127.0.0.1:5001/add-review", payload);
                 setReviews([res.data, ...reviews]);
                 setNewReview({ rating: 5, comment: "", img: null });
             } catch (err) {
@@ -124,13 +124,13 @@ export default function ProductDetails() {
         setLoading(true);
         try {
             // 1. Try Backend
-            const res = await axios.get(`http://localhost:5000/product/${id}`);
+            const res = await axios.get(`http://127.0.0.1:5001/product/${id}`);
             const data = res.data;
             setProduct(data);
 
             // Fetch related products (same category)
             if (data.category_name) {
-                const relatedRes = await axios.get(`http://localhost:5000/products/category/${data.category_name}`);
+                const relatedRes = await axios.get(`http://127.0.0.1:5001/products/category/${data.category_name}`);
                 setRelatedProducts(relatedRes.data.filter(p => p.product_id !== data.product_id).slice(0, 4));
             }
         } catch (err) {

@@ -5,10 +5,23 @@ const bcrypt = require('bcryptjs');
 const { decrypt } = require('../utils/encryption');
 const { recordSession } = require('./live');
 const { recordAuditLog } = require('../utils/audit');
+console.log("[ADMIN-ROUTES] Loading admin routes...");
 
-// Admin Login Route
+// Admin Login Route (GET - for browser access)
+router.get('/admin-login', (req, res) => {
+   res.send(`
+      <div style="font-family: sans-serif; text-align: center; padding: 50px;">
+         <h1 style="color: #4f46e5;">Admin API Endpoint</h1>
+         <p>This URL is for API authentication. To access the Admin Dashboard login page, please use the frontend application.</p>
+         <p style="color: #666;">(Usually http://localhost:5173/admin-login)</p>
+      </div>
+   `);
+});
+
+// Admin Login Route (POST)
 router.post('/admin-login', async (req, res) => {
    const { email, password } = req.body;
+   console.log(`[AUTH] Admin login attempt for: ${email}`);
    
    try {
       console.log(`[admin-login] Attempting login for: ${email}`);

@@ -17,7 +17,7 @@ export default function AdminLogin() {
       setError("");
 
       try {
-         const res = await axios.post("http://localhost:5000/admin-login", { email, password });
+         const res = await axios.post("http://127.0.0.1:5001/admin-login", { email, password });
          
          if (res.data.success) {
             // Save admin token/details
@@ -31,7 +31,11 @@ export default function AdminLogin() {
             setError(res.data.message || "Invalid administrator credentials.");
          }
       } catch (err) {
-         setError("Connection to authorization server failed.");
+         if (err.response && err.response.data && err.response.data.message) {
+            setError(err.response.data.message);
+         } else {
+            setError("Connection to authorization server failed.");
+         }
       } finally {
          setLoading(false);
       }

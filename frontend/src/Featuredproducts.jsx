@@ -26,7 +26,7 @@ export default function Featured() {
 
                 // 2. Get Dynamic Products from Backend
                 try {
-                    const res = await axios.get("http://localhost:5000/featured-products");
+                    const res = await axios.get("http://127.0.0.1:5001/featured-products");
                     const dynamicMapped = res.data.map(p => ({
                         id: p.product_id,
                         name: p.name,

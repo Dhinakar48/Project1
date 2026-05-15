@@ -76,7 +76,7 @@ export default function OrderPage() {
       setIsLoadingAddresses(true);
       try {
         const host = window.location.hostname === "localhost" ? "localhost" : "127.0.0.1";
-        const res = await axios.get(`http://${host}:5000/addresses/${email}`);
+        const res = await axios.get(`http://${host}:5001/addresses/${email}`);
         setSavedAddresses(res.data);
       } catch (err) {
         console.error("Error fetching addresses:", err);
@@ -91,7 +91,7 @@ export default function OrderPage() {
     if (storedUser.customerId) {
         try {
             const host = window.location.hostname === "localhost" ? "localhost" : "127.0.0.1";
-            const res = await axios.get(`http://${host}:5000/payment-methods/${storedUser.customerId}`);
+            const res = await axios.get(`http://${host}:5001/payment-methods/${storedUser.customerId}`);
             setSavedPaymentMethods(res.data);
         } catch (err) {
             console.error("Error fetching payment methods:", err);
@@ -110,7 +110,7 @@ export default function OrderPage() {
         hasFetched.current = true;
         try {
           const host = window.location.hostname === "localhost" ? "localhost" : "127.0.0.1";
-          const res = await axios.get(`http://${host}:5000/profile/${email}`);
+          const res = await axios.get(`http://${host}:5001/profile/${email}`);
           if (res.data) {
             setFormData(prev => ({
               ...prev,
@@ -194,7 +194,7 @@ export default function OrderPage() {
     if (customerId) {
         try {
             const host = window.location.hostname === "localhost" ? "localhost" : "127.0.0.1";
-            await axios.post(`http://${host}:5000/order/place`, {
+            await axios.post(`http://${host}:5001/order/place`, {
                 customerId,
                 addressId: editingAddressId || (savedAddresses.length > 0 ? savedAddresses[0].address_id : null),
                 cartItems: cart,
@@ -323,7 +323,7 @@ export default function OrderPage() {
       // Use the verified email from profile to ensure we update the correct record
       const targetEmail = userProfile?.email || formData.email;
 
-      await axios.post(`http://${host}:5000/update-address`, {
+      await axios.post(`http://${host}:5001/update-address`, {
         address_id: editingAddressId,
         email: targetEmail,
         name: formData.name,

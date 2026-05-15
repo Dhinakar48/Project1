@@ -28,7 +28,7 @@ export default function Coupons() {
          if (!seller.id && !seller.seller_id) return;
          
          const sellerId = seller.id || seller.seller_id;
-         const res = await axios.get(`http://localhost:5000/api/seller/coupons/${sellerId}`);
+         const res = await axios.get(`http://127.0.0.1:5001/api/seller/coupons/${sellerId}`);
          if (res.data.success) {
             setCoupons(res.data.coupons);
          }
@@ -58,7 +58,7 @@ export default function Coupons() {
             valid_until: validUntil || null
          };
          
-         const res = await axios.post("http://localhost:5000/api/seller/coupons", payload);
+         const res = await axios.post("http://127.0.0.1:5001/api/seller/coupons", payload);
          if (res.data.success) {
             fetchCoupons();
             setIsCreating(false);
@@ -87,7 +87,7 @@ export default function Coupons() {
          const seller = JSON.parse(localStorage.getItem('sellerUser') || '{}');
          const sellerId = seller.id || seller.seller_id;
 
-         await axios.patch(`http://localhost:5000/api/seller/coupons/${id}`, {
+         await axios.patch(`http://127.0.0.1:5001/api/seller/coupons/${id}`, {
             is_active: !currentStatus,
             seller_id: sellerId
          });
@@ -103,7 +103,7 @@ export default function Coupons() {
          const seller = JSON.parse(localStorage.getItem('sellerUser') || '{}');
          const sellerId = seller.id || seller.seller_id;
 
-         await axios.delete(`http://localhost:5000/api/seller/coupons/${id}`, {
+         await axios.delete(`http://127.0.0.1:5001/api/seller/coupons/${id}`, {
             data: { seller_id: sellerId }
          });
          fetchCoupons();

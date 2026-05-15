@@ -24,7 +24,7 @@ export default function Coupons() {
 
    const fetchCoupons = async () => {
       try {
-         const res = await axios.get("http://localhost:5000/api/admin/coupons");
+         const res = await axios.get("http://127.0.0.1:5001/api/admin/coupons");
          if (res.data.success) {
             setCoupons(res.data.coupons);
          }
@@ -52,7 +52,7 @@ export default function Coupons() {
             valid_until: validUntil || null
          };
          
-         const res = await axios.post("http://localhost:5000/api/admin/coupons", payload);
+         const res = await axios.post("http://127.0.0.1:5001/api/admin/coupons", payload);
          if (res.data.success) {
             fetchCoupons();
             setIsCreating(false);
@@ -78,7 +78,7 @@ export default function Coupons() {
 
    const toggleStatus = async (id, currentStatus) => {
       try {
-         await axios.patch(`http://localhost:5000/api/admin/coupons/${id}`, {
+         await axios.patch(`http://127.0.0.1:5001/api/admin/coupons/${id}`, {
             is_active: !currentStatus
          });
          fetchCoupons();
@@ -90,7 +90,7 @@ export default function Coupons() {
    const handleRemoveCoupon = async (id) => {
       if (!window.confirm("Are you sure you want to delete this coupon? This action cannot be undone.")) return;
       try {
-         await axios.delete(`http://localhost:5000/api/admin/coupons/${id}`);
+         await axios.delete(`http://127.0.0.1:5001/api/admin/coupons/${id}`);
          fetchCoupons();
       } catch (err) {
          console.error("Error deleting coupon:", err);

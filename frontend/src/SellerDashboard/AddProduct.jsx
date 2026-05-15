@@ -58,7 +58,7 @@ export default function AddProduct({ onBack, onAddProduct, initialData, sellerId
 
   const fetchCategories = async () => {
     try {
-      const res = await axios.get("http://localhost:5000/categories");
+      const res = await axios.get("http://127.0.0.1:5001/categories");
       setCategories(res.rows || res.data);
     } catch (err) {
       console.error("Error fetching categories:", err);
@@ -155,10 +155,10 @@ export default function AddProduct({ onBack, onAddProduct, initialData, sellerId
     try {
       if (initialData) {
         console.log("Updating product:", initialData.product_id, productPayload);
-        await axios.put(`http://localhost:5000/seller-update-product/${initialData.product_id}`, productPayload);
+        await axios.put(`http://127.0.0.1:5001/seller-update-product/${initialData.product_id}`, productPayload);
         alert("Product updated successfully!");
       } else {
-        await axios.post("http://localhost:5000/seller-add-product", productPayload);
+        await axios.post("http://127.0.0.1:5001/seller-add-product", productPayload);
         alert("Product published successfully!");
       }
 

@@ -27,8 +27,8 @@ export default function Shipping() {
    const fetchShippingData = () => {
       setLoading(true);
       Promise.all([
-         axios.get("http://localhost:5000/api/admin/shipping-stats"),
-         axios.get("http://localhost:5000/api/admin/shipments")
+         axios.get("http://127.0.0.1:5001/api/admin/shipping-stats"),
+         axios.get("http://127.0.0.1:5001/api/admin/shipments")
       ]).then(([statsRes, shipmentsRes]) => {
          if (statsRes.data.success) setStats(statsRes.data.stats);
          if (shipmentsRes.data.success) setShipments(shipmentsRes.data.shipments);
@@ -49,7 +49,7 @@ export default function Shipping() {
 
    const handleViewOrder = (orderId) => {
       setLoading(true);
-      axios.get(`http://localhost:5000/api/admin/order-details/${orderId}`)
+      axios.get(`http://127.0.0.1:5001/api/admin/order-details/${orderId}`)
          .then(res => {
             if (res.data.success) {
                setSelectedOrder(res.data.order);

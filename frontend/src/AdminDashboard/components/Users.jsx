@@ -39,7 +39,7 @@ export default function Users() {
 
    const fetchUsers = () => {
       setLoading(true);
-      axios.get("http://localhost:5000/api/admin/all-users")
+      axios.get("http://127.0.0.1:5001/api/admin/all-users")
          .then(res => { if (res.data.success) setUsers(res.data.users); setLoading(false); })
          .catch(err => { console.error("Users fetch error", err); setLoading(false); });
    };
@@ -50,7 +50,7 @@ export default function Users() {
       setPanelOpen(true);
       setDetailUser(null);
       setDetailLoading(true);
-      axios.get(`http://localhost:5000/api/admin/user-detail/${user.type}/${user.id}`)
+      axios.get(`http://127.0.0.1:5001/api/admin/user-detail/${user.type}/${user.id}`)
          .then(res => { if (res.data.success) setDetailUser(res.data); })
          .catch(err => console.error("User detail error", err))
          .finally(() => setDetailLoading(false));
@@ -59,7 +59,7 @@ export default function Users() {
    const closePanel = () => { setPanelOpen(false); setTimeout(() => setDetailUser(null), 300); };
 
    const handleToggleStatus = (userId, type, currentStatus) => {
-      axios.patch("http://localhost:5000/api/admin/toggle-user-status", {
+      axios.patch("http://127.0.0.1:5001/api/admin/toggle-user-status", {
          userId, type, isActive: !currentStatus
       }).then(res => {
          if (res.data.success) { fetchUsers(); setActiveMenu(null); }

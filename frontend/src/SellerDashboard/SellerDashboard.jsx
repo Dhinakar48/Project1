@@ -77,7 +77,7 @@ export default function SellerDashboard() {
 
   const fetchStats = async () => {
     try {
-      const res = await axios.get(`http://localhost:5000/seller-stats/${seller.seller_id}`);
+      const res = await axios.get(`http://127.0.0.1:5001/seller-stats/${seller.seller_id}`);
       const data = res.data;
       setRealStats([
         { id: 1, name: 'Total Revenue', value: `₹${parseFloat(data.totalRevenue).toLocaleString()}`, icon: FaChartLine, trend: '+0%', color: 'amber', tab: 'Analytics' },
@@ -92,7 +92,7 @@ export default function SellerDashboard() {
 
   const fetchProducts = async () => {
     try {
-      const res = await axios.get(`http://localhost:5000/seller-products/${seller.seller_id}`);
+      const res = await axios.get(`http://127.0.0.1:5001/seller-products/${seller.seller_id}`);
       setInventoryProducts(res.data);
     } catch (err) {
       console.error("Error fetching products:", err);
@@ -101,7 +101,7 @@ export default function SellerDashboard() {
 
   const fetchNotifications = async () => {
     try {
-      const res = await axios.get(`http://localhost:5000/notifications/seller/${seller.seller_id}`);
+      const res = await axios.get(`http://127.0.0.1:5001/notifications/seller/${seller.seller_id}`);
       setNotifications(res.data);
     } catch (err) {
       console.error("Error fetching notifications:", err);
@@ -110,7 +110,7 @@ export default function SellerDashboard() {
 
   const fetchRecentOrders = async () => {
     try {
-      const res = await axios.get(`http://localhost:5000/api/seller-orders/${seller.seller_id}`);
+      const res = await axios.get(`http://127.0.0.1:5001/api/seller-orders/${seller.seller_id}`);
       setRecentOrders(res.data.slice(0, 5));
     } catch (err) {
       console.error("Error fetching recent orders:", err);
@@ -129,7 +129,7 @@ export default function SellerDashboard() {
        // Session Monitoring: Check if seller is blocked in real-time
        const checkStatus = async () => {
          try {
-           const res = await axios.get(`http://localhost:5000/api/verify-user-status/${seller.seller_id}`);
+           const res = await axios.get(`http://127.0.0.1:5001/api/verify-user-status/${seller.seller_id}`);
            if (res.data.success && res.data.is_active === false) {
              console.warn("Security Alert: Merchant account suspended by platform.");
              localStorage.clear();
@@ -155,7 +155,7 @@ export default function SellerDashboard() {
       return markAllAsRead();
     }
     try {
-      await axios.patch(`http://localhost:5000/notifications/${id}/read`);
+      await axios.patch(`http://127.0.0.1:5001/notifications/${id}/read`);
       fetchNotifications();
     } catch (err) {
       console.error("Error marking as read:", err);
@@ -164,7 +164,7 @@ export default function SellerDashboard() {
 
   const markAllAsRead = async () => {
     try {
-      await axios.patch(`http://localhost:5000/notifications/mark-all-read/${seller.seller_id}`);
+      await axios.patch(`http://127.0.0.1:5001/notifications/mark-all-read/${seller.seller_id}`);
       fetchNotifications();
     } catch (err) {
       console.error("Error marking all as read:", err);

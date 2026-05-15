@@ -28,7 +28,7 @@ export default function Settings() {
    useEffect(() => {
       const fetchProfile = async () => {
          try {
-            const res = await axios.get(`http://localhost:5000/api/seller/profile/${seller.seller_id}`);
+            const res = await axios.get(`http://127.0.0.1:5001/api/seller/profile/${seller.seller_id}`);
             const data = res.data;
             setSeller({
                seller_id: data.seller_id,
@@ -74,7 +74,7 @@ export default function Settings() {
    const handleSaveProfile = async () => {
       try {
          setStatus({ type: 'loading', message: 'Syncing profile...' });
-         const res = await axios.post("http://localhost:5000/api/seller/update-profile", {
+         const res = await axios.post("http://127.0.0.1:5001/api/seller/update-profile", {
             seller_id: seller.seller_id,
             name: seller.name,
             email: seller.email,
@@ -105,7 +105,7 @@ export default function Settings() {
       }
       try {
          setStatus({ type: 'loading', message: 'Updating security protocol...' });
-         const res = await axios.post("http://localhost:5000/api/seller/update-password", {
+         const res = await axios.post("http://127.0.0.1:5001/api/seller/update-password", {
             seller_id: seller.seller_id,
             currentPassword: passwords.currentPassword,
             newPassword: passwords.newPassword

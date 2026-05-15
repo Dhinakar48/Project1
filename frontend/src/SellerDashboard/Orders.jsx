@@ -14,7 +14,7 @@ export default function Orders({ globalSearch }) {
 
   const fetchHistory = async (orderId) => {
     try {
-      const res = await axios.get(`http://localhost:5000/order-history/${orderId}`);
+      const res = await axios.get(`http://127.0.0.1:5001/order-history/${orderId}`);
       setViewedHistory({ orderId, history: res.data });
     } catch (err) {
       console.error("Error fetching history:", err);
@@ -37,7 +37,7 @@ export default function Orders({ globalSearch }) {
     const sellerId = sellerData.seller_id || sellerData.id;
     if (sellerId) {
       try {
-        const res = await axios.get(`http://localhost:5000/seller-orders/${sellerId}`);
+        const res = await axios.get(`http://127.0.0.1:5001/seller-orders/${sellerId}`);
         
         // Group by order_id
         const grouped = res.data.reduce((acc, o) => {
@@ -98,7 +98,7 @@ export default function Orders({ globalSearch }) {
 
     const nextStatus = statusSequence[currentIndex + 1];
     try {
-      await axios.patch("http://localhost:5000/order/status", {
+      await axios.patch("http://127.0.0.1:5001/order/status", {
         orderId,
         status: nextStatus,
         changedBy: 'Seller Dashboard',

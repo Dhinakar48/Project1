@@ -21,7 +21,7 @@ export default function Profile() {
       const admin = JSON.parse(localStorage.getItem('admin') || '{}');
       const adminId = admin.id || 'ADM001';
       setLoading(true);
-      axios.get(`http://localhost:5000/api/admin/profile/${adminId}`)
+      axios.get(`http://127.0.0.1:5001/api/admin/profile/${adminId}`)
          .then(res => {
             if (res.data.success) {
                setProfile(res.data.profile);

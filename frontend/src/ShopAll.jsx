@@ -17,7 +17,7 @@ export default function ShopAll() {
         setLoading(true);
         try {
             // 1. Get Dynamic Products from Backend
-            const res = await axios.get("http://localhost:5000/products");
+            const res = await axios.get("http://127.0.0.1:5001/products");
             const dynamicProducts = res.data;
 
             // 2. Get Static Products from data.js and Map them

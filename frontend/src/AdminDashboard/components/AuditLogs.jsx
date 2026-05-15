@@ -9,7 +9,7 @@ export default function AuditLogs() {
 
    const fetchLogs = () => {
       setLoading(true);
-      axios.get("http://localhost:5000/api/admin/audit-logs")
+      axios.get("http://127.0.0.1:5001/api/admin/audit-logs")
          .then(res => {
             if (res.data.success) setLogs(res.data.logs);
             setLoading(false);

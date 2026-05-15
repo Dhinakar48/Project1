@@ -21,7 +21,7 @@ export default function Returns() {
 
    const fetchReturns = () => {
       setLoading(true);
-      axios.get("http://localhost:5000/api/admin/returns")
+      axios.get("http://127.0.0.1:5001/api/admin/returns")
          .then(res => {
             if (res.data.success) setReturns(res.data.returns);
             setLoading(false);
@@ -53,7 +53,7 @@ export default function Returns() {
       setProcessing(true);
       try {
          const res = await axios.patch(
-            `http://localhost:5000/api/admin/returns/${selected.order_id}/process`,
+            `http://127.0.0.1:5001/api/admin/returns/${selected.order_id}/process`,
             { status: newStatus, notes }
          );
          if (res.data.success) {

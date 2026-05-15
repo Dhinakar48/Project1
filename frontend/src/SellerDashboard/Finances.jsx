@@ -15,7 +15,7 @@ export default function Finances() {
       const fetchFinances = async () => {
          if (!seller?.seller_id) return;
          try {
-            const res = await axios.get(`http://localhost:5000/api/seller/finances/daily/${seller.seller_id}`);
+            const res = await axios.get(`http://127.0.0.1:5001/api/seller/finances/daily/${seller.seller_id}`);
             setFinances(res.data);
          } catch (err) {
             console.error("Error fetching finances:", err);

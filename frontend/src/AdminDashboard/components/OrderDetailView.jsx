@@ -19,7 +19,7 @@ export default function OrderDetailView({ order: initialOrder, items, history: i
       
       setUpdating(true);
       try {
-         const res = await axios.patch('http://localhost:5000/api/order/status', {
+         const res = await axios.patch('http://127.0.0.1:5001/api/order/status', {
             orderId: order.order_id,
             status: newStatus,
             changedBy: 'Administrator',
@@ -53,7 +53,7 @@ export default function OrderDetailView({ order: initialOrder, items, history: i
        setShipping(true);
        try {
           const admin = JSON.parse(localStorage.getItem('admin') || '{}');
-          const res = await axios.post(`http://localhost:5000/shiprocket/initiate/${order.order_id}`, {
+          const res = await axios.post(`http://127.0.0.1:5001/shiprocket/initiate/${order.order_id}`, {
              adminId: admin.id || 'ADM001'
           });
           if (res.data.success) {

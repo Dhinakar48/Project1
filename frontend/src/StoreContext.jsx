@@ -82,7 +82,7 @@ export function StoreProvider({ children }) {
       if (userProfile) {
         const userId = userProfile.customerId || userProfile.id;
         const userType = userProfile.seller_id ? 'seller' : 'customer';
-        await axios.post("http://localhost:5000/api/logout", { userId, userType });
+        await axios.post("http://127.0.0.1:5001/api/logout", { userId, userType });
       }
     } catch (err) {
       console.error("Backend logout failed:", err);
@@ -125,7 +125,7 @@ export function StoreProvider({ children }) {
         const user = JSON.parse(savedUser);
         if (user.customerId) {
           try {
-            const res = await axios.get(`http://localhost:5000/wishlist/${user.customerId}`);
+            const res = await axios.get(`http://127.0.0.1:5001/wishlist/${user.customerId}`);
             setWishlist(res.data.map(p => stripProduct(p)));
           } catch (err) {
             console.error("Failed to fetch wishlist:", err);
@@ -140,7 +140,7 @@ export function StoreProvider({ children }) {
         const user = JSON.parse(savedUser);
         if (user.customerId) {
           try {
-            const res = await axios.get(`http://localhost:5000/cart/${user.customerId}`);
+            const res = await axios.get(`http://127.0.0.1:5001/cart/${user.customerId}`);
             const mapped = res.data.map(item => {
                 let primaryImg = "/placeholder-product.png";
                 if (item.images && item.images.length > 0) {
@@ -192,7 +192,7 @@ export function StoreProvider({ children }) {
         const userId = user.customerId || user.id;
         if (userId) {
           try {
-            const res = await axios.get(`http://localhost:5000/api/verify-user-status/${userId}`);
+            const res = await axios.get(`http://127.0.0.1:5001/api/verify-user-status/${userId}`);
             if (res.data.success && res.data.is_active === false) {
               // User has been blocked!
               console.warn("Session Expired: Account blocked by administrator.");
@@ -204,7 +204,11 @@ export function StoreProvider({ children }) {
               window.location.href = "/?message=blocked";
             }
           } catch (err) {
-            console.error("Session verification failed", err);
+            if (err.response && err.response.status === 404) {
+              console.log("Status check skipped for this user type (404).");
+            } else {
+              console.error("Session verification failed", err);
+            }
           }
         }
       }
@@ -269,7 +273,7 @@ export function StoreProvider({ children }) {
     const user = JSON.parse(savedUser);
     if (user.customerId) {
       try {
-        await axios.post("http://localhost:5000/cart/add", {
+        await axios.post("http://127.0.0.1:5001/cart/add", {
           customerId: user.customerId,
           productId: lightProduct.product_id,
           variantId: variant.id,
@@ -288,7 +292,7 @@ export function StoreProvider({ children }) {
       const user = JSON.parse(savedUser);
       if (user.customerId) {
         try {
-          await axios.post("http://localhost:5000/cart/remove", {
+          await axios.post("http://127.0.0.1:5001/cart/remove", {
             customerId: user.customerId,
             productId,
             variantId
@@ -315,7 +319,7 @@ export function StoreProvider({ children }) {
       const user = JSON.parse(savedUser);
       if (user.customerId) {
         try {
-          await axios.post("http://localhost:5000/cart/update", {
+          await axios.post("http://127.0.0.1:5001/cart/update", {
             customerId: user.customerId,
             productId,
             variantId,
@@ -343,7 +347,7 @@ export function StoreProvider({ children }) {
       const user = JSON.parse(savedUser);
       if (user.customerId) {
         try {
-          await axios.post("http://localhost:5000/wishlist/toggle", {
+          await axios.post("http://127.0.0.1:5001/wishlist/toggle", {
             customerId: user.customerId,
             productId: product.product_id
           });
@@ -360,7 +364,7 @@ export function StoreProvider({ children }) {
     if (!code) return { success: false, message: "Please enter a coupon code." };
     
     try {
-       const res = await axios.post("http://localhost:5000/api/validate", {
+       const res = await axios.post("http://127.0.0.1:5001/api/validate", {
           code,
           cartTotal
        });

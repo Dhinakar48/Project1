@@ -59,7 +59,7 @@ export default function Products({
   const handleDeleteProduct = async (product_id) => {
     if (window.confirm("Are you sure you want to delete this product?")) {
       try {
-        await axios.delete(`http://localhost:5000/seller-delete-product/${product_id}`);
+        await axios.delete(`http://127.0.0.1:5001/seller-delete-product/${product_id}`);
         setInventoryProducts(); // Refresh list
       } catch (err) {
         console.error(err);
