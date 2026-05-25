@@ -12,78 +12,94 @@ export default function CategoryPage() {
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
-        fetchProducts();
-        fetchCategories();
+        let active = true;
+        
+        const loadPageData = async () => {
+            if (!categoryName) return;
+            setLoading(true);
+            
+            try {
+                // Fetch categories and products in parallel for maximum speed
+                const categoriesPromise = axios.get("http://127.0.0.1:5001/categories")
+                    .then(res => {
+                        const allowedNames = ["Audio", "Wearables", "Computing", "Accessories"];
+                        const filtered = allowedNames.map(name => {
+                            const found = res.data && Array.isArray(res.data) 
+                                ? res.data.find(cat => cat.name && cat.name.toLowerCase() === name.toLowerCase())
+                                : null;
+                            return found || { name, category_id: name };
+                        });
+                        if (active) setCategories(filtered);
+                    })
+                    .catch(err => {
+                        console.error("Error fetching categories:", err);
+                        if (active) {
+                            setCategories([
+                                { name: "Audio", category_id: "audio" },
+                                { name: "Wearables", category_id: "wearables" },
+                                { name: "Computing", category_id: "computing" },
+                                { name: "Accessories", category_id: "accessories" }
+                            ]);
+                        }
+                    });
+
+                const productsPromise = axios.get(`http://127.0.0.1:5001/products/category/${categoryName}`)
+                    .then(res => {
+                        const dynamicProducts = Array.isArray(res.data) ? res.data : [];
+                        
+                        const staticProducts = featuredProductsArray
+                            .filter(p => p.category && categoryName && p.category.toLowerCase() === categoryName.toLowerCase())
+                            .map(p => ({
+                                product_id: p.id,
+                                name: p.name,
+                                price: p.variants && p.variants[0] && p.variants[0].price ? p.variants[0].price.replace(/[^\d.]/g, '') : '0',
+                                description: p.desc || p.title || '',
+                                main_image: p.variants && p.variants[0] ? p.variants[0].img : '',
+                                images: p.variants ? p.variants.map(v => v.img) : [],
+                                isStatic: true
+                            }));
+
+                        const dbIds = new Set(dynamicProducts.map(p => String(p.product_id)));
+                        const uniqueStatic = staticProducts.filter(p => !dbIds.has(String(p.product_id)));
+                        
+                        if (active) {
+                            setProducts([...dynamicProducts, ...uniqueStatic]);
+                        }
+                    })
+                    .catch(err => {
+                        console.error("Error fetching products:", err);
+                        const staticProducts = featuredProductsArray
+                            .filter(p => p.category && categoryName && p.category.toLowerCase() === categoryName.toLowerCase())
+                            .map(p => ({
+                                product_id: p.id,
+                                name: p.name,
+                                price: p.variants && p.variants[0] && p.variants[0].price ? p.variants[0].price.replace(/[^\d.]/g, '') : '0',
+                                description: p.desc || p.title || '',
+                                main_image: p.variants && p.variants[0] ? p.variants[0].img : '',
+                                images: p.variants ? p.variants.map(v => v.img) : [],
+                                isStatic: true
+                            }));
+                        if (active) {
+                            setProducts(staticProducts);
+                        }
+                    });
+
+                await Promise.all([categoriesPromise, productsPromise]);
+            } catch (globalErr) {
+                console.error("Global fetch error:", globalErr);
+            } finally {
+                if (active) {
+                    setLoading(false);
+                }
+            }
+        };
+
+        loadPageData();
+
+        return () => {
+            active = false;
+        };
     }, [categoryName]);
-
-    const fetchProducts = async () => {
-        setLoading(true);
-        try {
-            // 1. Get Dynamic Products from Backend
-            const res = await axios.get(`http://127.0.0.1:5001/products/category/${categoryName}`);
-            const dynamicProducts = res.data;
-
-            // 2. Get Static Products from data.js and Filter by Category
-            const staticProducts = featuredProductsArray
-                .filter(p => p.category.toLowerCase() === categoryName.toLowerCase())
-                .map(p => ({
-                    product_id: p.id,
-                    name: p.name,
-                    price: p.variants[0].price.replace(/[^\d.]/g, ''),
-                    description: p.desc || p.title,
-                    main_image: p.variants[0].img,
-                    images: p.variants.map(v => v.img),
-                    isStatic: true
-                }));
-
-            // Deduplicate: Prioritize Dynamic, then add Unique Static
-            const dbIds = new Set(dynamicProducts.map(p => String(p.product_id)));
-            const uniqueStatic = staticProducts.filter(p => !dbIds.has(String(p.product_id)));
-            
-            setProducts([...dynamicProducts, ...uniqueStatic]);
-        } catch (err) {
-            console.error("Error fetching products:", err);
-            // Fallback to static products only
-            const staticProducts = featuredProductsArray
-                .filter(p => p.category.toLowerCase() === categoryName.toLowerCase())
-                .map(p => ({
-                    product_id: p.id,
-                    name: p.name,
-                    price: p.variants[0].price.replace(/[^\d.]/g, ''),
-                    description: p.desc || p.title,
-                    main_image: p.variants[0].img,
-                    images: p.variants.map(v => v.img),
-                    isStatic: true
-                }));
-            setProducts(staticProducts);
-        } finally {
-            setLoading(false);
-        }
-    };
-
-    const fetchCategories = async () => {
-        try {
-            const res = await axios.get("http://127.0.0.1:5001/categories");
-            const allowedNames = ["Audio", "Wearables", "Computing", "Accessories"];
-            
-            // Map the allowed names and find their corresponding data from the API
-            const filtered = allowedNames.map(name => {
-                const found = res.data.find(cat => cat.name.toLowerCase() === name.toLowerCase());
-                return found || { name, category_id: name }; // Fallback if not in DB yet
-            });
-            
-            setCategories(filtered);
-        } catch (err) {
-            console.error("Error fetching categories:", err);
-            // Fallback to static if API fails
-            setCategories([
-                { name: "Audio", category_id: "audio" },
-                { name: "Wearables", category_id: "wearables" },
-                { name: "Computing", category_id: "computing" },
-                { name: "Accessories", category_id: "accessories" }
-            ]);
-        }
-    };
 
     return (
         <div className="min-h-screen bg-stone-50 py-10 md:py-16 px-6 md:px-16 lg:px-24">
@@ -134,44 +150,42 @@ export default function CategoryPage() {
                     </div>
 
                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3 gap-x-8 gap-y-16">
-                        <AnimatePresence mode="wait">
-                            {loading ? (
-                                <div className="col-span-full py-20 text-center">
-                                    <p className="text-stone-400 font-medium animate-pulse">Scanning vault...</p>
-                                </div>
-                            ) : products.length > 0 ? (
-                                products.map((product) => (
-                                    <motion.div
-                                        key={product.product_id}
-                                        initial={{ opacity: 0, y: 20 }}
-                                        animate={{ opacity: 1, y: 0 }}
-                                        transition={{ duration: 0.4 }}
-                                        className="group cursor-pointer"
-                                        onClick={() => navigate(`/product/${product.product_id}`)}
-                                    >
-                                        <div className="aspect-[1/1] overflow-hidden bg-white mb-6 border border-stone-100 rounded-3xl shadow-sm group-hover:shadow-xl group-hover:shadow-stone-200/50 transition-all duration-500">
-                                            <img
-                                                src={product.main_image || (product.images && product.images[0]) || '/placeholder.png'}
-                                                alt={product.name}
-                                                className="w-full h-full object-contain p-10 group-hover:scale-110 transition duration-700"
-                                            />
-                                        </div>
-                                        <div className="px-2">
-                                            <h3 className="text-lg font-bold tracking-tight text-stone-900 group-hover:text-amber-600 transition-colors">
-                                                {product.name}
-                                            </h3>
-                                            <p className="text-xs font-black text-amber-600 mt-2 uppercase tracking-widest">
-                                                ₹{parseFloat(product.price).toLocaleString()}
-                                            </p>
-                                        </div>
-                                    </motion.div>
-                                ))
-                            ) : (
-                                <motion.div className="col-span-full py-20 text-center">
-                                    <p className="text-stone-400 font-medium italic">Current vault is empty.</p>
+                        {loading ? (
+                            <div className="col-span-full py-20 text-center">
+                                <p className="text-stone-400 font-medium animate-pulse">Scanning vault...</p>
+                            </div>
+                        ) : products.length > 0 ? (
+                            products.map((product) => (
+                                <motion.div
+                                    key={product.product_id}
+                                    initial={{ opacity: 0, y: 20 }}
+                                    animate={{ opacity: 1, y: 0 }}
+                                    transition={{ duration: 0.4 }}
+                                    className="group cursor-pointer"
+                                    onClick={() => navigate(`/product/${product.product_id}`)}
+                                >
+                                    <div className="aspect-[1/1] overflow-hidden bg-white mb-6 border border-stone-100 rounded-3xl shadow-sm group-hover:shadow-xl group-hover:shadow-stone-200/50 transition-all duration-500">
+                                        <img
+                                            src={product.main_image || (product.images && product.images[0]) || '/placeholder.png'}
+                                            alt={product.name}
+                                            className="w-full h-full object-contain p-10 group-hover:scale-110 transition duration-700"
+                                        />
+                                    </div>
+                                    <div className="px-2">
+                                        <h3 className="text-lg font-bold tracking-tight text-stone-900 group-hover:text-amber-600 transition-colors">
+                                            {product.name}
+                                        </h3>
+                                        <p className="text-xs font-black text-amber-600 mt-2 uppercase tracking-widest">
+                                            ₹{parseFloat(product.price).toLocaleString()}
+                                        </p>
+                                    </div>
                                 </motion.div>
-                            )}
-                        </AnimatePresence>
+                            ))
+                        ) : (
+                            <div className="col-span-full py-20 text-center">
+                                <p className="text-stone-400 font-medium italic">Current vault is empty.</p>
+                            </div>
+                        )}
                     </div>
                 </main>
             </div>

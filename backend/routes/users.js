@@ -484,6 +484,89 @@ router.get("/seller/finances/half-yearly/:sellerId", async (req, res) => {
   }
 });
 
+// Get Extra Analytics Data (Live Feed, Conversion Ratio, Product Alpha, Category Spread)
+router.get("/seller/analytics-extra/:sellerId", async (req, res) => {
+  const sellerId = req.params.sellerId;
+  try {
+    // 1. Conversion Ratio Stats
+    const convRes = await pool.query(`
+      SELECT 
+        COUNT(DISTINCT o.order_id) as total_orders,
+        COUNT(DISTINCT CASE WHEN o.payment_status = 'Paid' THEN o.order_id END) as paid_orders,
+        COUNT(DISTINCT CASE WHEN o.order_status = 'Cancelled' THEN o.order_id END) as cancelled_orders,
+        COUNT(DISTINCT CASE WHEN o.payment_status = 'Pending' AND o.order_status != 'Cancelled' THEN o.order_id END) as pending_orders
+      FROM order_items oi
+      JOIN orders o ON oi.order_id = o.order_id
+      WHERE oi.seller_id = $1
+    `, [sellerId]);
+
+    // 2. Category Dominance / Spread
+    const catRes = await pool.query(`
+      SELECT 
+        COALESCE(c.name, 'Uncategorized') as category_name,
+        COUNT(oi.order_item_id) as items_sold,
+        COALESCE(SUM(oi.total_amount), 0) as total_sales
+      FROM order_items oi
+      JOIN products p ON oi.product_id = p.product_id
+      LEFT JOIN categories c ON p.category_id = c.category_id
+      WHERE oi.seller_id = $1
+      GROUP BY c.name
+      ORDER BY total_sales DESC
+    `, [sellerId]);
+
+    // Fallback if no sales yet: use inventory category spread
+    let categorySpread = catRes.rows;
+    if (categorySpread.length === 0 || parseFloat(categorySpread[0]?.total_sales || 0) === 0) {
+      const fallbackCat = await pool.query(`
+        SELECT 
+          COALESCE(c.name, 'Uncategorized') as category_name,
+          COUNT(p.product_id) as items_sold,
+          0 as total_sales
+        FROM products p
+        LEFT JOIN categories c ON p.category_id = c.category_id
+        WHERE p.seller_id = $1
+        GROUP BY c.name
+        ORDER BY items_sold DESC
+      `, [sellerId]);
+      categorySpread = fallbackCat.rows;
+    }
+
+    // 3. Live System Event Feed (from notifications)
+    const feedRes = await pool.query(`
+      SELECT notification_id, type, message, created_at, is_read, order_id
+      FROM notifications
+      WHERE seller_id = $1
+      ORDER BY created_at DESC
+      LIMIT 10
+    `, [sellerId]);
+
+    // 4. Product Alpha (Top Performing Products)
+    const topProdRes = await pool.query(`
+      SELECT 
+          p.product_id,
+          p.name,
+          COALESCE(SUM(oi.total_amount), 0) as revenue,
+          COALESCE(SUM(oi.quantity), 0) as units_sold
+      FROM products p
+      LEFT JOIN order_items oi ON p.product_id = oi.product_id
+      WHERE p.seller_id = $1
+      GROUP BY p.product_id, p.name
+      ORDER BY revenue DESC, units_sold DESC
+      LIMIT 5
+    `, [sellerId]);
+
+    res.json({
+      conversionStats: convRes.rows[0],
+      categorySpread: categorySpread,
+      liveFeed: feedRes.rows,
+      topProducts: topProdRes.rows
+    });
+  } catch (err) {
+    console.error("Error fetching extra analytics:", err);
+    res.status(500).json({ message: "Error fetching extra analytics data" });
+  }
+});
+
 // Get Profiles
 router.get("/profile/:email", async (req, res) => {
   try {

@@ -5,6 +5,7 @@ import { FaWallet, FaChartLine, FaArrowUp, FaArrowDown } from "react-icons/fa";
 
 export default function Analytics({ timeRange, setTimeRange, setActiveTab, sellerId }) {
    const [finances, setFinances] = useState([]);
+   const [extraData, setExtraData] = useState(null);
    const [loading, setLoading] = useState(true);
    const [selectedHalf, setSelectedHalf] = useState(1);
 
@@ -20,8 +21,13 @@ export default function Analytics({ timeRange, setTimeRange, setActiveTab, selle
             if (timeRange === 'Half-Yearly') type = 'half-yearly';
             if (timeRange === 'Yearly') type = 'annual';
             
-            const res = await axios.get(`http://127.0.0.1:5001/api/seller/finances/${type}/${sellerId}`);
-            setFinances(res.data);
+            const [finRes, extraRes] = await Promise.all([
+               axios.get(`http://127.0.0.1:5001/api/seller/finances/${type}/${sellerId}`),
+               axios.get(`http://127.0.0.1:5001/api/seller/analytics-extra/${sellerId}`)
+            ]);
+            
+            setFinances(finRes.data);
+            setExtraData(extraRes.data);
          } catch (err) {
             console.error("Error fetching finances:", err);
          } finally {
@@ -201,25 +207,25 @@ export default function Analytics({ timeRange, setTimeRange, setActiveTab, selle
             <div className="bg-white p-8 rounded-[2.5rem] border border-stone-100 shadow-sm relative overflow-hidden group">
                <div className="absolute inset-0 bg-gradient-to-br from-amber-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-700 pointer-events-none" />
                <h3 className="font-semibold text-stone-900 text-sm mb-1">Conversion Ratio</h3>
-               <p className="text-[9px] font-bold text-stone-400">Revenue vs Orders metrics</p>
+               <p className="text-[9px] font-bold text-stone-400">Paid vs Pending Orders</p>
 
                <div className="my-10 h-32 flex items-end justify-center gap-6 relative z-10">
                   <div className="w-16 bg-stone-100 rounded-t-2xl relative overflow-hidden h-full group/bar">
-                     <motion.div initial={{ height: 0 }} animate={{ height: '80%' }} transition={{ duration: 1, delay: 0.2 }} className="absolute bottom-0 w-full bg-stone-900 rounded-t-2xl group-hover/bar:bg-stone-800 transition-colors" />
+                     <motion.div initial={{ height: 0 }} animate={{ height: extraData ? `${(parseInt(extraData.conversionStats?.paid_orders || 0) / Math.max(parseInt(extraData.conversionStats?.total_orders || 1), 1)) * 100}%` : '0%' }} transition={{ duration: 1, delay: 0.2 }} className="absolute bottom-0 w-full bg-stone-900 rounded-t-2xl group-hover/bar:bg-stone-800 transition-colors" />
                   </div>
                   <div className="w-16 bg-stone-100 rounded-t-2xl relative overflow-hidden h-full group/bar">
-                     <motion.div initial={{ height: 0 }} animate={{ height: '40%' }} transition={{ duration: 1, delay: 0.4 }} className="absolute bottom-0 w-full bg-amber-500 rounded-t-2xl group-hover/bar:bg-amber-400 transition-colors" />
+                     <motion.div initial={{ height: 0 }} animate={{ height: extraData ? `${(parseInt(extraData.conversionStats?.pending_orders || 0) / Math.max(parseInt(extraData.conversionStats?.total_orders || 1), 1)) * 100}%` : '0%' }} transition={{ duration: 1, delay: 0.4 }} className="absolute bottom-0 w-full bg-amber-500 rounded-t-2xl group-hover/bar:bg-amber-400 transition-colors" />
                   </div>
                </div>
 
                <div className="flex justify-center gap-12 text-center relative z-10 border-t border-stone-50 pt-6">
                   <div>
-                     <span className="text-[9px] font-semibold text-stone-400 block mb-1">Revenue</span>
-                     <span className="text-xl font-semibold text-stone-900">80%</span>
+                     <span className="text-[9px] font-semibold text-stone-400 block mb-1">Paid</span>
+                     <span className="text-xl font-semibold text-stone-900">{extraData ? Math.round((parseInt(extraData.conversionStats?.paid_orders || 0) / Math.max(parseInt(extraData.conversionStats?.total_orders || 1), 1)) * 100) : 0}%</span>
                   </div>
                   <div>
-                     <span className="text-[9px] font-semibold text-amber-500 block mb-1">Orders</span>
-                     <span className="text-xl font-semibold text-stone-900">40%</span>
+                     <span className="text-[9px] font-semibold text-amber-500 block mb-1">Pending</span>
+                     <span className="text-xl font-semibold text-stone-900">{extraData ? Math.round((parseInt(extraData.conversionStats?.pending_orders || 0) / Math.max(parseInt(extraData.conversionStats?.total_orders || 1), 1)) * 100) : 0}%</span>
                   </div>
                </div>
             </div>
@@ -231,33 +237,45 @@ export default function Analytics({ timeRange, setTimeRange, setActiveTab, selle
                      <h3 className="font-semibold text-stone-900 text-sm mb-1">Category Dominance</h3>
                      <p className="text-[9px] font-bold text-stone-400">Market sector analysis</p>
                   </div>
-                  <div className="text-[10px] font-semibold text-amber-600 bg-amber-50 px-3 py-1.5 rounded-lg border border-amber-100">
-                     Computing leads by +20%
-                  </div>
+                  {extraData?.categorySpread?.length > 0 && (
+                     <div className="text-[10px] font-semibold text-amber-600 bg-amber-50 px-3 py-1.5 rounded-lg border border-amber-100">
+                        {extraData.categorySpread[0].category_name} leads!
+                     </div>
+                  )}
                </div>
 
                <div className="space-y-6 relative z-10">
-                  {[
-                     { cat: 'Computing', val: '45%', color: 'from-stone-800 to-stone-900', sales: '840 units' },
-                     { cat: 'Wearables', val: '25%', color: 'from-amber-400 to-amber-500', sales: '512 units' },
-                     { cat: 'Audio', val: '20%', color: 'from-stone-300 to-stone-400', sales: '320 units' },
-                     { cat: 'Accessories', val: '10%', color: 'from-stone-100 to-stone-200', sales: '145 units' },
-                  ].map((item, i) => (
+                  {extraData?.categorySpread?.slice(0, 4).map((item, i) => {
+                     const maxSales = Math.max(...extraData.categorySpread.map(c => parseFloat(c.total_sales) || parseFloat(c.items_sold) || 1));
+                     const val = parseFloat(item.total_sales) || parseFloat(item.items_sold) || 0;
+                     const pct = `${Math.round((val / maxSales) * 100)}%`;
+                     const colors = [
+                        'from-stone-800 to-stone-900',
+                        'from-amber-400 to-amber-500',
+                        'from-stone-300 to-stone-400',
+                        'from-stone-100 to-stone-200'
+                     ];
+                     const color = colors[i % colors.length];
+
+                     return (
                      <div key={i} className="group/item">
                         <div className="flex justify-between items-end mb-2">
-                           <span className="text-[10px] font-semibold text-stone-900">{item.cat} <span className="text-stone-300 ml-2">({item.sales})</span></span>
-                           <span className="text-[11px] font-semibold text-stone-900">{item.val}</span>
+                           <span className="text-[10px] font-semibold text-stone-900">{item.category_name} <span className="text-stone-300 ml-2">({item.items_sold} units)</span></span>
+                           <span className="text-[11px] font-semibold text-stone-900">{parseFloat(item.total_sales) > 0 ? `₹${parseFloat(item.total_sales).toLocaleString()}` : ''}</span>
                         </div>
                         <div className="h-3 w-full bg-stone-50 rounded-full overflow-hidden p-0.5 border border-stone-100">
                            <motion.div
                               initial={{ width: 0 }}
-                              animate={{ width: item.val }}
+                              animate={{ width: pct }}
                               transition={{ duration: 1.5, delay: i * 0.15 }}
-                              className={`h-full rounded-full bg-gradient-to-r ${item.color} group-hover/item:brightness-110 shadow-sm`}
+                              className={`h-full rounded-full bg-gradient-to-r ${color} group-hover/item:brightness-110 shadow-sm`}
                            />
                         </div>
                      </div>
-                  ))}
+                  )})}
+                  {!extraData?.categorySpread?.length && (
+                     <div className="text-center text-stone-400 text-xs py-4">No category data available yet.</div>
+                  )}
                </div>
             </div>
          </div>
@@ -278,13 +296,16 @@ export default function Analytics({ timeRange, setTimeRange, setActiveTab, selle
                   </div>
                </div>
                <div className="flex-1 overflow-y-auto space-y-3 pr-2 scrollbar-thin scrollbar-thumb-stone-200">
-                  {[
-                     { event: 'Order Dispatched', asset: '#ORD-99XZ', val: '₹42,999', time: 'Just Now', icon: '📦' },
-                     { event: 'New Registration', asset: 'elena@example.com', val: 'Client', time: '2m ago', icon: '👤' },
-                     { event: 'Restock Required', asset: 'Sonic Buds Pro', val: 'Critical', time: '14m ago', icon: '⚠️' },
-                     { event: 'Payment Settled', asset: '#TRX-4421', val: '₹1,89,999', time: '1h ago', icon: '💰' },
-                     { event: 'Review Added', asset: 'Vertex Pro 16', val: '5 Stars', time: '2h ago', icon: '⭐' },
-                  ].map((evt, i) => (
+                  {extraData?.liveFeed?.map((evt, i) => {
+                     let icon = '🔔';
+                     if (evt.type?.includes('Order')) icon = '📦';
+                     else if (evt.type?.includes('Payment') || evt.type?.includes('Commission')) icon = '💰';
+                     else if (evt.type?.includes('Review')) icon = '⭐';
+                     else if (evt.type?.includes('Cancel')) icon = '⚠️';
+                     else if (evt.type?.includes('Restock')) icon = '📉';
+
+                     const timeAgo = new Date(evt.created_at).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+                     return (
                      <motion.div
                         initial={{ opacity: 0, scale: 0.95 }}
                         animate={{ opacity: 1, scale: 1 }}
@@ -294,19 +315,22 @@ export default function Analytics({ timeRange, setTimeRange, setActiveTab, selle
                      >
                         <div className="flex items-center gap-4">
                            <div className="w-10 h-10 bg-white shadow-sm flex items-center justify-center rounded-xl border border-stone-100 text-base group-hover:scale-110 transition-transform">
-                              {evt.icon}
+                              {icon}
                            </div>
-                           <div>
-                              <span className="text-[10px] font-semibold text-stone-900 block">{evt.event}</span>
-                              <span className="text-[9px] font-bold text-stone-400">{evt.asset}</span>
+                           <div className="flex-1">
+                              <span className="text-[10px] font-semibold text-stone-900 block truncate max-w-[150px] sm:max-w-[200px]">{evt.type}</span>
+                              <span className="text-[9px] font-bold text-stone-400 block truncate max-w-[150px] sm:max-w-[200px]" title={evt.message}>{evt.message}</span>
                            </div>
                         </div>
-                        <div className="text-right">
-                           <span className="text-sm font-semibold text-stone-900 block">{evt.val}</span>
-                           <span className="text-[8px] font-semibold text-stone-400">{evt.time}</span>
+                        <div className="text-right flex-shrink-0">
+                           <span className="text-sm font-semibold text-stone-900 block">{evt.order_id || 'System'}</span>
+                           <span className="text-[8px] font-semibold text-stone-400">{timeAgo}</span>
                         </div>
                      </motion.div>
-                  ))}
+                  )})}
+                  {!extraData?.liveFeed?.length && (
+                     <div className="text-center text-stone-400 text-xs py-4">No recent activities found.</div>
+                  )}
                </div>
             </div>
 
@@ -318,19 +342,21 @@ export default function Analytics({ timeRange, setTimeRange, setActiveTab, selle
                   <p className="text-[9px] font-medium text-stone-400 mb-8">Top performing inventory</p>
 
                   <div className="space-y-6">
-                     {[
-                        { name: 'Quantum Watch X', rev: '₹4.3M', color: 'bg-green-500' },
-                        { name: 'Vertex Pro 16', rev: '₹14.9M', color: 'bg-blue-500' },
-                        { name: 'Aura Headset', rev: '₹2.1M', color: 'bg-purple-500' },
-                     ].map((prod, i) => (
+                     {extraData?.topProducts?.map((prod, i) => {
+                        const colors = ['bg-green-500', 'bg-blue-500', 'bg-purple-500', 'bg-rose-500', 'bg-amber-500'];
+                        return (
                         <div key={i} className="group/item flex items-center gap-4 cursor-default border-b border-stone-800/50 pb-5 last:border-0 last:pb-0">
-                           <div className={`w-1.5 h-1.5 ${prod.color} rounded-full flex-shrink-0 group-hover/item:scale-150 transition-transform shadow-[0_0_8px_currentColor]`} />
+                           <div className={`w-1.5 h-1.5 ${colors[i % colors.length]} rounded-full flex-shrink-0 group-hover/item:scale-150 transition-transform shadow-[0_0_8px_currentColor]`} />
                            <div className="flex-1">
-                              <span className="text-xs font-semibold block text-stone-100">{prod.name}</span>
+                              <span className="text-xs font-semibold block text-stone-100 truncate max-w-[150px]" title={prod.name}>{prod.name}</span>
+                              <span className="text-[9px] text-stone-400 block">{prod.units_sold} units sold</span>
                            </div>
-                           <span className="text-[10px] font-semibold text-stone-900 bg-amber-500 px-2 py-1 rounded-md">{prod.rev}</span>
+                           <span className="text-[10px] font-semibold text-stone-900 bg-amber-500 px-2 py-1 rounded-md">₹{parseFloat(prod.revenue).toLocaleString()}</span>
                         </div>
-                     ))}
+                     )})}
+                     {!extraData?.topProducts?.length && (
+                        <div className="text-center text-stone-400 text-xs py-4">No product sales data yet.</div>
+                     )}
                   </div>
                </div>
 

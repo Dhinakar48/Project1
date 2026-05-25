@@ -118,7 +118,7 @@ router.post("/order/place", async (req, res) => {
          );
        }
 
-       if (vId) {
+       if (vId && !String(vId).startsWith('default-') && !String(vId).startsWith('static-')) {
          await client.query("UPDATE product_variants SET stock_quantity = stock_quantity - $1 WHERE variant_id = $2", [item.quantity, vId]);
        } else {
          await client.query("UPDATE products SET stock_quantity = stock_quantity - $1 WHERE product_id = $2", [item.quantity, item.product_id || item.productId]);
@@ -200,6 +200,17 @@ router.post("/order/cancel", async (req, res) => {
     
     if (result.rows.length > 0) {
       const order = result.rows[0];
+
+      // Restore stocks for cancelled items
+      const itemsRes = await client.query("SELECT product_id, variant_id, quantity FROM order_items WHERE order_id = $1", [orderId]);
+      for (const item of itemsRes.rows) {
+        const vId = item.variant_id;
+        if (vId && !String(vId).startsWith('default-') && !String(vId).startsWith('static-')) {
+          await client.query("UPDATE product_variants SET stock_quantity = stock_quantity + $1 WHERE variant_id = $2", [item.quantity, vId]);
+        } else {
+          await client.query("UPDATE products SET stock_quantity = stock_quantity + $1 WHERE product_id = $2", [item.quantity, item.product_id]);
+        }
+      }
       
       // 1. Notify Customer
       const custNotifId = `NOT-CUS-${order.customer_id}-${Date.now()}`;
