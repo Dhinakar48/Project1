@@ -33,7 +33,7 @@ export default function SellerLogin() {
             storeName: "ElectroShop Premium" 
          };
          localStorage.setItem('sellerUser', JSON.stringify(adminSeller));
-         localStorage.setItem('sellerActiveTab', 'Overview');
+         sessionStorage.setItem('sellerActiveTab', 'Overview');
          localStorage.setItem('isSellerAuthenticated', 'true');
          localStorage.setItem('user', JSON.stringify({ email, name: "Admin Seller" })); 
          navigate("/seller-dashboard", { replace: true });
@@ -44,7 +44,7 @@ export default function SellerLogin() {
         localStorage.setItem('sellerUser', JSON.stringify(seller));
         
         if (seller.isVerified) {
-          localStorage.setItem('sellerActiveTab', 'Overview');
+          sessionStorage.setItem('sellerActiveTab', 'Overview');
           localStorage.setItem('isSellerAuthenticated', 'true');
           navigate("/seller-dashboard", { replace: true });
         } else {

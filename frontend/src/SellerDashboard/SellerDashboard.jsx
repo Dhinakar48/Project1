@@ -26,7 +26,7 @@ import { FaWallet } from "react-icons/fa";
 export default function SellerDashboard() {
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState(() => {
-    return localStorage.getItem('sellerActiveTab') || 'Analytics';
+    return sessionStorage.getItem('sellerActiveTab') || 'Overview';
   });
 
   const [seller, setSeller] = useState(() => {
@@ -147,7 +147,7 @@ export default function SellerDashboard() {
   }, [seller, navigate]);
 
   useEffect(() => {
-    localStorage.setItem('sellerActiveTab', activeTab);
+    sessionStorage.setItem('sellerActiveTab', activeTab);
   }, [activeTab]);
 
   const markAsRead = async (id) => {
